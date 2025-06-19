@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { HeroSection } from "@/components/home/HeroSection";
+import ModernHeroSlider from "@/components/home/HeroSection";
 import { FeaturedProducts } from "@/components/home/FeaturedProducts";
 import { CategoryShowcase } from "@/components/home/CategoryShowcase";
 import { WellnessStory } from "@/components/home/WellnessStory";
@@ -13,7 +13,7 @@ import { VibrantFeatures } from "@/components/home/VibrantFeatures";
 export default function HomePage() {
   return (
     <MainLayout>
-      <HeroSection />
+      <ModernHeroSlider />
       <FeaturedProducts />
       {/* <ColorfulCategories /> */}
       {/* <VibrantFeatures /> */}
