@@ -36,13 +36,13 @@ export default function SidebarContent({
       section: "products",
       description: "Juices & Teas",
     },
-    {
-      name: "Categories",
-      href: "/admin/categories",
-      icon: "📋",
-      section: "products",
-      description: "Product Categories",
-    },
+    // {
+    //   name: "Categories",
+    //   href: "/admin/categories",
+    //   icon: "📋",
+    //   section: "products",
+    //   description: "Product Categories",
+    // },
     {
       name: "Inventory",
       href: "/admin/inventory",
@@ -64,13 +64,13 @@ export default function SidebarContent({
       section: "sales",
       description: "Delivery Tracking",
     },
-    {
-      name: "Revenue",
-      href: "/admin/revenue",
-      icon: "💰",
-      section: "sales",
-      description: "Financial Reports",
-    },
+    // {
+    //   name: "Revenue",
+    //   href: "/admin/revenue",
+    //   icon: "💰",
+    //   section: "sales",
+    //   description: "Financial Reports",
+    // },
     {
       name: "Customers",
       href: "/admin/customers",
@@ -92,13 +92,13 @@ export default function SidebarContent({
       section: "customers",
       description: "Customer Feedback",
     },
-    {
-      name: "Analytics",
-      href: "/admin/analytics",
-      icon: "📈",
-      section: "growth",
-      description: "Performance Metrics",
-    },
+    // {
+    //   name: "Analytics",
+    //   href: "/admin/analytics",
+    //   icon: "📈",
+    //   section: "growth",
+    //   description: "Performance Metrics",
+    // },
     {
       name: "Promotions",
       href: "/admin/promotions",
@@ -106,13 +106,13 @@ export default function SidebarContent({
       section: "growth",
       description: "Discounts & Offers",
     },
-    {
-      name: "Reports",
-      href: "/admin/reports",
-      icon: "📄",
-      section: "growth",
-      description: "Business Reports",
-    },
+    // {
+    //   name: "Reports",
+    //   href: "/admin/reports",
+    //   icon: "📄",
+    //   section: "growth",
+    //   description: "Business Reports",
+    // },
   ];
 
   const menuSections = {

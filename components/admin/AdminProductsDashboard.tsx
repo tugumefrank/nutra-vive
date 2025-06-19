@@ -1143,8 +1143,8 @@ const AdminProductsDashboard: React.FC = () => {
 
       const response = await getProducts(filters);
 
-      setProducts(response.products);
-      setFilteredProducts(response.products);
+      setProducts(response.products as IProduct[]);
+      setFilteredProducts(response.products as IProduct[]);
       setTotalProducts(response.total);
       setTotalPages(response.totalPages);
       setCurrentPage(response.currentPage);
