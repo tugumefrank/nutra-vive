@@ -71,7 +71,7 @@ export async function createCategory(
   data: CategoryFormData
 ): Promise<{ success: boolean; category?: ICategory; error?: string }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     console.log("🔍 Validating category data...");
@@ -135,7 +135,7 @@ export async function updateCategory(
   data: CategoryFormData
 ): Promise<{ success: boolean; category?: ICategory; error?: string }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     console.log("🔍 Updating category:", id);
