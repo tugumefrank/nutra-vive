@@ -359,7 +359,7 @@ export function Header() {
                 <span className="text-2xl font-heading font-bold gradient-text">
                   Nutra-Vive
                 </span>
-                <p className="text-xs text-muted-foreground font-medium">
+                <p className="text-xs text-black font-medium">
                   Where Wellness Meets Flavor
                 </p>
               </div>
@@ -371,7 +371,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300 rounded-lg hover:bg-muted/50 group"
+                  className="relative px-4 py-2 text-md font-bold text-black hover:text-primary transition-all duration-300 rounded-lg hover:bg-muted/50 group"
                 >
                   {item.label}
                   <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-brand-500 to-wellness-500 transition-all duration-300 group-hover:w-full"></span>
