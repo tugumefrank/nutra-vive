@@ -20,7 +20,7 @@ export default function HomePage() {
       <WellnessStory />
       {/* <StatsSection /> */}
 
-      <CategoryShowcase />
+      {/* <CategoryShowcase /> */}
       <BenefitsSection />
 
       <Testimonials />

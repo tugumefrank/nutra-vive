@@ -7,61 +7,61 @@ import { Heart, Brain, Shield, Zap, Leaf, Sparkles } from "lucide-react";
 const benefits = [
   {
     icon: Heart,
-    title: "Heart Health",
+    title: "Heart Support",
     description:
-      "Rich in antioxidants and nutrients that support cardiovascular wellness and healthy blood flow.",
+      "Antioxidant-rich ingredients like hibiscus and pomegranate help maintain healthy blood pressure and support cardiovascular function.",
     color: "from-red-400 via-pink-500 to-rose-500",
     features: [
-      "Lower Blood Pressure",
-      "Improved Circulation",
-      "Cholesterol Support",
+      "Blood Pressure Support",
+      "Circulation Boost",
+      "Cholesterol Balance",
     ],
     emoji: "❤️",
   },
   {
     icon: Brain,
-    title: "Mental Clarity",
+    title: "Liver Cleanse",
     description:
-      "Natural compounds that enhance cognitive function, focus, and mental energy throughout your day.",
-    color: "from-purple-400 via-indigo-500 to-blue-500",
-    features: ["Enhanced Focus", "Memory Support", "Stress Relief"],
-    emoji: "🧠",
+      "Dandelion root and green tea compounds assist your liver's natural detoxification processes and support optimal liver function.",
+    color: "from-green-400 via-emerald-500 to-teal-500",
+    features: ["Natural Detox", "Liver Function", "Toxin Elimination"],
+    emoji: "🫁",
   },
   {
     icon: Shield,
-    title: "Immune Boost",
+    title: "Kidney Health",
     description:
-      "Powerful vitamins and minerals that strengthen your natural defenses against illness.",
-    color: "from-green-400 via-emerald-500 to-teal-500",
-    features: ["Vitamin C Rich", "Natural Defense", "Recovery Support"],
-    emoji: "🛡️",
+      "Hydrating ingredients and natural diuretics like nettle help support kidney function and maintain healthy fluid balance.",
+    color: "from-blue-400 via-cyan-500 to-teal-500",
+    features: ["Fluid Balance", "Natural Cleansing", "Kidney Function"],
+    emoji: "🔵",
   },
   {
     icon: Zap,
-    title: "Natural Energy",
+    title: "Brain Power",
     description:
-      "Sustained energy from whole food sources without crashes or artificial stimulants.",
-    color: "from-yellow-400 via-orange-500 to-red-500",
-    features: ["No Crash", "Sustained Power", "Natural Caffeine"],
-    emoji: "⚡",
+      "Antioxidants from berries and green tea support cognitive function, memory, and mental clarity throughout your day.",
+    color: "from-purple-400 via-indigo-500 to-blue-500",
+    features: ["Memory Support", "Mental Clarity", "Focus Enhancement"],
+    emoji: "🧠",
   },
   {
     icon: Leaf,
-    title: "Detox Support",
+    title: "Lung Health",
     description:
-      "Gentle cleansing ingredients that help your body eliminate toxins naturally.",
-    color: "from-teal-400 via-green-500 to-lime-500",
-    features: ["Liver Support", "Natural Cleanse", "Gentle Detox"],
-    emoji: "🌿",
+      "Anti-inflammatory compounds in ginger and turmeric help support respiratory health and maintain clear breathing.",
+    color: "from-cyan-400 via-blue-500 to-indigo-500",
+    features: ["Respiratory Support", "Anti-Inflammatory", "Breathing Ease"],
+    emoji: "🫁",
   },
   {
     icon: Sparkles,
-    title: "Radiant Skin",
+    title: "Digestive Wellness",
     description:
-      "Beauty from within with nutrients that promote healthy, glowing skin and hair.",
-    color: "from-pink-400 via-rose-500 to-purple-500",
-    features: ["Collagen Support", "Hydration", "Anti-Aging"],
-    emoji: "✨",
+      "Digestive-supporting herbs like ginger and chamomile promote healthy gut function and comfortable digestion.",
+    color: "from-yellow-400 via-orange-500 to-amber-500",
+    features: ["Gut Health", "Digestive Comfort", "Nutrient Absorption"],
+    emoji: "🌿",
   },
 ];
 
@@ -222,21 +222,21 @@ export function BenefitsSection() {
         >
           <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-400 to-teal-400 text-white px-6 py-3 rounded-full mb-8 shadow-xl">
             <Sparkles className="w-5 h-5" />
-            <span className="font-bold">Health Benefits</span>
+            <span className="font-bold">Vital Organ Support</span>
           </div>
 
           <h2 className="text-4xl lg:text-6xl font-heading font-bold mb-6 text-gray-800">
-            Transform Your{" "}
+            Nourish Your{" "}
             <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
-              Wellness
+              Body's
             </span>{" "}
-            Journey
+            Essential Systems
           </h2>
 
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Experience the transformative power of nature's finest ingredients,
-            carefully selected to support your health goals and enhance your
-            wellbeing with every sip.
+            Our organic beverages are formulated with specific nutrients and
+            herbs that support your body's vital organs, helping them function
+            optimally for complete wellness.
           </p>
         </motion.div>
 
@@ -248,6 +248,7 @@ export function BenefitsSection() {
         </div>
 
         {/* Bottom CTA */}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -256,26 +257,21 @@ export function BenefitsSection() {
         >
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
             <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              Ready to Experience These Benefits?
+              Ready to Transform Your Health Journey?
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Join thousands of customers who have transformed their health with
-              our premium organic beverages.
+              Want to improve your health with a personalized approach? Our
+              expert consultations will help you discover the perfect organic
+              blends tailored to your unique wellness goals.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                onClick={() => (window.location.href = "/consultation")}
               >
-                Shop Now & Save 15%
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white border-2 border-gray-300 text-gray-700 font-bold px-8 py-4 rounded-2xl hover:border-green-400 transition-all duration-300"
-              >
-                Learn More
+                Get Your Personal Health Consultation
               </motion.button>
             </div>
           </div>
