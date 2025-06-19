@@ -1,7 +1,7 @@
 // Export all stores from a single file for easier imports
 export { default as useCartStore, useCartSummary } from "./cartStore";
 export { default as useFavoritesStore } from "./favoritesStore";
-export { default as useNotificationStore } from "./notificationStore";
+
 export { default as useThemeStore } from "./themeStore";
 export { default as useSearchStore } from "./searchStore";
 export { default as useUIStore } from "./uiStore";
