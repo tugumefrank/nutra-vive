@@ -129,7 +129,11 @@ export const validateProductForm = (
     errors.push("Category is required");
   }
 
-  if (!formData.price || formData.price <= 0) {
+  const price =
+    typeof formData.price === "string"
+      ? parseFloat(formData.price)
+      : formData.price;
+  if (!price || price <= 0 || isNaN(price)) {
     errors.push("Price must be greater than 0");
   }
 

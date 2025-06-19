@@ -28,6 +28,7 @@ interface UIStore {
   setQuickViewProduct: (productId: string | null) => void;
   setSidebarOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
+  openCart: () => void;
 }
 
 const useUIStore = create<UIStore>((set, get) => ({
@@ -49,7 +50,12 @@ const useUIStore = create<UIStore>((set, get) => ({
       modals: { ...state.modals, [modalId]: true },
     }));
   },
-
+  openCart: () => {
+    // Implement the logic to open the cart UI/modal here
+    set({
+      /* update state to open cart */
+    });
+  },
   closeModal: (modalId: string) => {
     set((state) => ({
       modals: { ...state.modals, [modalId]: false },
