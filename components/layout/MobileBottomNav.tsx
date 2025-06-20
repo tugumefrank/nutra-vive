@@ -166,10 +166,10 @@ export function MobileBottomNav() {
       requiresAuth: true,
     },
     {
-      href: isAuthenticated ? "/profile" : "/sign-in",
-      label: isAuthenticated ? "Profile" : "Sign In",
+      href: "/consultation",
+      label: "Book",
       icon: User,
-      isActive: pathname.startsWith("/profile"),
+      isActive: pathname.startsWith("/consultation"),
     },
   ];
 

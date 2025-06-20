@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { FavoritesProvider } from "@/providers/FavoritesProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -87,10 +88,11 @@ export default function RootLayout({
           >
             {" "}
             <QueryProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <div className="flex-1">{children}</div>
-              </div>
-
+              <FavoritesProvider>
+                <div className="relative flex min-h-screen flex-col">
+                  <div className="flex-1">{children}</div>
+                </div>
+              </FavoritesProvider>
               <Toaster />
             </QueryProvider>
             <CartDrawer /> {/* Add this if not already present */}
