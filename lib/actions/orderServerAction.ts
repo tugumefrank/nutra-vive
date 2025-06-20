@@ -286,20 +286,20 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
 
     // Send confirmation email
     try {
-      await sendEmail({
-        to: order.email,
-        subject: `Order Confirmed - ${order.orderNumber}`,
-        template: "order-confirmation",
-        data: {
-          orderNumber: order.orderNumber,
-          customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
-          items: order.items,
-          subtotal: order.subtotal,
-          shipping: order.shippingAmount,
-          tax: order.taxAmount,
-          total: order.totalAmount,
-        },
-      });
+      //   await sendEmail({
+      //     to: order.email,
+      //     subject: `Order Confirmed - ${order.orderNumber}`,
+      //     template: "order-confirmation",
+      //     data: {
+      //       orderNumber: order.orderNumber,
+      //       customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+      //       items: order.items,
+      //       subtotal: order.subtotal,
+      //       shipping: order.shippingAmount,
+      //       tax: order.taxAmount,
+      //       total: order.totalAmount,
+      //     },
+      //   });
     } catch (emailError) {
       console.error("Email sending failed:", emailError);
       // Don't fail the order if email fails
