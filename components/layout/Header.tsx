@@ -16,25 +16,20 @@
 // } from "lucide-react";
 // import { Button } from "@/components/ui/button";
 // import { Badge } from "@/components/ui/badge";
-// import { useOptimisticCart } from "@/hooks/useCart"; // Updated import
-// import {
-//   useCartStore,
-//   useFavoritesStore,
-//   useThemeStore,
-//   useUIStore,
-// } from "@/store";
+// import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+// import { useFavoritesStore, useThemeStore, useUIStore } from "@/store";
 // import { cn } from "@/lib/utils";
 
 // export function Header() {
 //   const { user } = useUser();
 //   const [isScrolled, setIsScrolled] = useState(false);
 
-//   // Use optimistic cart for instant updates (no loading states needed)
-//   const { stats: cartStats } = useOptimisticCart();
+//   // Use unified cart hook for consistent state across all components
+//   const { stats, openCart, isAuthenticated } = useUnifiedCart();
+
 //   const favoriteCount = useFavoritesStore((state) => state.items.length);
 //   const { theme, toggleTheme } = useThemeStore();
 //   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
-//   const openCart = useCartStore((state) => state.openCart);
 
 //   useEffect(() => {
 //     const handleScroll = () => {
@@ -105,14 +100,20 @@
 //               <Button
 //                 variant="ghost"
 //                 size="icon"
-//                 asChild={user ? true : false}
+//                 asChild={isAuthenticated ? true : false}
 //                 onClick={
-//                   user ? undefined : () => (window.location.href = "/sign-in")
+//                   isAuthenticated
+//                     ? undefined
+//                     : () => (window.location.href = "/sign-in")
 //                 }
 //                 className="h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300"
-//                 title={user ? "View favorites" : "Sign in to view favorites"}
+//                 title={
+//                   isAuthenticated
+//                     ? "View favorites"
+//                     : "Sign in to view favorites"
+//                 }
 //               >
-//                 {user ? (
+//                 {isAuthenticated ? (
 //                   <Link href="/favorites" className="relative">
 //                     <Heart className="w-5 h-5" />
 //                     {favoriteCount > 0 && (
@@ -133,24 +134,27 @@
 //                 )}
 //               </Button>
 
-//               {/* Cart - Optimistic Updates (Instant Response) */}
+//               {/* Cart - Unified with instant updates across all components */}
 //               <Button
 //                 variant="ghost"
 //                 size="icon"
 //                 onClick={
-//                   user ? openCart : () => (window.location.href = "/sign-in")
+//                   isAuthenticated
+//                     ? openCart
+//                     : () => (window.location.href = "/sign-in")
 //                 }
 //                 className="relative h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300 hover:scale-105"
-//                 title={user ? "View cart" : "Sign in to view cart"}
+//                 title={isAuthenticated ? "View cart" : "Sign in to view cart"}
 //               >
 //                 <ShoppingBag className="w-5 h-5" />
 
-//                 {/* Instant cart count updates with smooth animation */}
-//                 {user && cartStats.totalItems > 0 && (
+//                 {/* Cart count with smooth animation - updates instantly across all components */}
+//                 {isAuthenticated && stats.totalItems > 0 && (
 //                   <motion.div
 //                     initial={{ scale: 0 }}
 //                     animate={{ scale: 1 }}
 //                     exit={{ scale: 0 }}
+//                     key={stats.totalItems} // Key ensures re-animation on count change
 //                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
 //                     className="absolute -top-1 -right-1"
 //                   >
@@ -158,13 +162,13 @@
 //                       variant="destructive"
 //                       className="w-5 h-5 flex items-center justify-center text-xs p-0 font-bold"
 //                     >
-//                       {cartStats.totalItems}
+//                       {stats.totalItems}
 //                     </Badge>
 //                   </motion.div>
 //                 )}
 
 //                 {/* Small indicator for guests */}
-//                 {!user && (
+//                 {!isAuthenticated && (
 //                   <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-60"></div>
 //                 )}
 //               </Button>
@@ -267,7 +271,7 @@
 //                   ))}
 
 //                   {/* Mobile Cart & Favorites Section for authenticated users */}
-//                   {user && (
+//                   {isAuthenticated && (
 //                     <motion.div
 //                       initial={{ opacity: 0, y: 20 }}
 //                       animate={{ opacity: 1, y: 0 }}
@@ -285,9 +289,9 @@
 //                         >
 //                           <ShoppingBag className="w-4 h-4" />
 //                           Cart
-//                           {cartStats.totalItems > 0 && (
+//                           {stats.totalItems > 0 && (
 //                             <Badge variant="secondary" className="ml-1">
-//                               {cartStats.totalItems}
+//                               {stats.totalItems}
 //                             </Badge>
 //                           )}
 //                         </Button>
@@ -311,7 +315,7 @@
 //                     </motion.div>
 //                   )}
 
-//                   {!user && (
+//                   {!isAuthenticated && (
 //                     <motion.div
 //                       initial={{ opacity: 0, y: 20 }}
 //                       animate={{ opacity: 1, y: 0 }}
@@ -363,7 +367,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+import { useCartSelectors } from "@/hooks/useCartSelectors"; // Updated import
 import { useFavoritesStore, useThemeStore, useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
 
@@ -371,8 +375,9 @@ export function Header() {
   const { user } = useUser();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Use unified cart hook for consistent state across all components
-  const { stats, openCart, isAuthenticated } = useUnifiedCart();
+  // Use optimized selectors for better reactivity
+  const { stats, openCart } = useCartSelectors();
+  const isAuthenticated = !!user;
 
   const favoriteCount = useFavoritesStore((state) => state.items.length);
   const { theme, toggleTheme } = useThemeStore();

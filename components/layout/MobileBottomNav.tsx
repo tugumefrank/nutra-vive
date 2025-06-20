@@ -114,18 +114,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Home, Store, Heart, ShoppingBag, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+import { useCartSelectors } from "@/hooks/useCartSelectors"; // Updated import
 import { useFavoritesStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const { user } = useUser();
 
-  // Use unified cart for consistent state
-  const { stats, openCart, isAuthenticated } = useUnifiedCart();
+  // Use optimized selectors for better reactivity
+  const { stats, openCart } = useCartSelectors();
+  const isAuthenticated = !!user;
   const favoriteCount = useFavoritesStore((state) => state.items.length);
 
   const navItems = [
