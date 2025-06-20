@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Search, Loader2 } from "lucide-react";
-import { useCartStore, useFavoritesStore } from "../../store";
+
 import { getCategories, getProducts } from "@/lib/actions/productserverActions";
 import { Product, ProductCard } from "./ProductCard";
 
