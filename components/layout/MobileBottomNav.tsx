@@ -129,7 +129,9 @@ export function MobileBottomNav() {
   // Use optimized selectors for better reactivity
   const { stats, openCart } = useCartSelectors();
   const isAuthenticated = !!user;
-  const favoriteCount = useFavoritesStore((state) => state.items.length);
+  const favoriteCount = useFavoritesStore(
+    (state: { items: string | any[] }) => state.items.length
+  );
 
   const navItems = [
     {

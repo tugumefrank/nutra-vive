@@ -3,13 +3,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { X, Plus, Minus, Star, Heart, ShoppingBag } from "lucide-react";
+import { X, Plus, Minus, Star, Heart, ShoppingBag, LogIn } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useCartStore, useFavoritesStore } from "@/store";
+import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+import { useUnifiedFavorites } from "@/hooks/useUnifiedFavorites"; // Updated import
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ProductQuickViewProps {
   product: any;
@@ -22,24 +26,57 @@ export function ProductQuickView({
   isOpen,
   onClose,
 }: ProductQuickViewProps) {
+  const { user } = useUser();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
-  const { addItem } = useCartStore();
-  const { toggleItem, isInFavorites } = useFavoritesStore();
+  // Use unified systems for synchronized state
+  const { addToCart, isAuthenticated: isCartAuthenticated } = useUnifiedCart();
+  const {
+    toggleFavorite,
+    isFavorite,
+    isAuthenticated: isFavAuthenticated,
+  } = useUnifiedFavorites();
 
-  const isFavorite = isInFavorites(product?.id);
+  const isAuthenticated = !!user;
+  const isProductFavorite = isAuthenticated ? isFavorite(product?._id) : false;
 
-  const handleAddToCart = () => {
-    if (product) {
-      addItem(product, quantity);
+  const handleSignInRedirect = () => {
+    toast.info("Please sign in to continue");
+    router.push("/sign-in");
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+
+    if (!isAuthenticated) {
+      handleSignInRedirect();
+      return;
+    }
+
+    try {
+      // This will update ALL components simultaneously via the unified store
+      await addToCart(product, quantity);
       onClose();
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
     }
   };
 
-  const handleToggleFavorite = () => {
-    if (product) {
-      toggleItem(product.id);
+  const handleToggleFavorite = async () => {
+    if (!product) return;
+
+    if (!isAuthenticated) {
+      handleSignInRedirect();
+      return;
+    }
+
+    try {
+      // This will update ALL components simultaneously via the unified store
+      await toggleFavorite(product._id, product.name);
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
     }
   };
 
@@ -101,18 +138,23 @@ export function ProductQuickView({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <Badge variant="secondary" className="text-xs">
-                  {product.category}
+                  {product.category?.name || product.category}
                 </Badge>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleToggleFavorite}
                   className={
-                    isFavorite ? "text-red-500" : "text-muted-foreground"
+                    isProductFavorite ? "text-red-500" : "text-muted-foreground"
+                  }
+                  title={
+                    isAuthenticated
+                      ? "Toggle favorite"
+                      : "Sign in to add to favorites"
                   }
                 >
                   <Heart
-                    className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`}
+                    className={`w-5 h-5 ${isProductFavorite ? "fill-current" : ""}`}
                   />
                 </Button>
               </div>
@@ -126,7 +168,8 @@ export function ProductQuickView({
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(product.rating || 0)
+                        i <
+                        Math.floor(product.averageRating || product.rating || 0)
                           ? "fill-yellow-400 text-yellow-400"
                           : "text-gray-300"
                       }`}
@@ -153,11 +196,15 @@ export function ProductQuickView({
 
             {/* Description */}
             <div className="mb-6">
-              <p className="text-muted-foreground">{product.description}</p>
+              <p className="text-muted-foreground">
+                {product.description ||
+                  product.shortDescription ||
+                  "Premium organic wellness product"}
+              </p>
             </div>
 
             {/* Features */}
-            {product.features && (
+            {product.features && product.features.length > 0 && (
               <div className="mb-6">
                 <h4 className="font-semibold mb-3">Key Benefits</h4>
                 <div className="flex flex-wrap gap-2">
@@ -198,10 +245,27 @@ export function ProductQuickView({
                 </div>
               </div>
 
+              {/* Add to Cart Button */}
               <Button size="lg" className="w-full" onClick={handleAddToCart}>
-                <ShoppingBag className="w-5 h-5 mr-2" />
-                Add to Cart - {formatCurrency(product.price * quantity)}
+                {isAuthenticated ? (
+                  <>
+                    <ShoppingBag className="w-5 h-5 mr-2" />
+                    Add to Cart - {formatCurrency(product.price * quantity)}
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign In to Purchase
+                  </>
+                )}
               </Button>
+
+              {/* Sign in hint for guests */}
+              {!isAuthenticated && (
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Create an account to save items and checkout
+                </p>
+              )}
             </div>
           </div>
         </motion.div>

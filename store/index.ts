@@ -1,6 +1,6 @@
 // Export all stores from a single file for easier imports
 
-export { default as useFavoritesStore } from "./favoritesStore";
+export { useFavoritesStore } from "./favoritesStore";
 
 export { default as useThemeStore } from "./themeStore";
 export { default as useSearchStore } from "./searchStore";
@@ -8,7 +8,7 @@ export { default as useUIStore } from "./uiStore";
 
 // Combined store hooks for common use cases
 
-import useFavoritesStore from "./favoritesStore";
+import { useFavoritesStore } from "./favoritesStore";
 import useUserStore from "./userStore";
 
 // // Hook to get cart and favorites count for badge display
