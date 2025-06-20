@@ -88,16 +88,7 @@ export default function RootLayout({
               <div className="relative flex min-h-screen flex-col">
                 <div className="flex-1">{children}</div>
               </div>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  style: {
-                    background: "hsl(var(--background))",
-                    color: "hsl(var(--foreground))",
-                    border: "1px solid hsl(var(--border))",
-                  },
-                }}
-              />
+              <Toaster />
             </QueryProvider>
           </ThemeProvider>
         </body>
