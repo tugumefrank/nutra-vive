@@ -6,12 +6,8 @@
 // import Link from "next/link";
 // import { useRouter } from "next/navigation";
 // import { loadStripe } from "@stripe/stripe-js";
-// import {
-//   Elements,
-//   PaymentElement,
-//   useStripe,
-//   useElements,
-// } from "@stripe/react-stripe-js";
+// import { Elements, PaymentElement } from "@stripe/react-stripe-js";
+
 // import {
 //   ArrowLeft,
 //   Shield,
@@ -47,10 +43,13 @@
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Badge } from "@/components/ui/badge";
 // import { Separator } from "@/components/ui/separator";
-
-// import { getCart } from "@/lib/actions/cartServerActions";
-// import { createCheckoutSession } from "@/lib/actions/orderServerAction";
 // import { toast } from "sonner";
+// import { getCart } from "@/lib/actions/cartServerActions";
+// import {
+//   createCheckoutSession,
+//   confirmPayment,
+// } from "@/lib/actions/orderServerAction";
+// import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
 
 // const stripePromise = loadStripe(
 //   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -75,68 +74,68 @@
 // }
 
 // // Payment form component
-// function PaymentForm({
-//   clientSecret,
-//   onSuccess,
-//   onError,
-//   processing,
-//   setProcessing,
-// }: {
-//   clientSecret: string;
-//   onSuccess: () => void;
-//   onError: (error: string) => void;
-//   processing: boolean;
-//   setProcessing: (processing: boolean) => void;
-// }) {
-//   const stripe = useStripe();
-//   const elements = useElements();
+// // function PaymentForm({
+// //   clientSecret,
+// //   onSuccess,
+// //   onError,
+// //   processing,
+// //   setProcessing,
+// // }: {
+// //   clientSecret: string;
+// //   onSuccess: () => void;
+// //   onError: (error: string) => void;
+// //   processing: boolean;
+// //   setProcessing: (processing: boolean) => void;
+// // }) {
+// //   const stripe = useStripe();
+// //   const elements = useElements();
 
-//   const handleSubmit = async (event: React.FormEvent) => {
-//     event.preventDefault();
+// //   const handleSubmit = async (event: React.FormEvent) => {
+// //     event.preventDefault();
 
-//     if (!stripe || !elements) {
-//       return;
-//     }
+// //     if (!stripe || !elements) {
+// //       return;
+// //     }
 
-//     setProcessing(true);
+// //     setProcessing(true);
 
-//     const result = await stripe.confirmPayment({
-//       elements,
-//       redirect: "if_required",
-//     });
+// //     const result = await stripe.confirmPayment({
+// //       elements,
+// //       redirect: "if_required",
+// //     });
 
-//     if (result.error) {
-//       onError(result.error.message || "Payment failed");
-//     } else {
-//       onSuccess();
-//     }
+// //     if (result.error) {
+// //       onError(result.error.message || "Payment failed");
+// //     } else {
+// //       onSuccess();
+// //     }
 
-//     setProcessing(false);
-//   };
+// //     setProcessing(false);
+// //   };
 
-//   return (
-//     <form onSubmit={handleSubmit} className="space-y-6">
-//       <div className="p-4 border rounded-xl bg-gray-50">
-//         <PaymentElement />
-//       </div>
+// //   return (
+// //     <form onSubmit={handleSubmit} className="space-y-6">
+// //       <div className="p-4 border rounded-xl bg-gray-50">
+// //         <PaymentElement />
+// //       </div>
 
-//       <Button
-//         type="submit"
-//         disabled={!stripe || processing}
-//         className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-6 text-lg font-semibold rounded-2xl"
-//       >
-//         {processing ? (
-//           <>
-//             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-//             Processing Payment...
-//           </>
-//         ) : (
-//           `Complete Payment`
-//         )}
-//       </Button>
-//     </form>
-//   );
-// }
+// //       <Button
+// //         type="submit"
+// //         disabled={!stripe || processing}
+// //         className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-6 text-lg font-semibold rounded-2xl"
+// //       >
+// //         {processing ? (
+// //           <>
+// //             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+// //             Processing Payment...
+// //           </>
+// //         ) : (
+// //           `Complete Payment`
+// //         )}
+// //       </Button>
+// //     </form>
+// //   );
+// // }
 
 // export default function CheckoutPage() {
 //   const [currentStep, setCurrentStep] = useState(1);
@@ -213,7 +212,7 @@
 //     );
 
 //     if (missingFields.length > 0) {
-//       toast.error("Missing Information: Please fill in all required fields");
+//       toast.error("Please fill in all required fields");
 //       return;
 //     }
 
@@ -269,7 +268,7 @@
 //       setOrderComplete(true);
 //       setCurrentStep(3);
 
-//       toast.success("Payment Successful! Your order has been confirmed");
+//       toast.success("Payment successful! Your order has been confirmed");
 
 //       // Clear cart and redirect after a delay
 //       setTimeout(() => {
@@ -284,12 +283,7 @@
 //   };
 
 //   const handlePaymentError = (error: string) => {
-//     toast.error(
-//       <>
-//         <b>Payment Failed</b>
-//         <div>{error}</div>
-//       </>
-//     );
+//     toast.error(`Payment Failed: ${error}`);
 //   };
 
 //   // Calculate totals
@@ -370,46 +364,6 @@
 //               Secure
 //             </div>
 //           </div>
-//         </div>
-//       </div>
-
-//       {/* Progress Indicator */}
-//       <div className="container mx-auto px-4 py-4 md:py-6">
-//         <div className="flex items-center justify-center space-x-4 md:space-x-8 mb-6 md:mb-8">
-//           {[
-//             { step: 1, label: "Shipping", icon: Truck },
-//             { step: 2, label: "Payment", icon: CreditCard },
-//             { step: 3, label: "Complete", icon: Check },
-//           ].map(({ step, label, icon: Icon }) => (
-//             <div key={step} className="flex items-center">
-//               <div
-//                 className={`
-//                 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center border-2 transition-all
-//                 ${
-//                   currentStep >= step
-//                     ? "bg-green-600 border-green-600 text-white"
-//                     : "border-gray-300 text-gray-400"
-//                 }
-//               `}
-//               >
-//                 <Icon className="w-4 h-4 md:w-5 md:h-5" />
-//               </div>
-//               <span
-//                 className={`ml-1 md:ml-2 text-xs md:text-sm font-medium ${
-//                   currentStep >= step ? "text-green-600" : "text-gray-400"
-//                 }`}
-//               >
-//                 {label}
-//               </span>
-//               {step < 3 && (
-//                 <div
-//                   className={`w-4 md:w-8 h-0.5 ml-2 md:ml-4 ${
-//                     currentStep > step ? "bg-green-600" : "bg-gray-300"
-//                   }`}
-//                 />
-//               )}
-//             </div>
-//           ))}
 //         </div>
 //       </div>
 
@@ -726,28 +680,7 @@
 //                       Payment Information
 //                     </CardTitle>
 //                   </CardHeader>
-//                   <CardContent>
-//                     <Elements
-//                       stripe={stripePromise}
-//                       options={{
-//                         clientSecret,
-//                         appearance: {
-//                           theme: "stripe",
-//                           variables: {
-//                             colorPrimary: "#16a34a",
-//                           },
-//                         },
-//                       }}
-//                     >
-//                       <PaymentForm
-//                         clientSecret={clientSecret}
-//                         onSuccess={handlePaymentSuccess}
-//                         onError={handlePaymentError}
-//                         processing={processing}
-//                         setProcessing={setProcessing}
-//                       />
-//                     </Elements>
-//                   </CardContent>
+//                   <CardContent></CardContent>
 //                 </Card>
 
 //                 <div className="flex justify-between">
@@ -834,7 +767,22 @@
 //                   <span className="text-green-600">${total.toFixed(2)}</span>
 //                 </div>
 //               </div>
-
+//               {clientSecret ? (
+//                 <Elements
+//                   stripe={stripePromise}
+//                   options={{
+//                     clientSecret: clientSecret, // ← Stripe Elements needs this
+//                     appearance: { theme: "stripe" },
+//                   }}
+//                 >
+//                   <StripeShopCheckout
+//                     amount={total}
+//                     onPaymentSuccess={handlePaymentSuccess}
+//                   />
+//                 </Elements>
+//               ) : (
+//                 <div>Loading payment...</div>
+//               )}
 //               {/* Security Badges */}
 //               <div className="text-center space-y-2">
 //                 <div className="flex items-center justify-center text-xs text-gray-500">
@@ -864,7 +812,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement } from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 
 import {
   ArrowLeft,
@@ -873,18 +821,13 @@ import {
   Truck,
   Store,
   MapPin,
-  Phone,
-  Mail,
-  User,
-  Home,
-  Building,
   Check,
   Lock,
   Zap,
   Gift,
   Loader2,
   AlertCircle,
-  Package,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -903,10 +846,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getCart } from "@/lib/actions/cartServerActions";
-import {
-  createCheckoutSession,
-  confirmPayment,
-} from "@/lib/actions/orderServerAction";
+import { createPaymentIntent } from "@/lib/actions/paymentServerActions"; // Your payment intent action
 import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
 
 const stripePromise = loadStripe(
@@ -931,78 +871,13 @@ interface CartData {
   items: CartItem[];
 }
 
-// Payment form component
-// function PaymentForm({
-//   clientSecret,
-//   onSuccess,
-//   onError,
-//   processing,
-//   setProcessing,
-// }: {
-//   clientSecret: string;
-//   onSuccess: () => void;
-//   onError: (error: string) => void;
-//   processing: boolean;
-//   setProcessing: (processing: boolean) => void;
-// }) {
-//   const stripe = useStripe();
-//   const elements = useElements();
-
-//   const handleSubmit = async (event: React.FormEvent) => {
-//     event.preventDefault();
-
-//     if (!stripe || !elements) {
-//       return;
-//     }
-
-//     setProcessing(true);
-
-//     const result = await stripe.confirmPayment({
-//       elements,
-//       redirect: "if_required",
-//     });
-
-//     if (result.error) {
-//       onError(result.error.message || "Payment failed");
-//     } else {
-//       onSuccess();
-//     }
-
-//     setProcessing(false);
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit} className="space-y-6">
-//       <div className="p-4 border rounded-xl bg-gray-50">
-//         <PaymentElement />
-//       </div>
-
-//       <Button
-//         type="submit"
-//         disabled={!stripe || processing}
-//         className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-6 text-lg font-semibold rounded-2xl"
-//       >
-//         {processing ? (
-//           <>
-//             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-//             Processing Payment...
-//           </>
-//         ) : (
-//           `Complete Payment`
-//         )}
-//       </Button>
-//     </form>
-//   );
-// }
-
 export default function CheckoutPage() {
-  const [currentStep, setCurrentStep] = useState(1);
   const [cart, setCart] = useState<CartData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [formValid, setFormValid] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -1023,10 +898,36 @@ export default function CheckoutPage() {
 
   const router = useRouter();
 
+  // Calculate totals
+  const subtotal =
+    cart?.items.reduce((sum, item) => sum + item.quantity * item.price, 0) || 0;
+  const shipping =
+    formData.deliveryMethod === "pickup"
+      ? 0
+      : subtotal >= 25
+        ? 0
+        : formData.deliveryMethod === "express"
+          ? 9.99
+          : 5.99;
+  const tax = Math.round((subtotal + shipping) * 0.08 * 100) / 100;
+  const total = subtotal + shipping + tax;
+
   // Load cart data
   useEffect(() => {
     loadCart();
   }, []);
+
+  // Validate form whenever formData changes
+  useEffect(() => {
+    validateForm();
+  }, [formData]);
+
+  // Create payment intent when form is valid and total > 0
+  useEffect(() => {
+    if (formValid && total > 0 && !clientSecret) {
+      initializePayment();
+    }
+  }, [formValid, total]);
 
   const loadCart = async () => {
     try {
@@ -1058,105 +959,60 @@ export default function CheckoutPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const proceedToPayment = async () => {
-    // Validate required fields
+  const validateForm = () => {
     const requiredFields = ["firstName", "lastName", "email"];
     if (formData.deliveryMethod !== "pickup") {
       requiredFields.push("address", "city", "state", "zipCode");
     }
 
-    const missingFields = requiredFields.filter(
-      (field) => !formData[field as keyof typeof formData]
+    const isValid = requiredFields.every(
+      (field) => formData[field as keyof typeof formData]
     );
+    setFormValid(isValid);
+  };
 
-    if (missingFields.length > 0) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
+  const initializePayment = async () => {
     try {
-      setProcessing(true);
-
-      const checkoutData = {
-        shippingAddress: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          address1: formData.address,
-          address2: formData.apartment,
-          city: formData.city,
-          province: formData.state,
-          country: formData.country,
-          zip: formData.zipCode,
-          phone: formData.phone,
-        },
-        email: formData.email,
-        phone: formData.phone,
-        deliveryMethod: formData.deliveryMethod as
-          | "standard"
-          | "express"
-          | "pickup",
-        notes: formData.notes,
-        marketingOptIn: formData.marketingOptIn,
-      };
-
-      const result = await createCheckoutSession(checkoutData);
+      setPaymentLoading(true);
+      const result = await createPaymentIntent(total);
 
       if (result.success && result.clientSecret) {
         setClientSecret(result.clientSecret);
-        setOrderId(result.orderId!);
-        setCurrentStep(2);
       } else {
-        toast.error(result.error || "Failed to create checkout session");
+        toast.error(result.error || "Failed to initialize payment");
       }
     } catch (error) {
-      console.error("Error creating checkout session:", error);
-      toast.error("Failed to proceed to payment");
+      console.error("Error initializing payment:", error);
+      toast.error("Failed to initialize payment");
     } finally {
-      setProcessing(false);
+      setPaymentLoading(false);
     }
   };
 
   const handlePaymentSuccess = async () => {
     try {
-      if (!orderId) {
-        throw new Error("No order ID found");
-      }
-
-      // Show success immediately
       setOrderComplete(true);
-      setCurrentStep(3);
 
-      toast.success("Payment successful! Your order has been confirmed");
+      toast.success(
+        "Order placed successfully! You will receive a confirmation email shortly."
+      );
 
-      // Clear cart and redirect after a delay
+      // Simulate order creation and redirect
       setTimeout(() => {
-        router.push(`/orders/${orderId}`);
+        router.push("/orders");
       }, 3000);
     } catch (error) {
       console.error("Error handling payment success:", error);
       toast.error(
-        "Payment processed but there was an issue. Please contact support."
+        "Payment processed but there was an issue creating your order. Please contact support."
       );
     }
   };
 
   const handlePaymentError = (error: string) => {
-    toast.error(`Payment Failed: ${error}`);
+    console.error("Payment error:", error);
+    // Error handling is done in the StripeShopCheckout component
   };
-
-  // Calculate totals
-  const subtotal =
-    cart?.items.reduce((sum, item) => sum + item.quantity * item.price, 0) || 0;
-  const shipping =
-    formData.deliveryMethod === "pickup"
-      ? 0
-      : subtotal >= 25
-        ? 0
-        : formData.deliveryMethod === "express"
-          ? 9.99
-          : 5.99;
-  const tax = Math.round((subtotal + shipping) * 0.08 * 100) / 100;
-  const total = subtotal + shipping + tax;
 
   if (loading) {
     return (
@@ -1227,334 +1083,285 @@ export default function CheckoutPage() {
 
       <div className="container mx-auto px-4 pb-8">
         <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
-          {/* Main Content */}
+          {/* Main Content - Shipping Information */}
           <div className="lg:col-span-2">
-            {currentStep === 1 && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-4 md:space-y-6"
-              >
-                {/* Contact Information */}
-                <Card className="glass border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-lg md:text-xl">
-                      <Mail className="w-5 h-5 mr-2 text-blue-600" />
-                      Contact Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name *</Label>
-                        <Input
-                          id="firstName"
-                          value={formData.firstName}
-                          onChange={(e) =>
-                            handleInputChange("firstName", e.target.value)
-                          }
-                          className="bg-white/60 border-white/40"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
-                        <Input
-                          id="lastName"
-                          value={formData.lastName}
-                          onChange={(e) =>
-                            handleInputChange("lastName", e.target.value)
-                          }
-                          className="bg-white/60 border-white/40"
-                          required
-                        />
-                      </div>
-                    </div>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-4 md:space-y-6"
+            >
+              {/* Contact Information */}
+              <Card className="glass border-white/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg md:text-xl">
+                    <Mail className="w-5 h-5 mr-2 text-blue-600" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="email">Email Address *</Label>
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
+                        id="firstName"
+                        value={formData.firstName}
                         onChange={(e) =>
-                          handleInputChange("email", e.target.value)
+                          handleInputChange("firstName", e.target.value)
                         }
                         className="bg-white/60 border-white/40"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
+                        id="lastName"
+                        value={formData.lastName}
                         onChange={(e) =>
-                          handleInputChange("phone", e.target.value)
+                          handleInputChange("lastName", e.target.value)
+                        }
+                        className="bg-white/60 border-white/40"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      className="bg-white/60 border-white/40"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
+                      className="bg-white/60 border-white/40"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Delivery Method */}
+              <Card className="glass border-white/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg md:text-xl">
+                    <Truck className="w-5 h-5 mr-2 text-green-600" />
+                    Delivery Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={formData.deliveryMethod}
+                    onValueChange={(value) =>
+                      handleInputChange("deliveryMethod", value)
+                    }
+                  >
+                    <div className="space-y-3">
+                      <Label
+                        htmlFor="standard"
+                        className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="standard" id="standard" />
+                          <div className="flex items-center">
+                            <Truck className="w-5 h-5 mr-2 text-blue-600" />
+                            <div>
+                              <div className="font-medium text-sm md:text-base">
+                                Standard Delivery
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-500">
+                                5-7 business days
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-700"
+                        >
+                          {subtotal >= 25 ? "FREE" : "$5.99"}
+                        </Badge>
+                      </Label>
+
+                      <Label
+                        htmlFor="express"
+                        className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="express" id="express" />
+                          <div className="flex items-center">
+                            <Zap className="w-5 h-5 mr-2 text-amber-600" />
+                            <div>
+                              <div className="font-medium text-sm md:text-base">
+                                Express Delivery
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-500">
+                                2-3 business days
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="outline">$9.99</Badge>
+                      </Label>
+
+                      <Label
+                        htmlFor="pickup"
+                        className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="pickup" id="pickup" />
+                          <div className="flex items-center">
+                            <Store className="w-5 h-5 mr-2 text-green-600" />
+                            <div>
+                              <div className="font-medium text-sm md:text-base">
+                                Store Pickup
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-500">
+                                Available same day
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-700"
+                        >
+                          FREE
+                        </Badge>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+
+              {/* Shipping Address */}
+              {formData.deliveryMethod !== "pickup" && (
+                <Card className="glass border-white/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg md:text-xl">
+                      <MapPin className="w-5 h-5 mr-2 text-red-600" />
+                      Shipping Address
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="address">Street Address *</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) =>
+                          handleInputChange("address", e.target.value)
+                        }
+                        className="bg-white/60 border-white/40"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="apartment">Apartment, Suite, etc.</Label>
+                      <Input
+                        id="apartment"
+                        value={formData.apartment}
+                        onChange={(e) =>
+                          handleInputChange("apartment", e.target.value)
                         }
                         className="bg-white/60 border-white/40"
                       />
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Delivery Method */}
-                <Card className="glass border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-lg md:text-xl">
-                      <Truck className="w-5 h-5 mr-2 text-green-600" />
-                      Delivery Method
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <RadioGroup
-                      value={formData.deliveryMethod}
-                      onValueChange={(value) =>
-                        handleInputChange("deliveryMethod", value)
-                      }
-                    >
-                      <div className="space-y-3">
-                        <Label
-                          htmlFor="standard"
-                          className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <RadioGroupItem value="standard" id="standard" />
-                            <div className="flex items-center">
-                              <Truck className="w-5 h-5 mr-2 text-blue-600" />
-                              <div>
-                                <div className="font-medium text-sm md:text-base">
-                                  Standard Delivery
-                                </div>
-                                <div className="text-xs md:text-sm text-gray-500">
-                                  5-7 business days
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-700"
-                          >
-                            {subtotal >= 25 ? "FREE" : "$5.99"}
-                          </Badge>
-                        </Label>
-
-                        <Label
-                          htmlFor="express"
-                          className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <RadioGroupItem value="express" id="express" />
-                            <div className="flex items-center">
-                              <Zap className="w-5 h-5 mr-2 text-amber-600" />
-                              <div>
-                                <div className="font-medium text-sm md:text-base">
-                                  Express Delivery
-                                </div>
-                                <div className="text-xs md:text-sm text-gray-500">
-                                  2-3 business days
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <Badge variant="outline">$9.99</Badge>
-                        </Label>
-
-                        <Label
-                          htmlFor="pickup"
-                          className="flex items-center justify-between p-3 md:p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <RadioGroupItem value="pickup" id="pickup" />
-                            <div className="flex items-center">
-                              <Store className="w-5 h-5 mr-2 text-green-600" />
-                              <div>
-                                <div className="font-medium text-sm md:text-base">
-                                  Store Pickup
-                                </div>
-                                <div className="text-xs md:text-sm text-gray-500">
-                                  Available same day
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className="bg-green-100 text-green-700"
-                          >
-                            FREE
-                          </Badge>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
-
-                {/* Shipping Address */}
-                {formData.deliveryMethod !== "pickup" && (
-                  <Card className="glass border-white/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-lg md:text-xl">
-                        <MapPin className="w-5 h-5 mr-2 text-red-600" />
-                        Shipping Address
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor="address">Street Address *</Label>
+                        <Label htmlFor="city">City *</Label>
                         <Input
-                          id="address"
-                          value={formData.address}
+                          id="city"
+                          value={formData.city}
                           onChange={(e) =>
-                            handleInputChange("address", e.target.value)
+                            handleInputChange("city", e.target.value)
                           }
                           className="bg-white/60 border-white/40"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="apartment">
-                          Apartment, Suite, etc.
-                        </Label>
+                        <Label htmlFor="state">State *</Label>
+                        <Select
+                          value={formData.state}
+                          onValueChange={(value) =>
+                            handleInputChange("state", value)
+                          }
+                        >
+                          <SelectTrigger className="bg-white/60 border-white/40">
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AL">Alabama</SelectItem>
+                            <SelectItem value="CA">California</SelectItem>
+                            <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="NY">New York</SelectItem>
+                            <SelectItem value="TX">Texas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="zipCode">ZIP Code *</Label>
                         <Input
-                          id="apartment"
-                          value={formData.apartment}
+                          id="zipCode"
+                          value={formData.zipCode}
                           onChange={(e) =>
-                            handleInputChange("apartment", e.target.value)
+                            handleInputChange("zipCode", e.target.value)
                           }
                           className="bg-white/60 border-white/40"
+                          required
                         />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="city">City *</Label>
-                          <Input
-                            id="city"
-                            value={formData.city}
-                            onChange={(e) =>
-                              handleInputChange("city", e.target.value)
-                            }
-                            className="bg-white/60 border-white/40"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="state">State *</Label>
-                          <Select
-                            value={formData.state}
-                            onValueChange={(value) =>
-                              handleInputChange("state", value)
-                            }
-                          >
-                            <SelectTrigger className="bg-white/60 border-white/40">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AL">Alabama</SelectItem>
-                              <SelectItem value="CA">California</SelectItem>
-                              <SelectItem value="FL">Florida</SelectItem>
-                              <SelectItem value="NY">New York</SelectItem>
-                              <SelectItem value="TX">Texas</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="zipCode">ZIP Code *</Label>
-                          <Input
-                            id="zipCode"
-                            value={formData.zipCode}
-                            onChange={(e) =>
-                              handleInputChange("zipCode", e.target.value)
-                            }
-                            className="bg-white/60 border-white/40"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Additional Options */}
-                <Card className="glass border-white/20">
-                  <CardContent className="pt-6 space-y-4">
-                    <div>
-                      <Label htmlFor="notes">Order Notes (Optional)</Label>
-                      <Input
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) =>
-                          handleInputChange("notes", e.target.value)
-                        }
-                        className="bg-white/60 border-white/40"
-                        placeholder="Special delivery instructions..."
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="marketing"
-                        checked={formData.marketingOptIn}
-                        onCheckedChange={(checked) =>
-                          handleInputChange("marketingOptIn", checked === true)
-                        }
-                      />
-                      <Label htmlFor="marketing" className="text-sm">
-                        Send me special offers and wellness tips
-                      </Label>
                     </div>
                   </CardContent>
                 </Card>
+              )}
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={proceedToPayment}
-                    disabled={processing}
-                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 md:px-8 py-3 rounded-2xl"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Continue to Payment"
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {currentStep === 2 && clientSecret && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-4 md:space-y-6"
-              >
-                <Card className="glass border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-lg md:text-xl">
-                      <CreditCard className="w-5 h-5 mr-2 text-blue-600" />
-                      Payment Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent></CardContent>
-                </Card>
-
-                <div className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentStep(1)}
-                    className="px-6 md:px-8 py-3 rounded-2xl"
-                  >
-                    Back to Shipping
-                  </Button>
-                </div>
-              </motion.div>
-            )}
+              {/* Additional Options */}
+              <Card className="glass border-white/20">
+                <CardContent className="pt-6 space-y-4">
+                  <div>
+                    <Label htmlFor="notes">Order Notes (Optional)</Label>
+                    <Input
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) =>
+                        handleInputChange("notes", e.target.value)
+                      }
+                      className="bg-white/60 border-white/40"
+                      placeholder="Special delivery instructions..."
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="marketing"
+                      checked={formData.marketingOptIn}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("marketingOptIn", checked === true)
+                      }
+                    />
+                    <Label htmlFor="marketing" className="text-sm">
+                      Send me special offers and wellness tips
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
-          {/* Order Summary Sidebar */}
+          {/* Order Summary Sidebar with Payment */}
           <div className="lg:col-span-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1625,31 +1432,79 @@ export default function CheckoutPage() {
                   <span className="text-green-600">${total.toFixed(2)}</span>
                 </div>
               </div>
-              {clientSecret ? (
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret: clientSecret, // ← Stripe Elements needs this
-                    appearance: { theme: "stripe" },
-                  }}
-                >
-                  <StripeShopCheckout
-                    amount={total}
-                    onPaymentSuccess={handlePaymentSuccess}
-                  />
-                </Elements>
-              ) : (
-                <div>Loading payment...</div>
-              )}
+
+              {/* Payment Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-semibold text-gray-900">
+                    Complete Payment
+                  </h4>
+                </div>
+
+                {!formValid && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Please fill in all required fields above to proceed with
+                        payment
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {formValid && total > 0 && (
+                  <>
+                    {paymentLoading && (
+                      <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                        <div className="flex items-center justify-center p-6">
+                          <Loader2 className="w-6 h-6 animate-spin text-green-600 mr-2" />
+                          <span className="text-gray-600">
+                            Preparing payment...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {clientSecret && (
+                      <Elements
+                        stripe={stripePromise}
+                        options={{
+                          clientSecret: clientSecret,
+                          appearance: {
+                            theme: "stripe",
+                            variables: {
+                              colorPrimary: "#16a34a",
+                              colorBackground: "#ffffff",
+                              colorText: "#374151",
+                              colorDanger: "#ef4444",
+                              borderRadius: "8px",
+                            },
+                          },
+                        }}
+                      >
+                        <StripeShopCheckout
+                          amount={total}
+                          onPaymentSuccess={handlePaymentSuccess}
+                          onPaymentError={handlePaymentError}
+                          disabled={!formValid}
+                        />
+                      </Elements>
+                    )}
+                  </>
+                )}
+              </div>
+
               {/* Security Badges */}
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-2 mt-6 pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-center text-xs text-gray-500">
                   <Shield className="w-4 h-4 mr-1" />
                   256-bit SSL encrypted
                 </div>
                 <div className="flex items-center justify-center text-xs text-gray-500">
                   <Lock className="w-4 h-4 mr-1" />
-                  PCI DSS compliant
+                  PCI DSS compliant payments
                 </div>
               </div>
             </motion.div>

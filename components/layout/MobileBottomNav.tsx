@@ -42,12 +42,12 @@ export function MobileBottomNav() {
       badge: cartItemCount,
       onClick: openCart,
     },
-    {
-      href: "/profile",
-      label: "Profile",
-      icon: User,
-      isActive: pathname.startsWith("/profile"),
-    },
+    // {
+    //   href: "/profile",
+    //   label: "Profile",
+    //   icon: User,
+    //   isActive: pathname.startsWith("/profile"),
+    // },
   ];
 
   return (
