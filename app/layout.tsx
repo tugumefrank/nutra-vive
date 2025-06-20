@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
 import { CartDrawer } from "@/components/cart/CartDrawer";
-import { CartProvider } from "@/providers/Cartprovider";
 
 const inter = Inter({
   subsets: ["latin"],
