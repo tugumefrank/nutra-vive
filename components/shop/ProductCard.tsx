@@ -1,9 +1,594 @@
+// "use client";
+
+// import React, { useState } from "react";
+// import {
+//   Heart,
+//   Star,
+//   ShoppingBag,
+//   Eye,
+//   Plus,
+//   Minus,
+//   LogIn,
+//   Loader2,
+// } from "lucide-react";
+// import Image from "next/image";
+// import { useUser } from "@clerk/nextjs";
+// import { useRouter } from "next/navigation";
+// import { toast } from "sonner";
+// import { useOptimisticCart } from "@/hooks/useCart";
+// import { useStandaloneFavorites } from "@/hooks/useFavourite";
+// import { cn } from "@/lib/utils";
+
+// export interface Product {
+//   _id: string;
+//   name: string;
+//   slug: string;
+//   price: number;
+//   compareAtPrice?: number;
+//   category: {
+//     _id: string;
+//     name: string;
+//   } | null;
+//   images: string[];
+//   description?: string;
+//   shortDescription?: string;
+//   averageRating: number;
+//   reviewCount: number;
+//   features: string[];
+//   isActive: boolean;
+//   isFeatured: boolean;
+//   createdAt?: string;
+// }
+
+// interface ProductCardProps {
+//   product: Product;
+//   className?: string;
+//   showCategory?: boolean;
+//   showFeatures?: boolean;
+//   maxFeatures?: number;
+//   variant?: "default" | "compact" | "list";
+// }
+
+// export function ProductCard({
+//   product,
+//   className = "",
+//   showCategory = true,
+//   showFeatures = true,
+//   maxFeatures = 2,
+//   variant = "default",
+// }: ProductCardProps) {
+//   const { user } = useUser();
+//   const router = useRouter();
+//   const [imageLoading, setImageLoading] = useState(true);
+//   const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+//   // Cart functionality
+//   const {
+//     isInCart,
+//     getItemQuantity,
+//     addToCart,
+//     updateQuantity,
+//     removeFromCart,
+//   } = useOptimisticCart();
+
+//   // Favorites functionality
+//   const { isFavorite, toggleProductFavorite } = useStandaloneFavorites();
+
+//   const inCart = user ? isInCart(product._id) : false;
+//   const quantity = user ? getItemQuantity(product._id) : 0;
+//   const isProductFavorite = user ? isFavorite(product._id) : false;
+
+//   const handleSignInRedirect = () => {
+//     toast.info("Please sign in to add items to cart");
+//     router.push("/sign-in");
+//   };
+
+//   const handleAddToCart = async (e: React.MouseEvent) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+
+//     if (!user) {
+//       handleSignInRedirect();
+//       return;
+//     }
+
+//     // Optimistic add - UI updates immediately
+//     await addToCart(product, 1);
+//   };
+
+//   const handleUpdateQuantity = async (e: React.MouseEvent, change: number) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+
+//     if (!user) {
+//       handleSignInRedirect();
+//       return;
+//     }
+
+//     const newQty = quantity + change;
+
+//     // Optimistic update - UI updates immediately
+//     await updateQuantity(product._id, newQty);
+//   };
+
+//   const handleViewCart = (e: React.MouseEvent) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+
+//     if (!user) {
+//       handleSignInRedirect();
+//       return;
+//     }
+
+//     router.push("/cart");
+//   };
+
+//   const handleToggleFavorite = async (e: React.MouseEvent) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+
+//     if (!user) {
+//       toast.info("Please sign in to manage favorites");
+//       router.push("/sign-in");
+//       return;
+//     }
+
+//     try {
+//       setFavoriteLoading(true);
+//       await toggleProductFavorite(product._id, product.name);
+//     } catch (error) {
+//       console.error("Error toggling favorite:", error);
+//     } finally {
+//       setFavoriteLoading(false);
+//     }
+//   };
+
+//   const handleProductClick = () => {
+//     router.push(`/products/${product.slug}`);
+//   };
+
+//   // Calculate discount percentage
+//   const discountPercentage =
+//     product.compareAtPrice && product.compareAtPrice > product.price
+//       ? Math.round(
+//           ((product.compareAtPrice - product.price) / product.compareAtPrice) *
+//             100
+//         )
+//       : 0;
+
+//   // Render based on variant
+//   if (variant === "list") {
+//     return (
+//       <div
+//         className={cn(
+//           "group cursor-pointer bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden border border-orange-200 hover:border-green-300 transition-all duration-500 hover:shadow-lg",
+//           className
+//         )}
+//         onClick={handleProductClick}
+//       >
+//         <div className="flex flex-col sm:flex-row">
+//           {/* Product Image */}
+//           <div className="relative w-full sm:w-48 h-48 sm:h-32 flex-shrink-0">
+//             {product.images && product.images.length > 0 ? (
+//               <Image
+//                 src={product.images[0]}
+//                 alt={product.name}
+//                 fill
+//                 className={cn(
+//                   "object-cover transition-all duration-700 group-hover:scale-110",
+//                   imageLoading ? "blur-sm" : "blur-0"
+//                 )}
+//                 onLoad={() => setImageLoading(false)}
+//               />
+//             ) : (
+//               <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+//                 <div className="text-2xl text-gray-400">📦</div>
+//               </div>
+//             )}
+
+//             {/* Favorite Button */}
+//             <button
+//               onClick={handleToggleFavorite}
+//               disabled={favoriteLoading}
+//               className={cn(
+//                 "absolute top-2 right-2 p-1.5 rounded-full transition-all duration-300 z-10 shadow-md",
+//                 isProductFavorite
+//                   ? "bg-red-500 text-white hover:bg-red-600"
+//                   : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500"
+//               )}
+//             >
+//               {favoriteLoading ? (
+//                 <Loader2 className="w-3 h-3 animate-spin" />
+//               ) : (
+//                 <Heart
+//                   className={cn("w-3 h-3", isProductFavorite && "fill-current")}
+//                 />
+//               )}
+//             </button>
+
+//             {/* Discount Badge */}
+//             {discountPercentage > 0 && (
+//               <div className="absolute top-2 left-2">
+//                 <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+//                   {discountPercentage}% OFF
+//                 </span>
+//               </div>
+//             )}
+//           </div>
+
+//           {/* Product Info */}
+//           <div className="flex-1 p-4">
+//             <div className="flex justify-between items-start mb-2">
+//               <div>
+//                 {showCategory && product.category && (
+//                   <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
+//                     {product.category.name}
+//                   </span>
+//                 )}
+//                 <h3 className="font-bold text-lg group-hover:text-green-600 transition-colors">
+//                   {product.name}
+//                 </h3>
+//               </div>
+//               <div className="flex items-center space-x-1">
+//                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+//                 <span className="text-sm font-medium">
+//                   {product.averageRating || 0}
+//                 </span>
+//                 <span className="text-xs text-gray-500">
+//                   ({product.reviewCount || 0})
+//                 </span>
+//               </div>
+//             </div>
+
+//             <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+//               {product.shortDescription ||
+//                 product.description ||
+//                 "Premium organic wellness product"}
+//             </p>
+
+//             <div className="flex justify-between items-end">
+//               <div className="flex flex-col">
+//                 {product.compareAtPrice &&
+//                   product.compareAtPrice > product.price && (
+//                     <span className="text-sm text-gray-500 line-through">
+//                       ${product.compareAtPrice.toFixed(2)}
+//                     </span>
+//                   )}
+//                 <span className="text-xl font-bold text-green-600">
+//                   ${product.price.toFixed(2)}
+//                 </span>
+//               </div>
+
+//               {/* Cart Actions */}
+//               <div onClick={(e) => e.stopPropagation()}>
+//                 {user && inCart ? (
+//                   <div className="flex items-center gap-2">
+//                     <div className="flex items-center gap-1 bg-green-50 rounded-lg p-1">
+//                       <button
+//                         onClick={(e) => handleUpdateQuantity(e, -1)}
+//                         className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
+//                       >
+//                         <Minus size={14} />
+//                       </button>
+//                       <span className="px-2 text-green-600 font-semibold text-sm min-w-[1.5rem] text-center">
+//                         {quantity}
+//                       </span>
+//                       <button
+//                         onClick={(e) => handleUpdateQuantity(e, 1)}
+//                         className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
+//                       >
+//                         <Plus size={14} />
+//                       </button>
+//                     </div>
+//                     <button
+//                       onClick={handleViewCart}
+//                       className="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+//                     >
+//                       View Cart
+//                     </button>
+//                   </div>
+//                 ) : (
+//                   <button
+//                     onClick={handleAddToCart}
+//                     className={cn(
+//                       "px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium text-sm",
+//                       user
+//                         ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+//                         : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+//                     )}
+//                   >
+//                     {user ? (
+//                       <>
+//                         <ShoppingBag className="w-4 h-4" />
+//                         Add to Cart
+//                       </>
+//                     ) : (
+//                       <>
+//                         <LogIn className="w-4 h-4" />
+//                         Sign In
+//                       </>
+//                     )}
+//                   </button>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Default card variant
+//   return (
+//     <div
+//       className={cn("group cursor-pointer", className)}
+//       onClick={handleProductClick}
+//     >
+//       <div className="bg-white/80 backdrop-blur-md rounded-3xl overflow-hidden border border-orange-200 hover:border-green-300 transition-all duration-500 hover:transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-100/50 h-full">
+//         {/* Product Image */}
+//         <div className="relative h-60 overflow-hidden">
+//           {product.images && product.images.length > 0 ? (
+//             <Image
+//               src={product.images[0]}
+//               alt={product.name}
+//               fill
+//               className={cn(
+//                 "object-cover transition-all duration-700 group-hover:scale-110",
+//                 imageLoading ? "blur-sm" : "blur-0"
+//               )}
+//               onLoad={() => setImageLoading(false)}
+//             />
+//           ) : (
+//             <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+//               <div className="text-4xl text-gray-400">📦</div>
+//             </div>
+//           )}
+
+//           {/* Favorite Button */}
+//           <button
+//             onClick={handleToggleFavorite}
+//             disabled={favoriteLoading}
+//             className={cn(
+//               "absolute top-3 right-3 p-2 rounded-full transition-all duration-300 z-10 shadow-md",
+//               isProductFavorite
+//                 ? "bg-red-500 text-white hover:bg-red-600 scale-110"
+//                 : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500"
+//             )}
+//           >
+//             {favoriteLoading ? (
+//               <Loader2 className="w-4 h-4 animate-spin" />
+//             ) : (
+//               <Heart
+//                 className={cn(
+//                   "w-4 h-4 transition-all",
+//                   isProductFavorite && "fill-current"
+//                 )}
+//               />
+//             )}
+//           </button>
+
+//           {/* Category Badge */}
+//           {showCategory && product.category && (
+//             <div className="absolute top-3 left-3">
+//               <span className="px-3 py-1 bg-white/90 text-green-600 text-xs font-semibold rounded-full">
+//                 {product.category.name}
+//               </span>
+//             </div>
+//           )}
+
+//           {/* Featured Badge */}
+//           {product.isFeatured && (
+//             <div className="absolute bottom-3 left-3">
+//               <span className="px-2 py-1 bg-yellow-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+//                 <Star className="w-3 h-3 fill-current" />
+//                 Featured
+//               </span>
+//             </div>
+//           )}
+
+//           {/* Discount Badge */}
+//           {discountPercentage > 0 && (
+//             <div className="absolute top-3 right-14">
+//               <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+//                 {discountPercentage}% OFF
+//               </span>
+//             </div>
+//           )}
+
+//           {/* Login Required Overlay for Guests */}
+//           {!user && (
+//             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+//               <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg">
+//                 <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
+//                   <LogIn className="w-4 h-4" />
+//                   Sign in to add to cart
+//                 </p>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+
+//         {/* Product Info */}
+//         <div className="p-6">
+//           <div className="flex items-center justify-between mb-2">
+//             {showCategory && product.category && (
+//               <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
+//                 {product.category.name}
+//               </span>
+//             )}
+//             <div className="flex items-center space-x-1">
+//               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+//               <span className="text-sm font-medium">
+//                 {product.averageRating || 0}
+//               </span>
+//               <span className="text-xs text-gray-500">
+//                 ({product.reviewCount || 0})
+//               </span>
+//             </div>
+//           </div>
+
+//           <h3 className="font-bold text-lg mb-2 group-hover:text-green-600 transition-colors">
+//             {product.name}
+//           </h3>
+
+//           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+//             {product.shortDescription ||
+//               product.description ||
+//               "Premium organic wellness product"}
+//           </p>
+
+//           {/* Features */}
+//           {showFeatures && product.features && product.features.length > 0 && (
+//             <div className="flex flex-wrap gap-1 mb-4">
+//               {product.features
+//                 .slice(0, maxFeatures)
+//                 .map((feature: string, idx: number) => (
+//                   <span
+//                     key={idx}
+//                     className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-lg"
+//                   >
+//                     {feature}
+//                   </span>
+//                 ))}
+//             </div>
+//           )}
+
+//           {/* Price and Cart Actions */}
+//           <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+//             {user && inCart ? (
+//               <>
+//                 {/* Price and Quantity Controls Row */}
+//                 <div className="flex items-center justify-between">
+//                   <div className="flex flex-col">
+//                     {/* Show compare price with strikethrough if it exists */}
+//                     {product.compareAtPrice &&
+//                       product.compareAtPrice > product.price && (
+//                         <div className="flex items-center gap-2 mb-1">
+//                           <span className="text-sm text-gray-500 line-through">
+//                             ${product.compareAtPrice.toFixed(2)}
+//                           </span>
+//                           <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
+//                             {discountPercentage}% OFF
+//                           </span>
+//                         </div>
+//                       )}
+//                     <span className="text-2xl font-bold text-green-600">
+//                       ${product.price.toFixed(2)}
+//                     </span>
+//                   </div>
+
+//                   {/* Quantity Controls */}
+//                   <div className="flex items-center gap-2 bg-green-50 rounded-xl p-1">
+//                     <button
+//                       onClick={(e) => handleUpdateQuantity(e, -1)}
+//                       className="p-1 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+//                       title="Decrease quantity"
+//                     >
+//                       <Minus size={16} />
+//                     </button>
+//                     <span className="px-2 text-green-600 font-semibold min-w-[2rem] text-center">
+//                       {quantity}
+//                     </span>
+//                     <button
+//                       onClick={(e) => handleUpdateQuantity(e, 1)}
+//                       className="p-1 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+//                       title="Increase quantity"
+//                     >
+//                       <Plus size={16} />
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 {/* Full Width View Cart Button */}
+//                 <button
+//                   onClick={handleViewCart}
+//                   className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold"
+//                 >
+//                   <Eye className="w-4 h-4" />
+//                   View Cart
+//                 </button>
+//               </>
+//             ) : (
+//               <>
+//                 {/* Price Row */}
+//                 <div className="flex items-center justify-between">
+//                   <div className="flex flex-col">
+//                     {/* Show compare price with strikethrough if it exists */}
+//                     {product.compareAtPrice &&
+//                       product.compareAtPrice > product.price && (
+//                         <div className="flex items-center gap-2 mb-1">
+//                           <span className="text-sm text-gray-500 line-through">
+//                             ${product.compareAtPrice.toFixed(2)}
+//                           </span>
+//                           <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
+//                             {discountPercentage}% OFF
+//                           </span>
+//                         </div>
+//                       )}
+//                     <span className="text-2xl font-bold text-green-600">
+//                       ${product.price.toFixed(2)}
+//                     </span>
+//                   </div>
+//                 </div>
+
+//                 {/* Add to Cart or Sign In Button */}
+//                 <button
+//                   onClick={handleAddToCart}
+//                   className={cn(
+//                     "w-full py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold",
+//                     user
+//                       ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+//                       : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+//                   )}
+//                 >
+//                   {user ? (
+//                     <>
+//                       <ShoppingBag className="w-4 h-4" />
+//                       Add to Cart
+//                     </>
+//                   ) : (
+//                     <>
+//                       <LogIn className="w-4 h-4" />
+//                       Sign In to Purchase
+//                     </>
+//                   )}
+//                 </button>
+//               </>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+
+//       <style jsx>{`
+//         .line-clamp-2 {
+//           display: -webkit-box;
+//           -webkit-line-clamp: 2;
+//           -webkit-box-orient: vertical;
+//           overflow: hidden;
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
 "use client";
 
-import React from "react";
-import { Heart, Star, ShoppingBag, Eye, Plus, Minus } from "lucide-react";
+import React, { useState, useRef } from "react";
+import {
+  Heart,
+  Star,
+  ShoppingBag,
+  Eye,
+  Plus,
+  Minus,
+  LogIn,
+} from "lucide-react";
 import Image from "next/image";
-import { useCartStore, useFavoritesStore } from "../../store";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useOptimisticCart } from "@/hooks/useCart";
+import { useStandaloneFavorites } from "@/hooks/useFavourite";
+import { cn } from "@/lib/utils";
 
 export interface Product {
   _id: string;
@@ -23,6 +608,7 @@ export interface Product {
   features: string[];
   isActive: boolean;
   isFeatured: boolean;
+  createdAt?: string;
 }
 
 interface ProductCardProps {
@@ -31,6 +617,7 @@ interface ProductCardProps {
   showCategory?: boolean;
   showFeatures?: boolean;
   maxFeatures?: number;
+  variant?: "default" | "compact" | "list";
 }
 
 export function ProductCard({
@@ -39,81 +626,296 @@ export function ProductCard({
   showCategory = true,
   showFeatures = true,
   maxFeatures = 2,
+  variant = "default",
 }: ProductCardProps) {
-  // Store hooks
+  const { user } = useUser();
+  const router = useRouter();
+  const [imageLoading, setImageLoading] = useState(true);
+  const [heartAnimation, setHeartAnimation] = useState("");
+  const heartRef = useRef<HTMLButtonElement>(null);
+
+  // Cart functionality
   const {
-    addItem,
+    isInCart,
+    getItemQuantity,
+    addToCart,
     updateQuantity,
-    removeItem,
-    items: cartItems,
-    openCart,
-  } = useCartStore();
-  const { toggleItem, isInFavorites } = useFavoritesStore();
+    removeFromCart,
+  } = useOptimisticCart();
 
-  // Check if product is in cart
-  const isInCart = (productId: string) => {
-    return (
-      cartItems &&
-      cartItems.length > 0 &&
-      cartItems.some((item: any) => item.productId === productId)
-    );
+  // Favorites functionality
+  const { isFavorite, toggleProductFavorite } = useStandaloneFavorites();
+
+  const inCart = user ? isInCart(product._id) : false;
+  const quantity = user ? getItemQuantity(product._id) : 0;
+  const isProductFavorite = user ? isFavorite(product._id) : false;
+
+  const handleSignInRedirect = () => {
+    toast.info("Please sign in to add items to cart");
+    router.push("/sign-in");
   };
 
-  // Get quantity of product in cart
-  const getCartQuantity = (productId: string) => {
-    if (!cartItems || cartItems.length === 0) return 0;
-    const item = cartItems.find((item: any) => item.productId === productId);
-    return item ? item.quantity : 0;
-  };
-
-  const isFavorite = isInFavorites(product._id);
-  const inCart = isInCart(product._id);
-  const quantity = getCartQuantity(product._id);
-
-  // Convert product to cart format
-  const cartProduct = {
-    id: product._id,
-    name: product.name,
-    slug: product.slug,
-    price: product.price.toString(),
-    images: product.images,
-    categoryId: product.category?._id || null,
-  };
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addItem(cartProduct as any, 1);
-  };
-
-  const handleToggleFavorite = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleItem(product._id);
-  };
-
-  const handleUpdateQuantity = (e: React.MouseEvent, change: number) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const currentQty = quantity;
-    const newQty = currentQty + change;
-
-    if (newQty <= 0) {
-      removeItem(product._id);
-    } else {
-      updateQuantity(product._id, newQty);
+    if (!user) {
+      handleSignInRedirect();
+      return;
     }
+
+    // Optimistic add - UI updates immediately
+    await addToCart(product, 1);
+  };
+
+  const handleUpdateQuantity = async (e: React.MouseEvent, change: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      handleSignInRedirect();
+      return;
+    }
+
+    const newQty = quantity + change;
+
+    // Optimistic update - UI updates immediately
+    await updateQuantity(product._id, newQty);
   };
 
   const handleViewCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openCart();
+
+    if (!user) {
+      handleSignInRedirect();
+      return;
+    }
+
+    router.push("/cart");
   };
 
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      toast.info("Please sign in to manage favorites");
+      router.push("/sign-in");
+      return;
+    }
+
+    // Trigger click animation
+    setHeartAnimation("heart-click");
+
+    // Optimistic update - UI updates immediately
+    await toggleProductFavorite(product._id, product.name);
+
+    // Clear animation after it completes
+    setTimeout(() => setHeartAnimation(""), 400);
+  };
+
+  const handleProductClick = () => {
+    router.push(`/products/${product.slug}`);
+  };
+
+  // Calculate discount percentage
+  const discountPercentage =
+    product.compareAtPrice && product.compareAtPrice > product.price
+      ? Math.round(
+          ((product.compareAtPrice - product.price) / product.compareAtPrice) *
+            100
+        )
+      : 0;
+
+  // Heart button component with animations
+  const HeartButton = ({
+    size = "w-4 h-4",
+    position = "absolute top-3 right-3",
+  }) => (
+    <button
+      ref={heartRef}
+      onClick={handleToggleFavorite}
+      className={cn(
+        position,
+        "p-2 rounded-full transition-all duration-300 z-10 shadow-md heart-button heart-transition",
+        isProductFavorite
+          ? "bg-red-500 text-white hover:bg-red-600"
+          : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500",
+        heartAnimation
+      )}
+      style={
+        {
+          // Add CSS custom properties for dynamic animations
+          "--heart-scale": isProductFavorite ? "1.1" : "1",
+        } as React.CSSProperties
+      }
+    >
+      <Heart
+        className={cn(
+          size,
+          "heart-transition",
+          isProductFavorite && "fill-current",
+          isProductFavorite && "heart-favorite"
+        )}
+      />
+    </button>
+  );
+
+  // Render based on variant
+  if (variant === "list") {
+    return (
+      <div
+        className={cn(
+          "group cursor-pointer bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden border border-orange-200 hover:border-green-300 transition-all duration-500 hover:shadow-lg",
+          className
+        )}
+        onClick={handleProductClick}
+      >
+        <div className="flex flex-col sm:flex-row">
+          {/* Product Image */}
+          <div className="relative w-full sm:w-48 h-48 sm:h-32 flex-shrink-0">
+            {product.images && product.images.length > 0 ? (
+              <Image
+                src={product.images[0]}
+                alt={product.name}
+                fill
+                className={cn(
+                  "object-cover transition-all duration-700 group-hover:scale-110",
+                  imageLoading ? "blur-sm" : "blur-0"
+                )}
+                onLoad={() => setImageLoading(false)}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
+                <div className="text-2xl text-gray-400">📦</div>
+              </div>
+            )}
+
+            {/* Favorite Button */}
+            <HeartButton
+              size="w-3 h-3"
+              position="absolute top-2 right-2 p-1.5"
+            />
+
+            {/* Discount Badge */}
+            {discountPercentage > 0 && (
+              <div className="absolute top-2 left-2">
+                <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                  {discountPercentage}% OFF
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Product Info */}
+          <div className="flex-1 p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                {showCategory && product.category && (
+                  <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                    {product.category.name}
+                  </span>
+                )}
+                <h3 className="font-bold text-lg group-hover:text-green-600 transition-colors">
+                  {product.name}
+                </h3>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium">
+                  {product.averageRating || 0}
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({product.reviewCount || 0})
+                </span>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+              {product.shortDescription ||
+                product.description ||
+                "Premium organic wellness product"}
+            </p>
+
+            <div className="flex justify-between items-end">
+              <div className="flex flex-col">
+                {product.compareAtPrice &&
+                  product.compareAtPrice > product.price && (
+                    <span className="text-sm text-gray-500 line-through">
+                      ${product.compareAtPrice.toFixed(2)}
+                    </span>
+                  )}
+                <span className="text-xl font-bold text-green-600">
+                  ${product.price.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Cart Actions */}
+              <div onClick={(e) => e.stopPropagation()}>
+                {user && inCart ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-green-50 rounded-lg p-1">
+                      <button
+                        onClick={(e) => handleUpdateQuantity(e, -1)}
+                        className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="px-2 text-green-600 font-semibold text-sm min-w-[1.5rem] text-center">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={(e) => handleUpdateQuantity(e, 1)}
+                        className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleViewCart}
+                      className="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                    >
+                      View Cart
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    className={cn(
+                      "px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium text-sm",
+                      user
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+                        : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                    )}
+                  >
+                    {user ? (
+                      <>
+                        <ShoppingBag className="w-4 h-4" />
+                        Add to Cart
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="w-4 h-4" />
+                        Sign In
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default card variant
   return (
-    <div className={`group ${className}`}>
+    <div
+      className={cn("group cursor-pointer", className)}
+      onClick={handleProductClick}
+    >
       <div className="bg-white/80 backdrop-blur-md rounded-3xl overflow-hidden border border-orange-200 hover:border-green-300 transition-all duration-500 hover:transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-100/50 h-full">
         {/* Product Image */}
         <div className="relative h-60 overflow-hidden">
@@ -122,7 +924,11 @@ export function ProductCard({
               src={product.images[0]}
               alt={product.name}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              className={cn(
+                "object-cover transition-all duration-700 group-hover:scale-110",
+                imageLoading ? "blur-sm" : "blur-0"
+              )}
+              onLoad={() => setImageLoading(false)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
@@ -131,16 +937,7 @@ export function ProductCard({
           )}
 
           {/* Favorite Button */}
-          <button
-            onClick={handleToggleFavorite}
-            className={`absolute top-3 right-3 p-2 rounded-full transition-colors z-10 ${
-              isFavorite
-                ? "bg-red-500 text-white shadow-lg"
-                : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500 shadow-md"
-            }`}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-          </button>
+          <HeartButton />
 
           {/* Category Badge */}
           {showCategory && product.category && (
@@ -161,17 +958,24 @@ export function ProductCard({
             </div>
           )}
 
-          {/* Discount Badge - Show if there's a compareAtPrice */}
-          {product.compareAtPrice && product.compareAtPrice > product.price && (
+          {/* Discount Badge */}
+          {discountPercentage > 0 && (
             <div className="absolute top-3 right-14">
               <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                {Math.round(
-                  ((product.compareAtPrice - product.price) /
-                    product.compareAtPrice) *
-                    100
-                )}
-                % OFF
+                {discountPercentage}% OFF
               </span>
+            </div>
+          )}
+
+          {/* Login Required Overlay for Guests */}
+          {!user && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg">
+                <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                  <LogIn className="w-4 h-4" />
+                  Sign in to add to cart
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -222,8 +1026,8 @@ export function ProductCard({
           )}
 
           {/* Price and Cart Actions */}
-          <div className="space-y-3">
-            {inCart ? (
+          <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+            {user && inCart ? (
               <>
                 {/* Price and Quantity Controls Row */}
                 <div className="flex items-center justify-between">
@@ -236,12 +1040,7 @@ export function ProductCard({
                             ${product.compareAtPrice.toFixed(2)}
                           </span>
                           <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
-                            {Math.round(
-                              ((product.compareAtPrice - product.price) /
-                                product.compareAtPrice) *
-                                100
-                            )}
-                            % OFF
+                            {discountPercentage}% OFF
                           </span>
                         </div>
                       )}
@@ -294,12 +1093,7 @@ export function ProductCard({
                             ${product.compareAtPrice.toFixed(2)}
                           </span>
                           <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
-                            {Math.round(
-                              ((product.compareAtPrice - product.price) /
-                                product.compareAtPrice) *
-                                100
-                            )}
-                            % OFF
+                            {discountPercentage}% OFF
                           </span>
                         </div>
                       )}
@@ -309,13 +1103,27 @@ export function ProductCard({
                   </div>
                 </div>
 
-                {/* Full Width Add to Cart Button */}
+                {/* Add to Cart or Sign In Button */}
                 <button
                   onClick={handleAddToCart}
-                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold"
+                  className={cn(
+                    "w-full py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold",
+                    user
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                  )}
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  Add to Cart
+                  {user ? (
+                    <>
+                      <ShoppingBag className="w-4 h-4" />
+                      Add to Cart
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-4 h-4" />
+                      Sign In to Purchase
+                    </>
+                  )}
                 </button>
               </>
             )}
@@ -329,6 +1137,61 @@ export function ProductCard({
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+
+        /* Heart animations */
+        .heart-favorite {
+          animation: heartPulse 0.6s ease-in-out;
+        }
+
+        .heart-click {
+          animation: heartBounce 0.4s ease-in-out;
+        }
+
+        .heart-transition {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .heart-button:hover {
+          transform: scale(1.1);
+        }
+
+        .heart-button:active {
+          transform: scale(0.95);
+        }
+
+        @keyframes heartPulse {
+          0% {
+            transform: scale(1);
+          }
+          15% {
+            transform: scale(1.2);
+          }
+          30% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.1);
+          }
+          60% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes heartBounce {
+          0%,
+          20%,
+          50%,
+          80%,
+          100% {
+            transform: translateY(0) scale(1);
+          }
+          40% {
+            transform: translateY(-2px) scale(1.1);
+          }
+          60% {
+            transform: translateY(-1px) scale(1.05);
+          }
         }
       `}</style>
     </div>

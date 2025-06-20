@@ -135,16 +135,21 @@ export async function submitConsultationForm(
       0
     );
 
-    // 🚧 MOCK MODE - Skip Stripe Payment Intent Creation
-    // In production, replace this with actual Stripe integration
-    const mockPaymentIntentId = `pi_mock_${Date.now()}`;
-    const mockClientSecret = `${mockPaymentIntentId}_secret_mock`;
-
-    console.log("💳 [MOCK] Skipping Stripe Payment Intent creation");
-    console.log("💰 Total amount calculated:", totalAmount);
-
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmount * 100, // Stripe expects amount in cents
+      currency: "usd",
+      metadata: {
+        customerEmail: validatedData.email,
+        customerName: `${validatedData.firstName} ${validatedData.lastName}`,
+        services: validatedData.servicesInterested.join(", "),
+      },
+    });
+    // Generate consultation number manually if needed
+    const consultationCount = await Consultation.countDocuments();
+    const consultationNumber = `CONS-${(consultationCount + 1).toString().padStart(6, "0")}`;
     // Create consultation record in MongoDB
     const consultation = new Consultation({
+      consultationNumber,
       user: user?._id,
       personalInfo: {
         firstName: validatedData.firstName,
@@ -187,7 +192,7 @@ export async function submitConsultationForm(
       howDidYouHear: validatedData.howDidYouHear,
       agreeToTerms: validatedData.agreeToTerms,
       agreeToMarketing: validatedData.agreeToMarketing,
-      paymentIntentId: mockPaymentIntentId,
+      paymentIntentId: paymentIntent.id,
       totalAmount,
       currency: "USD",
       paymentStatus: "pending", // Will be updated on mock payment success
@@ -248,7 +253,7 @@ export async function submitConsultationForm(
     return {
       success: true,
       consultationId: consultation._id.toString(),
-      clientSecret: mockClientSecret,
+      clientSecret: paymentIntent.client_secret ?? undefined,
     };
   } catch (error) {
     console.error("❌ Error submitting consultation form:", error);

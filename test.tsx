@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  submitConsultationForm,
+  confirmMockPayment,
+} from "@/lib/actions/consultation";
 import {
   User,
   Mail,
@@ -18,24 +23,8 @@ import {
   Loader2,
   CreditCard,
   Shield,
-  Leaf,
-  Sparkles,
-  Users,
-  Award,
-  Headphones,
-  Star,
-  TrendingUp,
-  Zap,
 } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
-import StripeCheckout from "../common/StripeCheckout";
-import { submitConsultationForm } from "@/lib/actions/consultation";
 
-if (!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
-  throw new Error("NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not defined");
-}
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY);
 interface ConsultationFormData {
   firstName: string;
   lastName: string;
@@ -84,11 +73,6 @@ const PaymentStep: React.FC<{
   consultationId?: string;
   onPaymentSuccess: () => void;
 }> = ({ totalAmount, clientSecret, consultationId, onPaymentSuccess }) => {
-  console.log("PaymentStep props:", {
-    totalAmount,
-    clientSecret,
-    consultationId,
-  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -113,7 +97,16 @@ const PaymentStep: React.FC<{
       // MOCK: Simulate payment processing delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      console.log("💳 [MOCK] Payment processed successfully!");
+      console.log("💳 [MOCK] Payment processed successfully!", {
+        consultationId,
+        amount: totalAmount,
+        clientSecret,
+      });
+
+      // 📧 [MOCK] In production, this would be handled by Stripe webhooks
+      console.log(
+        "📧 [MOCK] Payment confirmation would trigger webhook to update database"
+      );
 
       onPaymentSuccess();
     } catch (error) {
@@ -146,29 +139,63 @@ const PaymentStep: React.FC<{
         <div className="mb-6">
           <div className="flex justify-between items-center text-lg font-semibold">
             <span>Total Amount:</span>
-            <span className="text-emerald-600">
-              ${(totalAmount || 0).toFixed(2)}
-            </span>
+            <span className="text-emerald-600">${totalAmount.toFixed(2)}</span>
           </div>
         </div>
 
-        <div>
-          {clientSecret ? (
-            <Elements
-              stripe={stripePromise}
-              options={{
-                clientSecret: clientSecret, // ← Stripe Elements needs this
-                appearance: { theme: "stripe" },
-              }}
-            >
-              <StripeCheckout
-                amount={totalAmount}
-                onPaymentSuccess={onPaymentSuccess}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cardholder Name
+            </label>
+            <input
+              type="text"
+              value={billingName}
+              onChange={(e) => setBillingName(e.target.value)}
+              placeholder="Full name on card"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Card Number
+            </label>
+            <input
+              type="text"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              placeholder="1234 5678 9012 3456"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Expiry Date
+              </label>
+              <input
+                type="text"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                placeholder="MM/YY"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
               />
-            </Elements>
-          ) : (
-            <div>Loading payment...</div>
-          )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CVV
+              </label>
+              <input
+                type="text"
+                value={cvv}
+                onChange={(e) => setCvv(e.target.value)}
+                placeholder="123"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-4 text-sm text-gray-600">
@@ -177,18 +204,29 @@ const PaymentStep: React.FC<{
         </div>
       </div>
 
-      {paymentError && (
-        <div className="p-4 border border-red-200 bg-red-50 rounded-lg flex items-center gap-3">
-          <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-          <span className="text-red-800">{paymentError}</span>
-        </div>
-      )}
+      <button
+        onClick={handlePayment}
+        disabled={isProcessing}
+        className="w-full h-12 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Processing Payment...
+          </>
+        ) : (
+          <>
+            <CheckCircle className="w-4 h-4" />
+            Complete Payment & Book Consultation
+          </>
+        )}
+      </button>
     </div>
   );
 };
 
 const ConsultationForm: React.FC = () => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -196,14 +234,8 @@ const ConsultationForm: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const totalSteps = 6;
-
-  // Scroll to top when step changes
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [currentStep]);
 
   const [formData, setFormData] = useState<ConsultationFormData>({
     firstName: "",
@@ -213,8 +245,8 @@ const ConsultationForm: React.FC = () => {
     age: 0,
     gender: "",
     occupation: "",
-    currentWeight: 150,
-    goalWeight: 140,
+    currentWeight: 150, // Default to reasonable value
+    goalWeight: 140, // Default to reasonable value
     height: "",
     activityLevel: "",
     dietaryRestrictions: [],
@@ -234,7 +266,7 @@ const ConsultationForm: React.FC = () => {
     preferredDate: "",
     timeZone: "",
     communicationPreference: "",
-    urgencyLevel: "medium",
+    urgencyLevel: "medium", // Default to medium priority
     additionalNotes: "",
     howDidYouHear: "",
     agreeToTerms: false,
@@ -305,13 +337,6 @@ const ConsultationForm: React.FC = () => {
   ];
 
   const calculateTotal = () => {
-    if (
-      !formData?.servicesInterested ||
-      formData.servicesInterested.length === 0
-    ) {
-      return 0;
-    }
-
     return formData.servicesInterested.reduce((sum, serviceId) => {
       const service = serviceOptions.find((s) => s.id === serviceId);
       return sum + (service?.price || 0);
@@ -387,6 +412,8 @@ const ConsultationForm: React.FC = () => {
       if (!formData.communicationPreference)
         newErrors.communicationPreference =
           "Please select your communication preference";
+      if (!formData.urgencyLevel)
+        newErrors.urgencyLevel = "Please select urgency level";
     } else if (currentStep === 5) {
       if (!formData.agreeToTerms)
         newErrors.agreeToTerms = "You must agree to the terms and conditions";
@@ -511,9 +538,34 @@ const ConsultationForm: React.FC = () => {
   };
 
   const handlePaymentSuccess = async () => {
+    console.log("🎉 Payment successful! Updating database and redirecting...");
+
+    try {
+      // Update consultation status in database
+      if (consultationId) {
+        const confirmResult = await confirmMockPayment(consultationId);
+        if (confirmResult.success) {
+          console.log("✅ Consultation status updated in database");
+        } else {
+          console.error(
+            "❌ Failed to update consultation status:",
+            confirmResult.error
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error updating consultation status:", error);
+    }
+
     setShowSuccess(true);
+
+    // Redirect to success page with consultation ID after a short delay
     setTimeout(() => {
-      window.location.href = "/consultation/success";
+      if (consultationId) {
+        router.push(`/consultation/success?id=${consultationId}`);
+      } else {
+        router.push("/consultation/success");
+      }
     }, 2000);
   };
 
@@ -537,171 +589,22 @@ const ConsultationForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex pt-16 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 ">
-      {/* Left Side - Marketing Content */}
-      <div className="hidden lg:flex lg:w-2/5  flex-col justify-center px-12 relative">
-        {/* WhatsApp Support Badge */}
-        <div className="absolute top-8 right-8">
-          <a
-            href="https://wa.me/9735737764"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-orange-200 hover:bg-white/90 transition-colors"
-          >
-            <Headphones className="w-4 h-4 text-orange-600" />
-            <span className="text-sm font-medium text-orange-800">Support</span>
-          </a>
-        </div>
-
-        <div className="max-w-lg">
-          {/* Feature Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-orange-200/50">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Transform Your Health Journey
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Get personalized nutrition plans with our certified experts.
-                  Transform your health naturally with proven results.
-                </p>
-                <div className="flex items-center gap-2 text-sm text-orange-600">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span className="font-medium">4.9/5 from 2,500+ clients</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mini Stats */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 flex items-center gap-1">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  95%
-                </div>
-                <div className="text-xs text-gray-500">Success Rate</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 flex items-center gap-1">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  10K+
-                </div>
-                <div className="text-xs text-gray-500">Happy Clients</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 flex items-center gap-1">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  24/7
-                </div>
-                <div className="text-xs text-gray-500">Support</div>
-              </div>
+    <div className="flex-center min-h-screen w-full bg-primary-50">
+      <div className="max-w-4xl w-full mx-auto px-4 py-12">
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-orange-200">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-8 text-white">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold mb-2">
+                Nutrition Consultation
+              </h1>
+              <p className="text-orange-100">
+                Start your personalized wellness journey today
+              </p>
             </div>
           </div>
 
-          {/* Main Heading */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Professional Nutrition Consultation
-            </h2>
-            <p className="text-gray-700 leading-relaxed">
-              Our expert nutritionists will create a personalized plan tailored
-              to your unique needs, lifestyle, and health goals. Experience the
-              difference that professional guidance makes.
-            </p>
-          </div>
-
-          {/* Feature List */}
-          <div className="space-y-4">
-            {[
-              {
-                icon: <Users className="w-5 h-5 text-orange-600" />,
-                title: "Expert Consultations",
-                description: "1-on-1 sessions with certified nutritionists",
-              },
-              {
-                icon: <Award className="w-5 h-5 text-orange-600" />,
-                title: "Proven Results",
-                description:
-                  "95% of clients reach their wellness goals within 30 days",
-              },
-              {
-                icon: <Shield className="w-5 h-5 text-orange-600" />,
-                title: "100% Natural Approach",
-                description:
-                  "Holistic nutrition plans without harmful restrictions",
-              },
-            ].map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-orange-200">
-                  {feature.icon}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">
-                    {feature.title}
-                  </h4>
-                  <p className="text-sm text-gray-600">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute bottom-8 right-8 opacity-20">
-          <div className="w-32 h-32 bg-gradient-to-br from-orange-300 to-amber-400 rounded-full blur-3xl"></div>
-        </div>
-        <div className="absolute top-1/4 right-1/4 opacity-10">
-          <div className="w-24 h-24 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full blur-2xl"></div>
-        </div>
-      </div>
-
-      {/* Right Side - Consultation Form */}
-      <div className="w-full lg:w-3/5  flex flex-col items-center justify-center relative">
-        {/* Logo for Mobile */}
-        <div className="lg:hidden flex items-center gap-3 p-6 border-b border-gray-200">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-            <Leaf className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Nutra-Vive</h1>
-            <p className="text-sm text-gray-500">Natural Wellness</p>
-          </div>
-        </div>
-
-        {/* Scrollable Content Container */}
-        <div
-          ref={scrollContainerRef}
-          className="overflow-y-auto max-w-4xl w-full mx-auto px-4 py-12 bg-white rounded-3xl max-h-[calc(100vh-64px)] lg:max-h-[80vh] shadow-lg border border-orange-200/50 custom-scrollbar"
-        >
-          <div className="p-6 lg:p-8">
-            {/* Header */}
-            <div className="mb-8">
-              {/* Logo for Desktop */}
-              <div className="hidden lg:flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                  <Leaf className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">
-                    Nutra-Vive
-                  </h1>
-                  <p className="text-sm text-gray-500">Natural Wellness</p>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                  Nutrition Consultation
-                </h1>
-                <p className="text-gray-600">
-                  Start your personalized wellness journey today
-                </p>
-              </div>
-            </div>
-
+          <div className="p-8">
             {/* Progress Bar */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
@@ -720,7 +623,6 @@ const ConsultationForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Error Display */}
             {(errors.general || submitError) && (
               <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-lg flex items-center gap-3">
                 <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
@@ -731,7 +633,7 @@ const ConsultationForm: React.FC = () => {
             )}
 
             {/* Step Content */}
-            <div className="mb-8">
+            <div>
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <div className="text-center mb-8">
@@ -778,7 +680,7 @@ const ConsultationForm: React.FC = () => {
                           updateField("lastName", e.target.value)
                         }
                         placeholder="Enter your last name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       />
                       {errors.lastName && (
                         <p className="text-red-500 text-sm mt-1">
@@ -796,7 +698,7 @@ const ConsultationForm: React.FC = () => {
                         value={formData.email}
                         onChange={(e) => updateField("email", e.target.value)}
                         placeholder="your.email@example.com"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       />
                       {errors.email && (
                         <p className="text-red-500 text-sm mt-1">
@@ -814,7 +716,7 @@ const ConsultationForm: React.FC = () => {
                         value={formData.phone}
                         onChange={(e) => updateField("phone", e.target.value)}
                         placeholder="(555) 123-4567"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       />
                       {errors.phone && (
                         <p className="text-red-500 text-sm mt-1">
@@ -834,7 +736,7 @@ const ConsultationForm: React.FC = () => {
                           updateField("age", parseInt(e.target.value) || 0)
                         }
                         placeholder="Enter your age"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       />
                       {errors.age && (
                         <p className="text-red-500 text-sm mt-1">
@@ -850,7 +752,7 @@ const ConsultationForm: React.FC = () => {
                       <select
                         value={formData.gender}
                         onChange={(e) => updateField("gender", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       >
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
@@ -879,7 +781,7 @@ const ConsultationForm: React.FC = () => {
                         updateField("occupation", e.target.value)
                       }
                       placeholder="What do you do for work?"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -954,7 +856,7 @@ const ConsultationForm: React.FC = () => {
                         type="text"
                         value={formData.height}
                         onChange={(e) => updateField("height", e.target.value)}
-                        placeholder={"5'6\" or 168cm"}
+                        placeholder="5'6&quot; or 168cm"
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                       />
                       {errors.height && (
@@ -969,7 +871,7 @@ const ConsultationForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Activity Level *
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {[
                         {
                           value: "sedentary",
@@ -1039,7 +941,7 @@ const ConsultationForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Dietary Restrictions/Preferences
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                       {dietaryOptions.map((option) => (
                         <label key={option} className="relative cursor-pointer">
                           <input
@@ -1122,7 +1024,7 @@ const ConsultationForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Primary Goals * (Select all that apply)
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                       {goalOptions.map((option) => (
                         <label key={option} className="relative cursor-pointer">
                           <input
@@ -1186,7 +1088,7 @@ const ConsultationForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Biggest Challenges (Select all that apply)
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                       {challengeOptions.map((option) => (
                         <label key={option} className="relative cursor-pointer">
                           <input
@@ -1389,7 +1291,7 @@ const ConsultationForm: React.FC = () => {
                           Total Amount:
                         </span>
                         <span className="text-2xl font-bold text-emerald-600">
-                          ${(calculateTotal() || 0).toFixed(2)}
+                          ${calculateTotal()}
                         </span>
                       </div>
                     </div>
@@ -1622,8 +1524,8 @@ const ConsultationForm: React.FC = () => {
                             Privacy Policy
                           </a>
                           . I understand that the consultation fee is $
-                          {(calculateTotal() || 0).toFixed(2)} and additional
-                          services are optional. *
+                          {calculateTotal()} and additional services are
+                          optional. *
                         </span>
                       </div>
                     </label>
@@ -1677,7 +1579,7 @@ const ConsultationForm: React.FC = () => {
 
             {/* Navigation */}
             {currentStep !== 6 && (
-              <div className="flex justify-between pt-6 border-t border-gray-200">
+              <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={prevStep}

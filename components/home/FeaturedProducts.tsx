@@ -4,8 +4,14 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Loader2 } from "lucide-react";
-// Adjust path as needed
+import {
+  ArrowRight,
+  Zap,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+
 import { getProducts } from "@/lib/actions/productserverActions";
 import { Product, ProductCard } from "../shop/ProductCard";
 
@@ -16,6 +22,7 @@ export function FeaturedProducts() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Fetch featured products on component mount
   useEffect(() => {
@@ -70,6 +77,20 @@ export function FeaturedProducts() {
 
     fetchFeaturedProducts();
   }, []);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % featuredProducts.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(
+      (prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length
+    );
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
 
   return (
     <section
@@ -132,14 +153,15 @@ export function FeaturedProducts() {
           </div>
         )}
 
-        {/* Products Grid */}
+        {/* Products Display */}
         {!loading && !error && featuredProducts.length > 0 && (
           <>
+            {/* Desktop Grid - Hidden on mobile */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"
+              className="hidden lg:grid lg:grid-cols-4 gap-8 mb-12"
             >
               {featuredProducts.map((product, index) => (
                 <motion.div
@@ -156,6 +178,68 @@ export function FeaturedProducts() {
                   />
                 </motion.div>
               ))}
+            </motion.div>
+
+            {/* Mobile Slider - Hidden on desktop */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="lg:hidden mb-12"
+            >
+              <div className="relative">
+                {/* Slider Container */}
+                <div className="overflow-hidden">
+                  <motion.div
+                    animate={{ x: `${-currentSlide * 100}%` }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="flex"
+                  >
+                    {featuredProducts.map((product) => (
+                      <div
+                        key={product._id}
+                        className="w-full flex-shrink-0 px-4"
+                      >
+                        <ProductCard
+                          product={product}
+                          showCategory={true}
+                          showFeatures={true}
+                          maxFeatures={2}
+                        />
+                      </div>
+                    ))}
+                  </motion.div>
+                </div>
+
+                {/* Navigation Buttons */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 p-3 bg-white/80 backdrop-blur-sm text-gray-800 rounded-full hover:bg-white/90 transition-all duration-200 shadow-lg border border-orange-200/50 z-10"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-3 bg-white/80 backdrop-blur-sm text-gray-800 rounded-full hover:bg-white/90 transition-all duration-200 shadow-lg border border-orange-200/50 z-10"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Slide Indicators */}
+              <div className="flex justify-center space-x-2 mt-6">
+                {featuredProducts.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      index === currentSlide
+                        ? "bg-green-600 scale-125"
+                        : "bg-gray-300 hover:bg-gray-400"
+                    }`}
+                  />
+                ))}
+              </div>
             </motion.div>
 
             {/* CTA */}

@@ -153,7 +153,8 @@ export interface IOrder extends Document {
 export interface ICart extends Document {
   _id: string;
   user?: string; // User ID
-  sessionId?: string; // For guest users
+  sessionId?: string;
+  clerkUserId: { type: String };
   items: {
     product: string; // Product ID
     quantity: number;
@@ -165,7 +166,7 @@ export interface ICart extends Document {
 
 export interface IFavorite extends Document {
   _id: string;
-  user: mongoose.Types.ObjectId; // User ID
+  user: string; // Clerk userId instead of ObjectId reference
   product: mongoose.Types.ObjectId; // Product ID
   createdAt: Date;
 }
@@ -359,6 +360,7 @@ const cartSchema = new Schema<ICart>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User" },
     sessionId: String,
+    clerkUserId: { type: String },
     items: [
       {
         product: {
@@ -376,7 +378,7 @@ const cartSchema = new Schema<ICart>(
 
 const favoriteSchema = new Schema<IFavorite>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: String, required: true }, // Store Clerk userId directly
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
   },
   { timestamps: true }
@@ -431,7 +433,9 @@ orderSchema.index({ orderNumber: 1 });
 orderSchema.index({ user: 1 });
 cartSchema.index({ user: 1 });
 cartSchema.index({ sessionId: 1 });
-favoriteSchema.index({ user: 1, product: 1 });
+favoriteSchema.index({ user: 1 }); // For efficient user queries
+favoriteSchema.index({ product: 1 }); // For efficient product queries
+favoriteSchema.index({ user: 1, product: 1 }, { unique: true });
 
 // Models
 export const User: Model<IUser> =

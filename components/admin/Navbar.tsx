@@ -13,6 +13,7 @@ import {
   Package,
   AlertCircle,
   CheckCircle,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -91,7 +92,7 @@ export default function NutraViveNavbar() {
             {/* Brand Name - Hidden on mobile */}
             <div className="ml-3 hidden sm:block">
               <h1 className="font-bold text-gray-800 text-lg leading-tight">
-                Nutra-Vive Admin Panel
+                Admin Panel
               </h1>
               <p className="text-xs text-emerald-600 -mt-1 font-medium">
                 manage all business operations
@@ -102,47 +103,12 @@ export default function NutraViveNavbar() {
 
         {/* Right Section - Controls & User */}
         <div className="flex items-center space-x-3">
-          {/* Search Bar */}
-          <div
-            className={`relative transition-all duration-300 ${
-              isSearchExpanded ? "w-60" : "w-9"
-            }`}
-          >
-            <div className="absolute inset-y-0 left-0 flex items-center pl-2">
-              <Search
-                className={`h-4 w-4 cursor-pointer transition-colors ${
-                  isSearchExpanded
-                    ? "text-gray-400"
-                    : "text-gray-600 hover:text-emerald-600"
-                }`}
-                onClick={() => setIsSearchExpanded(!isSearchExpanded)}
-              />
+          {/* Go to home */}
+          <Link href="/" className="group">
+            <div className="w-9 h-9 bg-gray-50/80 border border-gray-200/60 rounded-full flex items-center justify-center hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300">
+              <Globe className="h-4 w-4 text-gray-600 group-hover:text-emerald-600 transition-colors" />
             </div>
-            <input
-              type="text"
-              placeholder="Search products, orders..."
-              className={`w-full bg-gray-50/80 border border-gray-200/60 rounded-full py-1.5 pl-8 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/50 transition-all ${
-                isSearchExpanded
-                  ? "opacity-100"
-                  : "opacity-0 pointer-events-none"
-              }`}
-              onBlur={(event) => {
-                if (event.currentTarget && !event.currentTarget.value) {
-                  setIsSearchExpanded(false);
-                }
-              }}
-            />
-            {!isSearchExpanded && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute inset-0 hover:bg-emerald-50 rounded-full"
-                onClick={() => setIsSearchExpanded(true)}
-              >
-                <span className="sr-only">Search</span>
-              </Button>
-            )}
-          </div>
+          </Link>
 
           {/* Notifications */}
           <DropdownMenu>
@@ -209,18 +175,6 @@ export default function NutraViveNavbar() {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all duration-200"
-            asChild
-          >
-            <Link href="/dashboard/settings">
-              <Settings className="h-5 w-5" />
-            </Link>
-          </Button>
 
           {/* Divider */}
           <div className="h-6 w-px bg-gray-200/70"></div>
