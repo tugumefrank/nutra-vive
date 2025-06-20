@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartProvider } from "@/providers/Cartprovider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -84,12 +86,15 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
+            {" "}
             <QueryProvider>
               <div className="relative flex min-h-screen flex-col">
                 <div className="flex-1">{children}</div>
               </div>
+
               <Toaster />
             </QueryProvider>
+            <CartDrawer /> {/* Add this if not already present */}
           </ThemeProvider>
         </body>
       </html>

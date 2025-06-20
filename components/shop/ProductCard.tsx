@@ -1,6 +1,6 @@
 // "use client";
 
-// import React, { useState } from "react";
+// import React, { useState, useRef } from "react";
 // import {
 //   Heart,
 //   Star,
@@ -9,7 +9,6 @@
 //   Plus,
 //   Minus,
 //   LogIn,
-//   Loader2,
 // } from "lucide-react";
 // import Image from "next/image";
 // import { useUser } from "@clerk/nextjs";
@@ -60,7 +59,8 @@
 //   const { user } = useUser();
 //   const router = useRouter();
 //   const [imageLoading, setImageLoading] = useState(true);
-//   const [favoriteLoading, setFavoriteLoading] = useState(false);
+//   const [heartAnimation, setHeartAnimation] = useState("");
+//   const heartRef = useRef<HTMLButtonElement>(null);
 
 //   // Cart functionality
 //   const {
@@ -133,14 +133,14 @@
 //       return;
 //     }
 
-//     try {
-//       setFavoriteLoading(true);
-//       await toggleProductFavorite(product._id, product.name);
-//     } catch (error) {
-//       console.error("Error toggling favorite:", error);
-//     } finally {
-//       setFavoriteLoading(false);
-//     }
+//     // Trigger click animation
+//     setHeartAnimation("heart-click");
+
+//     // Optimistic update - UI updates immediately
+//     await toggleProductFavorite(product._id, product.name);
+
+//     // Clear animation after it completes
+//     setTimeout(() => setHeartAnimation(""), 400);
 //   };
 
 //   const handleProductClick = () => {
@@ -155,6 +155,40 @@
 //             100
 //         )
 //       : 0;
+
+//   // Heart button component with animations
+//   const HeartButton = ({
+//     size = "w-4 h-4",
+//     position = "absolute top-3 right-3",
+//   }) => (
+//     <button
+//       ref={heartRef}
+//       onClick={handleToggleFavorite}
+//       className={cn(
+//         position,
+//         "p-2 rounded-full transition-all duration-300 z-10 shadow-md heart-button heart-transition",
+//         isProductFavorite
+//           ? "bg-red-500 text-white hover:bg-red-600"
+//           : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500",
+//         heartAnimation
+//       )}
+//       style={
+//         {
+//           // Add CSS custom properties for dynamic animations
+//           "--heart-scale": isProductFavorite ? "1.1" : "1",
+//         } as React.CSSProperties
+//       }
+//     >
+//       <Heart
+//         className={cn(
+//           size,
+//           "heart-transition",
+//           isProductFavorite && "fill-current",
+//           isProductFavorite && "heart-favorite"
+//         )}
+//       />
+//     </button>
+//   );
 
 //   // Render based on variant
 //   if (variant === "list") {
@@ -187,24 +221,10 @@
 //             )}
 
 //             {/* Favorite Button */}
-//             <button
-//               onClick={handleToggleFavorite}
-//               disabled={favoriteLoading}
-//               className={cn(
-//                 "absolute top-2 right-2 p-1.5 rounded-full transition-all duration-300 z-10 shadow-md",
-//                 isProductFavorite
-//                   ? "bg-red-500 text-white hover:bg-red-600"
-//                   : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500"
-//               )}
-//             >
-//               {favoriteLoading ? (
-//                 <Loader2 className="w-3 h-3 animate-spin" />
-//               ) : (
-//                 <Heart
-//                   className={cn("w-3 h-3", isProductFavorite && "fill-current")}
-//                 />
-//               )}
-//             </button>
+//             <HeartButton
+//               size="w-3 h-3"
+//               position="absolute top-2 right-2 p-1.5"
+//             />
 
 //             {/* Discount Badge */}
 //             {discountPercentage > 0 && (
@@ -345,27 +365,7 @@
 //           )}
 
 //           {/* Favorite Button */}
-//           <button
-//             onClick={handleToggleFavorite}
-//             disabled={favoriteLoading}
-//             className={cn(
-//               "absolute top-3 right-3 p-2 rounded-full transition-all duration-300 z-10 shadow-md",
-//               isProductFavorite
-//                 ? "bg-red-500 text-white hover:bg-red-600 scale-110"
-//                 : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500"
-//             )}
-//           >
-//             {favoriteLoading ? (
-//               <Loader2 className="w-4 h-4 animate-spin" />
-//             ) : (
-//               <Heart
-//                 className={cn(
-//                   "w-4 h-4 transition-all",
-//                   isProductFavorite && "fill-current"
-//                 )}
-//               />
-//             )}
-//           </button>
+//           <HeartButton />
 
 //           {/* Category Badge */}
 //           {showCategory && product.category && (
@@ -566,6 +566,61 @@
 //           -webkit-box-orient: vertical;
 //           overflow: hidden;
 //         }
+
+//         /* Heart animations */
+//         .heart-favorite {
+//           animation: heartPulse 0.6s ease-in-out;
+//         }
+
+//         .heart-click {
+//           animation: heartBounce 0.4s ease-in-out;
+//         }
+
+//         .heart-transition {
+//           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+//         }
+
+//         .heart-button:hover {
+//           transform: scale(1.1);
+//         }
+
+//         .heart-button:active {
+//           transform: scale(0.95);
+//         }
+
+//         @keyframes heartPulse {
+//           0% {
+//             transform: scale(1);
+//           }
+//           15% {
+//             transform: scale(1.2);
+//           }
+//           30% {
+//             transform: scale(1);
+//           }
+//           45% {
+//             transform: scale(1.1);
+//           }
+//           60% {
+//             transform: scale(1);
+//           }
+//         }
+
+//         @keyframes heartBounce {
+//           0%,
+//           20%,
+//           50%,
+//           80%,
+//           100% {
+//             transform: translateY(0) scale(1);
+//           }
+//           40% {
+//             transform: translateY(-2px) scale(1.1);
+//           }
+//           60% {
+//             transform: translateY(-1px) scale(1.05);
+//           }
+//         }
 //       `}</style>
 //     </div>
 //   );
@@ -583,10 +638,9 @@ import {
   LogIn,
 } from "lucide-react";
 import Image from "next/image";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useOptimisticCart } from "@/hooks/useCart";
+import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
 import { useStandaloneFavorites } from "@/hooks/useFavourite";
 import { cn } from "@/lib/utils";
 
@@ -628,27 +682,27 @@ export function ProductCard({
   maxFeatures = 2,
   variant = "default",
 }: ProductCardProps) {
-  const { user } = useUser();
   const router = useRouter();
   const [imageLoading, setImageLoading] = useState(true);
   const [heartAnimation, setHeartAnimation] = useState("");
   const heartRef = useRef<HTMLButtonElement>(null);
 
-  // Cart functionality
+  // Use unified cart system for consistent state across all components
   const {
     isInCart,
     getItemQuantity,
     addToCart,
     updateQuantity,
-    removeFromCart,
-  } = useOptimisticCart();
+    openCart,
+    isAuthenticated,
+  } = useUnifiedCart();
 
   // Favorites functionality
   const { isFavorite, toggleProductFavorite } = useStandaloneFavorites();
 
-  const inCart = user ? isInCart(product._id) : false;
-  const quantity = user ? getItemQuantity(product._id) : 0;
-  const isProductFavorite = user ? isFavorite(product._id) : false;
+  const inCart = isAuthenticated ? isInCart(product._id) : false;
+  const quantity = isAuthenticated ? getItemQuantity(product._id) : 0;
+  const isProductFavorite = isAuthenticated ? isFavorite(product._id) : false;
 
   const handleSignInRedirect = () => {
     toast.info("Please sign in to add items to cart");
@@ -659,47 +713,56 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
+    if (!isAuthenticated) {
       handleSignInRedirect();
       return;
     }
 
-    // Optimistic add - UI updates immediately
-    await addToCart(product, 1);
+    try {
+      // This will update ALL components simultaneously via the unified store
+      await addToCart(product, 1);
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+    }
   };
 
   const handleUpdateQuantity = async (e: React.MouseEvent, change: number) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
+    if (!isAuthenticated) {
       handleSignInRedirect();
       return;
     }
 
     const newQty = quantity + change;
 
-    // Optimistic update - UI updates immediately
-    await updateQuantity(product._id, newQty);
+    try {
+      // This will update ALL components simultaneously via the unified store
+      await updateQuantity(product._id, newQty);
+    } catch (error) {
+      console.error("Failed to update quantity:", error);
+    }
   };
 
   const handleViewCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
+    if (!isAuthenticated) {
       handleSignInRedirect();
       return;
     }
 
-    router.push("/cart");
+    // Open cart drawer instead of navigating
+    openCart();
   };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
+    if (!isAuthenticated) {
       toast.info("Please sign in to manage favorites");
       router.push("/sign-in");
       return;
@@ -851,9 +914,9 @@ export function ProductCard({
                 </span>
               </div>
 
-              {/* Cart Actions */}
+              {/* Cart Actions - Unified system ensures all components update */}
               <div onClick={(e) => e.stopPropagation()}>
-                {user && inCart ? (
+                {isAuthenticated && inCart ? (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 bg-green-50 rounded-lg p-1">
                       <button
@@ -884,12 +947,12 @@ export function ProductCard({
                     onClick={handleAddToCart}
                     className={cn(
                       "px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium text-sm",
-                      user
+                      isAuthenticated
                         ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
                         : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
                     )}
                   >
-                    {user ? (
+                    {isAuthenticated ? (
                       <>
                         <ShoppingBag className="w-4 h-4" />
                         Add to Cart
@@ -910,7 +973,7 @@ export function ProductCard({
     );
   }
 
-  // Default card variant
+  // Default card variant with unified cart system
   return (
     <div
       className={cn("group cursor-pointer", className)}
@@ -968,7 +1031,7 @@ export function ProductCard({
           )}
 
           {/* Login Required Overlay for Guests */}
-          {!user && (
+          {!isAuthenticated && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
               <div className="bg-white/95 backdrop-blur-sm rounded-xl p-3 shadow-lg">
                 <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
@@ -1025,9 +1088,9 @@ export function ProductCard({
             </div>
           )}
 
-          {/* Price and Cart Actions */}
+          {/* Price and Cart Actions - Unified system ensures all components update */}
           <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-            {user && inCart ? (
+            {isAuthenticated && inCart ? (
               <>
                 {/* Price and Quantity Controls Row */}
                 <div className="flex items-center justify-between">
@@ -1108,12 +1171,12 @@ export function ProductCard({
                   onClick={handleAddToCart}
                   className={cn(
                     "w-full py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold",
-                    user
+                    isAuthenticated
                       ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700"
                       : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
                   )}
                 >
-                  {user ? (
+                  {isAuthenticated ? (
                     <>
                       <ShoppingBag className="w-4 h-4" />
                       Add to Cart

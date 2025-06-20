@@ -13,11 +13,10 @@
 //   Sun,
 //   Moon,
 //   Leaf,
-//   Loader2,
 // } from "lucide-react";
 // import { Button } from "@/components/ui/button";
 // import { Badge } from "@/components/ui/badge";
-// import { useCartStats } from "@/hooks/useCart";
+// import { useOptimisticCart } from "@/hooks/useCart"; // Updated import
 // import {
 //   useCartStore,
 //   useFavoritesStore,
@@ -30,8 +29,8 @@
 //   const { user } = useUser();
 //   const [isScrolled, setIsScrolled] = useState(false);
 
-//   // Use simple cart stats hook
-//   const { stats: cartStats, loading: cartLoading } = useCartStats();
+//   // Use optimistic cart for instant updates (no loading states needed)
+//   const { stats: cartStats } = useOptimisticCart();
 //   const favoriteCount = useFavoritesStore((state) => state.items.length);
 //   const { theme, toggleTheme } = useThemeStore();
 //   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
@@ -111,6 +110,7 @@
 //                   user ? undefined : () => (window.location.href = "/sign-in")
 //                 }
 //                 className="h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300"
+//                 title={user ? "View favorites" : "Sign in to view favorites"}
 //               >
 //                 {user ? (
 //                   <Link href="/favorites" className="relative">
@@ -125,13 +125,15 @@
 //                     )}
 //                   </Link>
 //                 ) : (
-//                   <div className="relative">
+//                   <div className="relative cursor-pointer">
 //                     <Heart className="w-5 h-5" />
+//                     {/* Small indicator for guests */}
+//                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-60"></div>
 //                   </div>
 //                 )}
 //               </Button>
 
-//               {/* Cart - Enhanced with Database Count (Auth Only) */}
+//               {/* Cart - Optimistic Updates (Instant Response) */}
 //               <Button
 //                 variant="ghost"
 //                 size="icon"
@@ -139,24 +141,31 @@
 //                   user ? openCart : () => (window.location.href = "/sign-in")
 //                 }
 //                 className="relative h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300 hover:scale-105"
+//                 title={user ? "View cart" : "Sign in to view cart"}
 //               >
 //                 <ShoppingBag className="w-5 h-5" />
 
-//                 {/* Show loading spinner when cart is loading (only for authenticated users) */}
-//                 {user && cartLoading && (
-//                   <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center">
-//                     <Loader2 className="w-3 h-3 animate-spin text-primary" />
-//                   </div>
+//                 {/* Instant cart count updates with smooth animation */}
+//                 {user && cartStats.totalItems > 0 && (
+//                   <motion.div
+//                     initial={{ scale: 0 }}
+//                     animate={{ scale: 1 }}
+//                     exit={{ scale: 0 }}
+//                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
+//                     className="absolute -top-1 -right-1"
+//                   >
+//                     <Badge
+//                       variant="destructive"
+//                       className="w-5 h-5 flex items-center justify-center text-xs p-0 font-bold"
+//                     >
+//                       {cartStats.totalItems}
+//                     </Badge>
+//                   </motion.div>
 //                 )}
 
-//                 {/* Show cart count when loaded and has items (only for authenticated users) */}
-//                 {user && !cartLoading && cartStats.totalItems > 0 && (
-//                   <Badge
-//                     variant="destructive"
-//                     className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-xs p-0 animate-bounce"
-//                   >
-//                     {cartStats.totalItems}
-//                   </Badge>
+//                 {/* Small indicator for guests */}
+//                 {!user && (
+//                   <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-60"></div>
 //                 )}
 //               </Button>
 
@@ -208,11 +217,21 @@
 //                 onClick={toggleMobileMenu}
 //                 className="md:hidden h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300"
 //               >
-//                 {isMobileMenuOpen ? (
-//                   <X className="w-5 h-5" />
-//                 ) : (
-//                   <Menu className="w-5 h-5" />
-//                 )}
+//                 <AnimatePresence mode="wait" initial={false}>
+//                   <motion.div
+//                     key={isMobileMenuOpen ? "close" : "open"}
+//                     initial={{ rotate: -90, opacity: 0 }}
+//                     animate={{ rotate: 0, opacity: 1 }}
+//                     exit={{ rotate: 90, opacity: 0 }}
+//                     transition={{ duration: 0.2 }}
+//                   >
+//                     {isMobileMenuOpen ? (
+//                       <X className="w-5 h-5" />
+//                     ) : (
+//                       <Menu className="w-5 h-5" />
+//                     )}
+//                   </motion.div>
+//                 </AnimatePresence>
 //               </Button>
 //             </div>
 //           </div>
@@ -229,20 +248,76 @@
 //             >
 //               <div className="container mx-auto px-4 py-6">
 //                 <nav className="flex flex-col space-y-2">
-//                   {navItems.map((item) => (
-//                     <Link
+//                   {navItems.map((item, index) => (
+//                     <motion.div
 //                       key={item.href}
-//                       href={item.href}
-//                       className="flex items-center justify-between p-3 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300 rounded-xl hover:bg-muted/50"
-//                       onClick={() => toggleMobileMenu()}
+//                       initial={{ opacity: 0, x: -20 }}
+//                       animate={{ opacity: 1, x: 0 }}
+//                       transition={{ duration: 0.3, delay: index * 0.1 }}
 //                     >
-//                       {item.label}
-//                       <span className="w-2 h-2 bg-gradient-to-r from-brand-500 to-wellness-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-//                     </Link>
+//                       <Link
+//                         href={item.href}
+//                         className="flex items-center justify-between p-3 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300 rounded-xl hover:bg-muted/50 group"
+//                         onClick={() => toggleMobileMenu()}
+//                       >
+//                         {item.label}
+//                         <span className="w-2 h-2 bg-gradient-to-r from-brand-500 to-wellness-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+//                       </Link>
+//                     </motion.div>
 //                   ))}
 
+//                   {/* Mobile Cart & Favorites Section for authenticated users */}
+//                   {user && (
+//                     <motion.div
+//                       initial={{ opacity: 0, y: 20 }}
+//                       animate={{ opacity: 1, y: 0 }}
+//                       transition={{ duration: 0.3, delay: 0.4 }}
+//                       className="pt-4 border-t border-muted"
+//                     >
+//                       <div className="flex space-x-3">
+//                         <Button
+//                           variant="outline"
+//                           onClick={() => {
+//                             openCart();
+//                             toggleMobileMenu();
+//                           }}
+//                           className="flex-1 rounded-xl flex items-center justify-center gap-2"
+//                         >
+//                           <ShoppingBag className="w-4 h-4" />
+//                           Cart
+//                           {cartStats.totalItems > 0 && (
+//                             <Badge variant="secondary" className="ml-1">
+//                               {cartStats.totalItems}
+//                             </Badge>
+//                           )}
+//                         </Button>
+//                         <Button
+//                           variant="outline"
+//                           asChild
+//                           onClick={() => toggleMobileMenu()}
+//                           className="flex-1 rounded-xl flex items-center justify-center gap-2"
+//                         >
+//                           <Link href="/favorites">
+//                             <Heart className="w-4 h-4" />
+//                             Favorites
+//                             {favoriteCount > 0 && (
+//                               <Badge variant="secondary" className="ml-1">
+//                                 {favoriteCount}
+//                               </Badge>
+//                             )}
+//                           </Link>
+//                         </Button>
+//                       </div>
+//                     </motion.div>
+//                   )}
+
 //                   {!user && (
-//                     <div className="flex space-x-3 pt-4 border-t border-muted">
+//                     <motion.div
+//                       initial={{ opacity: 0, y: 20 }}
+//                       animate={{ opacity: 1, y: 0 }}
+//                       transition={{ duration: 0.3, delay: 0.4 }}
+//                       className="flex space-x-3 pt-4 border-t border-muted"
+//                     >
 //                       <Button
 //                         variant="outline"
 //                         size="sm"
@@ -259,7 +334,7 @@
 //                       >
 //                         <Link href="/sign-up">Get Started</Link>
 //                       </Button>
-//                     </div>
+//                     </motion.div>
 //                   )}
 //                 </nav>
 //               </div>
@@ -288,25 +363,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useOptimisticCart } from "@/hooks/useCart"; // Updated import
-import {
-  useCartStore,
-  useFavoritesStore,
-  useThemeStore,
-  useUIStore,
-} from "@/store";
+import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+import { useFavoritesStore, useThemeStore, useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const { user } = useUser();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Use optimistic cart for instant updates (no loading states needed)
-  const { stats: cartStats } = useOptimisticCart();
+  // Use unified cart hook for consistent state across all components
+  const { stats, openCart, isAuthenticated } = useUnifiedCart();
+
   const favoriteCount = useFavoritesStore((state) => state.items.length);
   const { theme, toggleTheme } = useThemeStore();
   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
-  const openCart = useCartStore((state) => state.openCart);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -377,14 +447,20 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                asChild={user ? true : false}
+                asChild={isAuthenticated ? true : false}
                 onClick={
-                  user ? undefined : () => (window.location.href = "/sign-in")
+                  isAuthenticated
+                    ? undefined
+                    : () => (window.location.href = "/sign-in")
                 }
                 className="h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300"
-                title={user ? "View favorites" : "Sign in to view favorites"}
+                title={
+                  isAuthenticated
+                    ? "View favorites"
+                    : "Sign in to view favorites"
+                }
               >
-                {user ? (
+                {isAuthenticated ? (
                   <Link href="/favorites" className="relative">
                     <Heart className="w-5 h-5" />
                     {favoriteCount > 0 && (
@@ -405,24 +481,27 @@ export function Header() {
                 )}
               </Button>
 
-              {/* Cart - Optimistic Updates (Instant Response) */}
+              {/* Cart - Unified with instant updates across all components */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={
-                  user ? openCart : () => (window.location.href = "/sign-in")
+                  isAuthenticated
+                    ? openCart
+                    : () => (window.location.href = "/sign-in")
                 }
                 className="relative h-10 w-10 rounded-xl hover:bg-muted/80 transition-all duration-300 hover:scale-105"
-                title={user ? "View cart" : "Sign in to view cart"}
+                title={isAuthenticated ? "View cart" : "Sign in to view cart"}
               >
                 <ShoppingBag className="w-5 h-5" />
 
-                {/* Instant cart count updates with smooth animation */}
-                {user && cartStats.totalItems > 0 && (
+                {/* Cart count with smooth animation - updates instantly across all components */}
+                {isAuthenticated && stats.totalItems > 0 && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
+                    key={stats.totalItems} // Key ensures re-animation on count change
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     className="absolute -top-1 -right-1"
                   >
@@ -430,13 +509,13 @@ export function Header() {
                       variant="destructive"
                       className="w-5 h-5 flex items-center justify-center text-xs p-0 font-bold"
                     >
-                      {cartStats.totalItems}
+                      {stats.totalItems}
                     </Badge>
                   </motion.div>
                 )}
 
                 {/* Small indicator for guests */}
-                {!user && (
+                {!isAuthenticated && (
                   <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-60"></div>
                 )}
               </Button>
@@ -539,7 +618,7 @@ export function Header() {
                   ))}
 
                   {/* Mobile Cart & Favorites Section for authenticated users */}
-                  {user && (
+                  {isAuthenticated && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -557,9 +636,9 @@ export function Header() {
                         >
                           <ShoppingBag className="w-4 h-4" />
                           Cart
-                          {cartStats.totalItems > 0 && (
+                          {stats.totalItems > 0 && (
                             <Badge variant="secondary" className="ml-1">
-                              {cartStats.totalItems}
+                              {stats.totalItems}
                             </Badge>
                           )}
                         </Button>
@@ -583,7 +662,7 @@ export function Header() {
                     </motion.div>
                   )}
 
-                  {!user && (
+                  {!isAuthenticated && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
