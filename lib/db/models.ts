@@ -514,7 +514,7 @@ export interface IConsultation extends Document {
     preferredDate: string;
     timeZone: string;
     communicationPreference: "email" | "phone" | "video-call" | "text";
-    urgencyLevel: "low" | "medium" | "high";
+    urgencyLevel: "3-5-days" | "1-week" | "2-weeks" | "1-month" | "";
   };
 
   // Additional Information
@@ -693,7 +693,7 @@ const consultationSchema = new Schema<IConsultation>(
       },
       urgencyLevel: {
         type: String,
-        enum: ["low", "medium", "high"],
+        enum: ["3-5-days", "1-week", "2-weeks", "1-month"],
         required: true,
       },
     },

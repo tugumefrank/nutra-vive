@@ -65,7 +65,7 @@ const consultationFormSchema = z.object({
   preferredDate: z.string().min(1, "Preferred date is required"),
   timeZone: z.string().min(1, "Time zone is required"),
   communicationPreference: z.enum(["email", "phone", "video-call", "text"]),
-  urgencyLevel: z.enum(["low", "medium", "high"]),
+  urgencyLevel: z.enum(["3-5-days", "1-week", "2-weeks", "1-month"]),
 
   // Additional
   additionalNotes: z.string().optional(),
