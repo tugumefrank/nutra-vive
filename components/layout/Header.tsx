@@ -16,7 +16,7 @@
 // } from "lucide-react";
 // import { Button } from "@/components/ui/button";
 // import { Badge } from "@/components/ui/badge";
-// import { useUnifiedCart } from "@/hooks/useUnifiedCart"; // Updated import
+// import { useCartSelectors } from "@/hooks/useCartSelectors"; // Updated import
 // import { useFavoritesStore, useThemeStore, useUIStore } from "@/store";
 // import { cn } from "@/lib/utils";
 
@@ -24,11 +24,14 @@
 //   const { user } = useUser();
 //   const [isScrolled, setIsScrolled] = useState(false);
 
-//   // Use unified cart hook for consistent state across all components
-//   const { stats, openCart, isAuthenticated } = useUnifiedCart();
+//   // Use optimized selectors for better reactivity
+//   const { stats, openCart } = useCartSelectors();
+//   const isAuthenticated = !!user;
 
-//   const favoriteCount = useFavoritesStore((state) => state.items.length);
-//   const { theme, toggleTheme } = useThemeStore();
+//   const favoriteCount = useFavoritesStore(
+//     (state: { items: string | any[] }) => state.items.length
+//   );
+
 //   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
 
 //   useEffect(() => {
@@ -43,8 +46,9 @@
 //   const navItems = [
 //     { href: "/", label: "Home" },
 //     { href: "/shop", label: "Shop" },
-//     { href: "/about", label: "About" },
+
 //     { href: "/consultation", label: "Consultation" },
+//     { href: "/account", label: "my account" },
 //   ];
 
 //   return (
@@ -351,7 +355,7 @@
 // }
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -364,6 +368,8 @@ import {
   Sun,
   Moon,
   Leaf,
+  Settings,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -379,10 +385,15 @@ export function Header() {
   const { stats, openCart } = useCartSelectors();
   const isAuthenticated = !!user;
 
+  // Check if user is admin
+  const isAdmin = useMemo(() => {
+    return user?.primaryEmailAddress?.emailAddress === "frankholmez@gmail.com";
+  }, [user?.primaryEmailAddress?.emailAddress]);
+
   const favoriteCount = useFavoritesStore(
     (state: { items: string | any[] }) => state.items.length
   );
-  const { theme, toggleTheme } = useThemeStore();
+
   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
 
   useEffect(() => {
@@ -394,12 +405,43 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navItems = [
-    { href: "/", label: "Home" },
-    { href: "/shop", label: "Shop" },
-    { href: "/about", label: "About" },
-    { href: "/consultation", label: "Consultation" },
-  ];
+  // Define the type for navigation items
+  type NavItem = {
+    href: string;
+    label: string;
+    icon?: React.ElementType;
+    isSpecial?: boolean;
+  };
+
+  // Dynamic navigation items based on authentication and admin status
+  const navItems: NavItem[] = useMemo(() => {
+    const baseItems: NavItem[] = [
+      { href: "/", label: "Home" },
+      { href: "/shop", label: "Shop" },
+      { href: "/consultation", label: "Consultation" },
+    ];
+
+    // Add conditional items based on user status
+    if (isAuthenticated) {
+      if (isAdmin) {
+        baseItems.push({
+          href: "/admin",
+          label: "Dashboard",
+          icon: Settings,
+          isSpecial: true,
+        });
+      } else {
+        baseItems.push({
+          href: "/account",
+          label: "My Account",
+          icon: UserCog,
+          isSpecial: true,
+        });
+      }
+    }
+
+    return baseItems;
+  }, [isAuthenticated, isAdmin]);
 
   return (
     <>
@@ -436,16 +478,32 @@ export function Header() {
 
             {/* Desktop Navigation - Enhanced */}
             <nav className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="relative px-4 py-2 text-md font-bold text-black hover:text-primary transition-all duration-300 rounded-lg hover:bg-muted/50 group"
-                >
-                  {item.label}
-                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-brand-500 to-wellness-500 transition-all duration-300 group-hover:w-full"></span>
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "relative px-4 py-2 text-md font-bold transition-all duration-300 rounded-lg hover:bg-muted/50 group flex items-center gap-2",
+                      item.isSpecial
+                        ? "text-orange-600 hover:text-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 hover:border-orange-300 shadow-sm hover:shadow-md"
+                        : "text-black hover:text-primary"
+                    )}
+                  >
+                    {Icon && <Icon className="w-4 h-4" />}
+                    {item.label}
+                    <span
+                      className={cn(
+                        "absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 transition-all duration-300 group-hover:w-full",
+                        item.isSpecial
+                          ? "bg-gradient-to-r from-orange-500 to-amber-500"
+                          : "bg-gradient-to-r from-brand-500 to-wellness-500"
+                      )}
+                    ></span>
+                  </Link>
+                );
+              })}
             </nav>
 
             {/* Actions - Enhanced */}
@@ -531,11 +589,28 @@ export function Header() {
               <div className="flex items-center">
                 {user ? (
                   <div className="flex items-center gap-3">
+                    {/* Admin Badge */}
+                    {isAdmin && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="hidden lg:flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-200 rounded-full"
+                      >
+                        <Settings className="w-3 h-3 text-orange-600" />
+                        <span className="text-xs font-semibold text-orange-700">
+                          Admin
+                        </span>
+                      </motion.div>
+                    )}
+
                     <UserButton
                       afterSignOutUrl="/sign-in"
                       appearance={{
                         elements: {
-                          userButtonAvatarBox: "w-9 h-9 shadow-sm",
+                          userButtonAvatarBox: cn(
+                            "w-9 h-9 shadow-sm transition-all duration-300",
+                            isAdmin && "ring-2 ring-orange-300 ring-offset-1"
+                          ),
                           userButtonPopoverCard:
                             "bg-white/95 backdrop-blur-sm border border-gray-200/70 text-gray-800 rounded-xl shadow-xl shadow-emerald-500/10",
                           userButtonPopoverActions: "text-gray-800",
@@ -606,23 +681,49 @@ export function Header() {
             >
               <div className="container mx-auto px-4 py-6">
                 <nav className="flex flex-col space-y-2">
-                  {navItems.map((item, index) => (
-                    <motion.div
-                      key={item.href}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Link
-                        href={item.href}
-                        className="flex items-center justify-between p-3 text-sm font-semibold text-muted-foreground hover:text-primary transition-all duration-300 rounded-xl hover:bg-muted/50 group"
-                        onClick={() => toggleMobileMenu()}
+                  {navItems.map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <motion.div
+                        key={item.href}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
                       >
-                        {item.label}
-                        <span className="w-2 h-2 bg-gradient-to-r from-brand-500 to-wellness-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                      </Link>
-                    </motion.div>
-                  ))}
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center justify-between p-3 text-sm font-semibold transition-all duration-300 rounded-xl hover:bg-muted/50 group",
+                            item.isSpecial
+                              ? "text-orange-600 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200"
+                              : "text-muted-foreground hover:text-primary"
+                          )}
+                          onClick={() => toggleMobileMenu()}
+                        >
+                          <div className="flex items-center gap-2">
+                            {Icon && <Icon className="w-4 h-4" />}
+                            {item.label}
+                            {item.isSpecial && (
+                              <Badge
+                                variant="secondary"
+                                className="bg-orange-100 text-orange-700 text-xs"
+                              >
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
+                          <span
+                            className={cn(
+                              "w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
+                              item.isSpecial
+                                ? "bg-gradient-to-r from-orange-500 to-amber-500"
+                                : "bg-gradient-to-r from-brand-500 to-wellness-500"
+                            )}
+                          ></span>
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
 
                   {/* Mobile Cart & Favorites Section for authenticated users */}
                   {isAuthenticated && (
