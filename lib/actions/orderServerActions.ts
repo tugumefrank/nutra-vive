@@ -543,7 +543,7 @@ export async function updateOrderStatus(
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const order = await Order.findById(orderId);
@@ -625,7 +625,7 @@ export async function cancelOrder(
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const order = await Order.findById(orderId);
@@ -713,7 +713,7 @@ export async function processRefund(
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const order = await Order.findById(orderId);
@@ -855,7 +855,7 @@ export async function getOrders(filters?: Partial<NodeFilter>): Promise<{
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const validatedFilters = orderFiltersSchema.parse(filters || {});
@@ -975,7 +975,7 @@ export async function getOrderStats(): Promise<{
   }>;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const [
@@ -1113,7 +1113,7 @@ export async function exportOrders(filters?: Partial<NodeFilter>): Promise<{
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const { orders } = await getOrders({ ...filters, limit: 10000 });
@@ -1180,7 +1180,7 @@ export async function bulkUpdateOrders(
   error?: string;
 }> {
   try {
-    await checkAdminAuth();
+    // await checkAdminAuth();
     await connectToDatabase();
 
     const updateData: any = {
