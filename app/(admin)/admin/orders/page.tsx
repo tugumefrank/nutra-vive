@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 interface OrdersPageProps {
-  searchParams: {
+  searchParams: Promise<{
     status?: string;
     paymentStatus?: string;
     search?: string;
@@ -37,18 +37,18 @@ interface OrdersPageProps {
     dateTo?: string;
     page?: string;
     tab?: string;
-  };
+  }>;
 }
 
 async function OrdersContent({ searchParams }: OrdersPageProps) {
   // Get filters from search params
   const filters = {
-    status: searchParams.status,
-    paymentStatus: searchParams.paymentStatus,
-    search: searchParams.search,
-    dateFrom: searchParams.dateFrom,
-    dateTo: searchParams.dateTo,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
+    status: (await searchParams).status,
+    paymentStatus: (await searchParams).paymentStatus,
+    search: (await searchParams).search,
+    dateFrom: (await searchParams).dateFrom,
+    dateTo: (await searchParams).dateTo,
+    page: parseInt((await searchParams).page ?? "1"),
   };
 
   // Fetch orders and stats in parallel
@@ -57,7 +57,7 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
     getOrderStats(),
   ]);
 
-  const activeTab = searchParams.tab || "all";
+  const activeTab = (await searchParams).tab || "all";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
