@@ -28,7 +28,7 @@
 //   children,
 //   preview,
 //   companyName = "Nutra-Vive",
-//   companyUrl = "https://nutravive.com",
+//   companyUrl = "https://nutraviveholistic.com",
 // }: BaseEmailProps) {
 //   return (
 //     <Html>
@@ -71,8 +71,8 @@
 //             </Text>
 //             <Text style={footerText}>
 //               Questions? Contact us at{" "}
-//               <Link href="mailto:support@nutravive.com" style={link}>
-//                 support@nutravive.com
+//               <Link href="mailto:support@nutraviveholistic.com" style={link}>
+//                 support@nutraviveholistic.com
 //               </Link>
 //             </Text>
 //           </Section>
@@ -279,7 +279,7 @@ export default function BaseEmail({
   children,
   preview,
   companyName = "Nutra-Vive",
-  companyUrl = "https://nutravive.com",
+  companyUrl = "https://nutraviveholistic.com",
 }: BaseEmailProps) {
   return (
     <Html>
@@ -322,8 +322,8 @@ export default function BaseEmail({
             </Text>
             <Text style={footerText}>
               Questions? Contact us at{" "}
-              <Link href="mailto:support@nutravive.com" style={link}>
-                support@nutravive.com
+              <Link href="mailto:support@nutraviveholistic.com" style={link}>
+                support@nutraviveholistic.com
               </Link>
             </Text>
           </Section>

@@ -1512,7 +1512,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   {formData.metaTitle || formData.name}
                 </h3>
                 <p className="text-green-700 text-sm mb-2">
-                  nutravive.com › products › {formData.slug}
+                  nutraviveholistic.com › products › {formData.slug}
                 </p>
                 <p className="text-gray-600 text-sm line-clamp-2">
                   {formData.metaDescription || formData.shortDescription}

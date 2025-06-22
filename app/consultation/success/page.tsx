@@ -298,7 +298,7 @@
 //             <div className="space-y-3">
 //               <div className="flex items-center gap-3">
 //                 <Mail className="w-4 h-4 text-gray-500" />
-//                 <span className="text-gray-900">support@nutravive.com</span>
+//                 <span className="text-gray-900">support@nutraviveholistic.com</span>
 //               </div>
 //               <div className="flex items-center gap-3">
 //                 <Phone className="w-4 h-4 text-gray-500" />
@@ -697,7 +697,9 @@ const ConsultationSuccessPageContent: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-900">support@nutravive.com</span>
+                <span className="text-gray-900">
+                  support@nutraviveholistic.com
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-gray-500" />

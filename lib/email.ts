@@ -18,10 +18,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email configuration
 const emailConfig = {
-  from: process.env.FROM_EMAIL || "noreply@nutravive.com",
-  adminEmail: process.env.ADMIN_EMAIL || "admin@nutravive.com",
+  from: process.env.FROM_EMAIL || "noreply@nutraviveholistic.com",
+  adminEmail: process.env.ADMIN_EMAIL || "admin@nutraviveholistic.com",
   companyName: process.env.COMPANY_NAME || "Nutra-Vive",
-  companyUrl: process.env.COMPANY_URL || "https://nutravive.com",
+  companyUrl: process.env.COMPANY_URL || "https://nutraviveholistic.com",
 };
 
 export interface EmailOptions {

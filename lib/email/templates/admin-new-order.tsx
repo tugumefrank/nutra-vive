@@ -18,7 +18,7 @@ export default function AdminNewOrderEmail({
   total,
   itemCount,
   companyName = "Nutra-Vive",
-  companyUrl = "https://nutravive.com",
+  companyUrl = "https://nutraviveholistic.com",
 }: AdminNewOrderProps) {
   return (
     <BaseEmail

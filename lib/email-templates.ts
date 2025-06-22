@@ -94,8 +94,8 @@ const createEmailTemplate = (content: string, title: string) => `
           <div class="footer">
               <p><strong>Nutra-Vive</strong></p>
               <p>Where Wellness Meets Flavor—Naturally</p>
-              <p>📧 support@nutravive.com | 📞 (555) 123-4567</p>
-              <p>🌐 <a href="https://nutravive.com" style="color: #10b981;">nutravive.com</a></p>
+              <p>📧 support@nutraviveholistic.com | 📞 (555) 123-4567</p>
+              <p>🌐 <a href="https://nutraviveholistic.com" style="color: #10b981;">nutraviveholistic.com</a></p>
           </div>
       </div>
   </body>
@@ -138,14 +138,14 @@ export const emailTemplates = {
             </ol>
             
             <div class="text-center mt-4">
-                <a href="https://nutravive.com/consultation/manage?id=${
+                <a href="https://nutraviveholistic.com/consultation/manage?id=${
                   data.consultationNumber
                 }" class="button">
                     Manage Your Consultation
                 </a>
             </div>
             
-            <p class="mt-4">If you have any questions or need to reschedule, please don't hesitate to contact us at support@nutravive.com or (555) 123-4567.</p>
+            <p class="mt-4">If you have any questions or need to reschedule, please don't hesitate to contact us at support@nutraviveholistic.com or (555) 123-4567.</p>
             
             <p>Looking forward to helping you on your wellness journey!</p>
             
@@ -161,8 +161,8 @@ export const emailTemplates = {
       text: `Hi ${data.firstName},
   
   We've received your consultation request (${data.consultationNumber}) for $${
-        data.totalAmount
-      }.
+    data.totalAmount
+  }.
   
   Our team will contact you within 24 hours to confirm your appointment.
   
@@ -205,7 +205,7 @@ export const emailTemplates = {
             </ul>
             
             <div class="text-center mt-4">
-                <a href="https://nutravive.com/consultation/${
+                <a href="https://nutraviveholistic.com/consultation/${
                   data.consultationNumber
                 }" class="button">
                     View Consultation Details
@@ -272,7 +272,7 @@ export const emailTemplates = {
             <p>Please review the consultation request and contact the customer within 24 hours to confirm scheduling.</p>
             
             <div class="text-center mt-4">
-                <a href="https://nutravive.com/admin/consultations/${
+                <a href="https://nutraviveholistic.com/admin/consultations/${
                   data.consultationNumber
                 }" class="button">
                     Review Consultation
@@ -354,7 +354,7 @@ export const emailTemplates = {
               ? `<p><strong>Reason:</strong> ${data.consultantNotes}</p>`
               : ""
           }
-          <p>If you'd like to reschedule or book a new consultation, we're here to help. Just reply to this email or contact us at support@nutravive.com.</p>
+          <p>If you'd like to reschedule or book a new consultation, we're here to help. Just reply to this email or contact us at support@nutraviveholistic.com.</p>
           <p>Your wellness journey is important to us, and we hope to work with you in the future!</p>
         `,
       rescheduled: `
@@ -388,7 +388,7 @@ export const emailTemplates = {
             ${statusContent[data.status as keyof typeof statusContent]}
             
             <div class="text-center mt-4">
-                <a href="https://nutravive.com/consultation/${
+                <a href="https://nutraviveholistic.com/consultation/${
                   data.consultationNumber
                 }" class="button">
                     View Consultation Details
@@ -474,7 +474,7 @@ export const emailTemplates = {
                 </a>
                 `
                     : `
-                <a href="https://nutravive.com/consultation/${data.consultationNumber}" class="button">
+                <a href="https://nutraviveholistic.com/consultation/${data.consultationNumber}" class="button">
                     View Details
                 </a>
                 `

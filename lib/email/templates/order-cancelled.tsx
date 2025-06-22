@@ -18,7 +18,7 @@ export default function OrderCancelledEmail({
   reason,
   refundInfo,
   companyName = "Nutra-Vive",
-  companyUrl = "https://nutravive.com",
+  companyUrl = "https://nutraviveholistic.com",
 }: OrderCancelledProps) {
   return (
     <BaseEmail
@@ -60,7 +60,9 @@ export default function OrderCancelledEmail({
       <Section style={sharedStyles.supportSection}>
         <Text style={sharedStyles.supportText}>
           Questions about your cancellation? Contact our support team at{" "}
-          <Text style={sharedStyles.supportLink}>support@nutravive.com</Text>
+          <Text style={sharedStyles.supportLink}>
+            support@nutraviveholistic.com
+          </Text>
         </Text>
       </Section>
     </BaseEmail>
