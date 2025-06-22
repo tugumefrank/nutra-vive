@@ -87,9 +87,9 @@ export default function PaymentStep({
             <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="text-green-700">
                 <p className="font-medium">✅ Order created successfully!</p>
-                <p className="text-sm mt-1">
+                {/* <p className="text-sm mt-1">
                   Order ID: <span className="font-mono">{orderId}</span>
-                </p>
+                </p> */}
                 <p className="text-sm mt-1">
                   Complete your payment below to confirm your order.
                 </p>
@@ -97,7 +97,7 @@ export default function PaymentStep({
             </div>
 
             {/* Order Total Display */}
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+            {/* <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-orange-900">Total Amount</p>
@@ -112,7 +112,7 @@ export default function PaymentStep({
                   <p className="text-xs text-orange-600">USD</p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Stripe Payment Component */}
             <div className="border border-gray-200 rounded-xl p-4 bg-white">
