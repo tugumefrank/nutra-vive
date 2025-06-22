@@ -138,13 +138,13 @@ async function generateOrderNumber(): Promise<string> {
 function calculateShipping(deliveryMethod: string, subtotal: number): number {
   if (deliveryMethod === "pickup") return 0;
   if (subtotal >= 25) return 0; // Free shipping over $25
-  if (deliveryMethod === "express") return 9.99;
-  return 5.99; // Standard shipping
+  if (deliveryMethod === "express") return 0;
+  return 0; // Standard shipping
 }
 
 // Calculate tax (simplified - 8% tax rate) (keep existing)
 function calculateTax(subtotal: number, shippingAmount: number): number {
-  return Math.round((subtotal + shippingAmount) * 0.08 * 100) / 100;
+  return 0; //Math.round((subtotal + shippingAmount) * 0.08 * 100) / 100;
 }
 
 // Create checkout session (updated with new email system)
