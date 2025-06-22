@@ -1,4 +1,4 @@
-import { MainLayout } from "@/components/layout/MainLayout";
+import { LandingLayout, MainLayout } from "@/components/layout/MainLayout";
 import ModernHeroSlider from "@/components/home/HeroSection";
 import { FeaturedProducts } from "@/components/home/FeaturedProducts";
 import { CategoryShowcase } from "@/components/home/CategoryShowcase";
@@ -12,7 +12,7 @@ import { VibrantFeatures } from "@/components/home/VibrantFeatures";
 
 export default function HomePage() {
   return (
-    <MainLayout>
+    <LandingLayout>
       <ModernHeroSlider />
       <FeaturedProducts />
       {/* <ColorfulCategories /> */}
@@ -25,6 +25,6 @@ export default function HomePage() {
 
       <Testimonials />
       {/* <NewsletterCTA /> */}
-    </MainLayout>
+    </LandingLayout>
   );
 }
