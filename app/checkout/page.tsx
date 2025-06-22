@@ -1255,7 +1255,7 @@ export default function CheckoutPage() {
                           variant="secondary"
                           className="bg-green-100 text-green-700"
                         >
-                          {subtotal >= 25 ? "FREE" : "$5.99"}
+                          {subtotal >= 25 ? "FREE" : "$0.00"}
                         </Badge>
                       </Label>
 
@@ -1277,7 +1277,7 @@ export default function CheckoutPage() {
                             </div>
                           </div>
                         </div>
-                        <Badge variant="outline">$9.99</Badge>
+                        <Badge variant="outline">$0.00</Badge>
                       </Label>
 
                       <Label
