@@ -813,7 +813,7 @@ import { getCart } from "@/lib/actions/cartServerActions";
 import {
   createCheckoutSession,
   confirmPayment,
-} from "@/lib/actions/orderServerAction";
+} from "@/lib/actions/orderServerActions";
 import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
 
 // Initialize Stripe outside component to avoid recreating
