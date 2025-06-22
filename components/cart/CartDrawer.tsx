@@ -373,8 +373,8 @@ export function CartDrawer() {
       (sum: number, item: any) => sum + item.quantity * item.price,
       0
     ) || 0;
-  const shipping = subtotal > 50 ? 0 : 5.99; // Free shipping over $50
-  const tax = subtotal * 0.08; // 8% tax
+  const shipping = subtotal > 50 ? 0 : 0; // Free shipping over $50
+  const tax = 0; //subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
   return (
