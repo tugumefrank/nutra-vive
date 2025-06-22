@@ -870,7 +870,7 @@ export default function CheckoutPage() {
   // Calculate totals
   const subtotal =
     cart?.items.reduce((sum, item) => sum + item.quantity * item.price, 0) || 0;
-  const shipping =
+  const shipping: number =
     formData.deliveryMethod === "pickup"
       ? 0
       : subtotal >= 25
