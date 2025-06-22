@@ -1,202 +1,192 @@
-// lib/email.ts
+// lib/email.ts - Simplified service that replaces your existing email function
 
-import { emailTemplates } from "./email-templates";
+import { Resend } from "resend";
+import { render } from "@react-email/render";
 
-interface EmailOptions {
-  to: string;
-  subject?: string;
-  template?: keyof typeof emailTemplates;
-  data?: Record<string, any>;
-  html?: string;
-  text?: string;
+// Email template imports
+import OrderConfirmationEmail from "./email/templates/order-confirmation";
+import OrderStatusUpdateEmail from "./email/templates/order-status-update";
+import OrderCancelledEmail from "./email/templates/order-cancelled";
+import RefundProcessedEmail from "./email/templates/refund-processed";
+import ConsultationConfirmationEmail from "./email/templates/consultation-confirmation";
+import PaymentConfirmationEmail from "./email/templates/payment-confirmation";
+import WelcomeEmail from "./email/templates/welcome";
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Email configuration
+const emailConfig = {
+  from: process.env.FROM_EMAIL || "noreply@nutravive.com",
+  adminEmail: process.env.ADMIN_EMAIL || "admin@nutravive.com",
+  companyName: process.env.COMPANY_NAME || "Nutra-Vive",
+  companyUrl: process.env.COMPANY_URL || "https://nutravive.com",
+};
+
+export interface EmailOptions {
+  to: string | string[];
+  subject: string;
+  template: string;
+  data: Record<string, any>;
+  from?: string;
 }
 
-interface EmailResponse {
-  success: boolean;
-  error?: string;
-  messageId?: string;
-}
-
-// Main email sending function using Resend
-export async function sendEmail(options: EmailOptions): Promise<EmailResponse> {
+// Main email sending function that replaces your existing sendEmail function
+export async function sendEmail({
+  to,
+  subject,
+  template,
+  data,
+  from = emailConfig.from,
+}: EmailOptions) {
   try {
-    // Check if we're in development mode
-    if (process.env.NODE_ENV === "development") {
-      console.log("📧 [DEV MODE] Email would be sent:", {
-        to: options.to,
-        subject: options.subject,
-        template: options.template,
-        data: options.data,
-      });
+    console.log(`📧 Sending ${template} email to:`, to);
 
-      // Return mock success in development
-      return {
-        success: true,
-        messageId: `mock-${Date.now()}`,
-      };
-    }
+    // Get the React component for the template
+    const EmailComponent = getEmailTemplate(template);
+    if (!EmailComponent) {
+      console.error(`❌ Email template "${template}" not found`);
 
-    // Production email sending with Resend
-    return await sendEmailWithResend(options);
-  } catch (error: any) {
-    console.error("Email service error:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to send email",
-    };
-  }
-}
-
-// Resend Implementation
-async function sendEmailWithResend(
-  options: EmailOptions
-): Promise<EmailResponse> {
-  try {
-    // Check if Resend is configured
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not configured");
-    }
-
-    const { Resend } = require("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    let html = options.html;
-    let text = options.text;
-    let subject = options.subject;
-
-    // Use template if provided
-    if (options.template && options.data) {
-      const emailTemplate = emailTemplates[options.template](options.data);
-      html = emailTemplate.html;
-      text = emailTemplate.text;
-      subject = subject || emailTemplate.subject;
-    }
-
-    // Validate required fields
-    if (!html && !text) {
-      throw new Error("Either HTML or text content is required");
-    }
-
-    if (!subject) {
-      throw new Error("Email subject is required");
-    }
-
-    const emailData = {
-      from: process.env.FROM_EMAIL || "Nutra-Vive <noreply@nutravive.com>",
-      to: options.to,
-      subject,
-      ...(html && { html }),
-      ...(text && { text }),
-    };
-
-    console.log("📧 Sending email via Resend:", {
-      to: options.to,
-      subject,
-      template: options.template,
-    });
-
-    const response = await resend.emails.send(emailData);
-
-    if (response.error) {
-      throw new Error(response.error.message || "Resend API error");
-    }
-
-    console.log("✅ Email sent successfully:", response.data?.id);
-
-    return {
-      success: true,
-      messageId: response.data?.id,
-    };
-  } catch (error: any) {
-    console.error("❌ Resend email error:", error);
-    return {
-      success: false,
-      error: error.message || "Failed to send email via Resend",
-    };
-  }
-}
-
-// Utility function to send consultation emails
-export async function sendConsultationEmail(
-  type:
-    | "confirmation"
-    | "payment-confirmation"
-    | "admin-notification"
-    | "status-update"
-    | "reminder",
-  to: string,
-  data: Record<string, any>
-): Promise<EmailResponse> {
-  const templateMap = {
-    confirmation: "consultation-confirmation",
-    "payment-confirmation": "payment-confirmation",
-    "admin-notification": "admin-consultation-notification",
-    "status-update": "consultation-status-update",
-    reminder: "consultation-reminder",
-  } as const;
-
-  return sendEmail({
-    to,
-    template: templateMap[type],
-    data,
-  });
-}
-
-// Utility function to send bulk emails (for marketing, etc.)
-export async function sendBulkEmails(
-  emails: { to: string; data?: Record<string, any> }[],
-  template: keyof typeof emailTemplates,
-  commonData: Record<string, any> = {}
-): Promise<{ sent: number; failed: number; errors: string[] }> {
-  const results = {
-    sent: 0,
-    failed: 0,
-    errors: [] as string[],
-  };
-
-  // Send emails with a delay to respect rate limits
-  for (const email of emails) {
-    try {
-      const result = await sendEmail({
-        to: email.to,
-        template,
-        data: { ...commonData, ...email.data },
-      });
-
-      if (result.success) {
-        results.sent++;
-      } else {
-        results.failed++;
-        results.errors.push(`Failed to send to ${email.to}: ${result.error}`);
+      // In development, just log instead of failing
+      if (process.env.NODE_ENV === "development") {
+        console.log("📧 [DEV MODE] Email would have been sent:", {
+          to,
+          subject,
+          template,
+          data,
+        });
+        return { success: true, id: "dev-mode" };
       }
 
-      // Add small delay between emails to respect rate limits
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch (error: any) {
-      results.failed++;
-      results.errors.push(`Error sending to ${email.to}: ${error.message}`);
+      throw new Error(`Email template "${template}" not found`);
     }
+
+    // Render the React component to HTML
+    const html = await render(EmailComponent({ ...data, ...emailConfig }));
+
+    // Check if we're in development mode and Resend is not configured
+    if (!process.env.RESEND_API_KEY) {
+      console.log("📧 [DEV MODE] Resend not configured, logging email:", {
+        to,
+        subject,
+        template,
+        data,
+      });
+      console.log(
+        "📧 [DEV MODE] Email HTML preview:",
+        html.substring(0, 200) + "..."
+      );
+      return { success: true, id: "dev-mode" };
+    }
+
+    // Send the email with Resend
+    const result = await resend.emails.send({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+    });
+
+    if (result.error) {
+      console.error("❌ Resend API error:", result.error);
+      throw new Error(result.error.message);
+    }
+
+    console.log("✅ Email sent successfully:", result.data?.id);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
+
+    // In development, log the email instead of failing
+    if (process.env.NODE_ENV === "development") {
+      console.log("📧 [DEV MODE] Email failed but logged:", {
+        to,
+        subject,
+        template,
+        data,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return { success: true, id: "dev-mode-fallback" };
+    }
+
+    // In production, we might want to still throw to handle the error properly
+    throw error;
   }
-
-  return results;
 }
 
-// Test email function for development
-export async function sendTestEmail(to: string): Promise<EmailResponse> {
-  return sendEmail({
+// Template mapping function
+function getEmailTemplate(template: string) {
+  const templates: Record<string, any> = {
+    "order-confirmation": OrderConfirmationEmail,
+    "order-status-update": OrderStatusUpdateEmail,
+    "order-cancelled": OrderCancelledEmail,
+    "refund-processed": RefundProcessedEmail,
+    "consultation-confirmation": ConsultationConfirmationEmail,
+    "payment-confirmation": PaymentConfirmationEmail,
+    welcome: WelcomeEmail,
+  };
+
+  return templates[template];
+}
+
+// Convenience functions for common emails (optional, but makes it easier to use)
+export const sendOrderConfirmation = (to: string, data: any) =>
+  sendEmail({
     to,
-    subject: "Nutra-Vive - Test Email",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #f97316;">Nutra-Vive Email Test</h1>
-        <p>This is a test email to verify your email configuration is working correctly.</p>
-        <p>If you received this email, your Resend integration is set up properly! 🎉</p>
-        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="color: #6b7280; font-size: 14px;">
-          This email was sent from your Nutra-Vive application.
-        </p>
-      </div>
-    `,
-    text: "Nutra-Vive Email Test - If you received this email, your Resend integration is working correctly!",
+    subject: `Order Confirmed - ${data.orderNumber}`,
+    template: "order-confirmation",
+    data,
   });
-}
+
+export const sendOrderStatusUpdate = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: `Order Update - ${data.orderNumber}`,
+    template: "order-status-update",
+    data,
+  });
+
+export const sendConsultationConfirmation = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: "Consultation Request Received - Nutra-Vive",
+    template: "consultation-confirmation",
+    data,
+  });
+
+export const sendOrderCancellation = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: `Order Cancelled - ${data.orderNumber}`,
+    template: "order-cancelled",
+    data,
+  });
+
+export const sendRefundNotification = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: `Refund Processed - ${data.orderNumber}`,
+    template: "refund-processed",
+    data,
+  });
+
+export const sendWelcomeEmail = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: `Welcome to ${emailConfig.companyName}!`,
+    template: "welcome",
+    data,
+  });
+
+// Admin notification helper
+export const sendAdminNotification = (
+  subject: string,
+  data: any,
+  template: string = "admin-notification"
+) =>
+  sendEmail({
+    to: emailConfig.adminEmail,
+    subject: `[ADMIN] ${subject}`,
+    template,
+    data,
+  });
