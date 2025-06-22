@@ -11,6 +11,7 @@ import RefundProcessedEmail from "./email/templates/refund-processed";
 import ConsultationConfirmationEmail from "./email/templates/consultation-confirmation";
 import PaymentConfirmationEmail from "./email/templates/payment-confirmation";
 import WelcomeEmail from "./email/templates/welcome";
+import AdminNewOrderEmail from "./email/templates/admin-new-order";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -121,6 +122,7 @@ function getEmailTemplate(template: string) {
     "order-status-update": OrderStatusUpdateEmail,
     "order-cancelled": OrderCancelledEmail,
     "refund-processed": RefundProcessedEmail,
+    "admin-new-order": AdminNewOrderEmail,
     "consultation-confirmation": ConsultationConfirmationEmail,
     "payment-confirmation": PaymentConfirmationEmail,
     welcome: WelcomeEmail,
@@ -188,5 +190,13 @@ export const sendAdminNotification = (
     to: emailConfig.adminEmail,
     subject: `[ADMIN] ${subject}`,
     template,
+    data,
+  });
+
+export const sendAdminNewOrder = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: "New Order - Nutra-Vive",
+    template: "admin-new-order",
     data,
   });
