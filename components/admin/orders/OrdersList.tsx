@@ -78,10 +78,16 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
   const handleQuickStatusUpdate = async (orderId: string, status: string) => {
     setIsUpdating(orderId);
     try {
-      const result = await updateOrderStatus({
+      const result = await updateOrderStatus(
         orderId,
-        status: status as any,
-      });
+        status as
+          | "pending"
+          | "processing"
+          | "shipped"
+          | "delivered"
+          | "cancelled"
+          | "refunded"
+      );
 
       if (result.success) {
         toast.success(`Order status updated to ${status}`);

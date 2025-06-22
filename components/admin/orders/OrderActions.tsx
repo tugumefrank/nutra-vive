@@ -85,11 +85,11 @@ export function OrderActions({
   const handleStatusUpdate = async (newStatus: string, tracking?: string) => {
     setIsLoading(true);
     try {
-      const result = await updateOrderStatus({
+      const result = await updateOrderStatus(
         orderId,
-        status: newStatus as any,
-        trackingNumber: tracking,
-      });
+        newStatus as any,
+        tracking
+      );
 
       if (result.success) {
         toast.success(`Order ${orderNumber} status updated to ${newStatus}`);
