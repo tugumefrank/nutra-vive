@@ -40,12 +40,11 @@
 // import { Separator } from "@/components/ui/separator";
 // import { toast } from "sonner";
 // import { getCart } from "@/lib/actions/cartServerActions";
-// import { createPaymentIntent } from "@/lib/actions/paymentServerActions"; // Your payment intent action
+// import { createPaymentIntent } from "@/lib/actions/paymentServerActions";
 // import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
 
-// const stripePromise = loadStripe(
-//   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-// );
+// // Initialize Stripe outside component to avoid recreating
+// const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 // interface CartItem {
 //   _id: string;
@@ -72,6 +71,7 @@
 //   const [clientSecret, setClientSecret] = useState<string | null>(null);
 //   const [paymentLoading, setPaymentLoading] = useState(false);
 //   const [formValid, setFormValid] = useState(false);
+//   const [paymentError, setPaymentError] = useState<string | null>(null);
 
 //   // Form state
 //   const [formData, setFormData] = useState({
@@ -118,10 +118,16 @@
 
 //   // Create payment intent when form is valid and total > 0
 //   useEffect(() => {
-//     if (formValid && total > 0 && !clientSecret) {
+//     if (formValid && total > 0 && !clientSecret && !paymentLoading) {
+//       console.log("Conditions met for payment intent creation:", {
+//         formValid,
+//         total,
+//         clientSecret: !!clientSecret,
+//         paymentLoading,
+//       });
 //       initializePayment();
 //     }
-//   }, [formValid, total]);
+//   }, [formValid, total, clientSecret, paymentLoading]);
 
 //   const loadCart = async () => {
 //     try {
@@ -130,6 +136,7 @@
 
 //       if (result.success && result.cart) {
 //         setCart(result.cart);
+//         console.log("Cart loaded:", result.cart);
 
 //         // Redirect to cart if empty
 //         if (!result.cart.items || result.cart.items.length === 0) {
@@ -162,22 +169,37 @@
 //     const isValid = requiredFields.every(
 //       (field) => formData[field as keyof typeof formData]
 //     );
+
+//     console.log("Form validation:", { isValid, requiredFields, formData });
 //     setFormValid(isValid);
 //   };
 
 //   const initializePayment = async () => {
 //     try {
+//       console.log("Initializing payment for total:", total);
 //       setPaymentLoading(true);
+//       setPaymentError(null);
+
 //       const result = await createPaymentIntent(total);
+//       console.log("Payment intent result:", result);
 
 //       if (result.success && result.clientSecret) {
+//         console.log(
+//           "Setting client secret:",
+//           result.clientSecret.substring(0, 20) + "..."
+//         );
 //         setClientSecret(result.clientSecret);
 //       } else {
+//         console.error("Payment intent creation failed:", result.error);
+//         setPaymentError(result.error || "Failed to initialize payment");
 //         toast.error(result.error || "Failed to initialize payment");
 //       }
 //     } catch (error) {
 //       console.error("Error initializing payment:", error);
-//       toast.error("Failed to initialize payment");
+//       const errorMessage =
+//         error instanceof Error ? error.message : "Failed to initialize payment";
+//       setPaymentError(errorMessage);
+//       toast.error(errorMessage);
 //     } finally {
 //       setPaymentLoading(false);
 //     }
@@ -205,7 +227,7 @@
 
 //   const handlePaymentError = (error: string) => {
 //     console.error("Payment error:", error);
-//     // Error handling is done in the StripeShopCheckout component
+//     setPaymentError(error);
 //   };
 
 //   if (loading) {
@@ -627,6 +649,20 @@
 //                 </div>
 //               </div>
 
+//               {/* Debug Information */}
+//               {process.env.NODE_ENV === "development" && (
+//                 <div className="mb-4 p-3 bg-gray-100 rounded text-xs space-y-1">
+//                   <div>
+//                     <strong>Debug Info:</strong>
+//                   </div>
+//                   <div>Form Valid: {formValid ? "✓" : "✗"}</div>
+//                   <div>Total: ${total.toFixed(2)}</div>
+//                   <div>Client Secret: {clientSecret ? "✓" : "✗"}</div>
+//                   <div>Payment Loading: {paymentLoading ? "✓" : "✗"}</div>
+//                   <div>Payment Error: {paymentError || "None"}</div>
+//                 </div>
+//               )}
+
 //               {/* Payment Section */}
 //               <div className="space-y-4">
 //                 <div className="flex items-center gap-2">
@@ -648,6 +684,26 @@
 //                   </div>
 //                 )}
 
+//                 {paymentError && (
+//                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+//                     <div className="flex items-center gap-2 text-red-700">
+//                       <AlertCircle className="w-4 h-4" />
+//                       <div>
+//                         <p className="text-sm font-medium">Payment Error</p>
+//                         <p className="text-sm">{paymentError}</p>
+//                       </div>
+//                     </div>
+//                     <Button
+//                       onClick={initializePayment}
+//                       variant="outline"
+//                       size="sm"
+//                       className="mt-2"
+//                     >
+//                       Retry Payment Setup
+//                     </Button>
+//                   </div>
+//                 )}
+
 //                 {formValid && total > 0 && (
 //                   <>
 //                     {paymentLoading && (
@@ -661,7 +717,7 @@
 //                       </div>
 //                     )}
 
-//                     {clientSecret && (
+//                     {clientSecret && !paymentLoading && (
 //                       <Elements
 //                         stripe={stripePromise}
 //                         options={{
@@ -677,6 +733,7 @@
 //                             },
 //                           },
 //                         }}
+//                         key={clientSecret} // Force re-render when clientSecret changes
 //                       >
 //                         <StripeShopCheckout
 //                           amount={total}
@@ -753,17 +810,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getCart } from "@/lib/actions/cartServerActions";
-import { createPaymentIntent } from "@/lib/actions/paymentServerActions";
+import {
+  createCheckoutSession,
+  confirmPayment,
+} from "@/lib/actions/orderServerAction";
 import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
 
 // Initialize Stripe outside component to avoid recreating
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-
-// Debug Stripe key
-console.log(
-  "Stripe Publishable Key:",
-  process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY?.substring(0, 12) + "..."
-);
 
 interface CartItem {
   _id: string;
@@ -788,9 +842,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [orderComplete, setOrderComplete] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [formValid, setFormValid] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [creatingOrder, setCreatingOrder] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -835,18 +891,25 @@ export default function CheckoutPage() {
     validateForm();
   }, [formData]);
 
-  // Create payment intent when form is valid and total > 0
+  // Create order and payment intent when form is valid and total > 0
   useEffect(() => {
-    if (formValid && total > 0 && !clientSecret && !paymentLoading) {
-      console.log("Conditions met for payment intent creation:", {
+    if (
+      formValid &&
+      total > 0 &&
+      !clientSecret &&
+      !paymentLoading &&
+      !creatingOrder
+    ) {
+      console.log("Conditions met for order creation:", {
         formValid,
         total,
         clientSecret: !!clientSecret,
         paymentLoading,
+        creatingOrder,
       });
-      initializePayment();
+      createOrder();
     }
-  }, [formValid, total, clientSecret, paymentLoading]);
+  }, [formValid, total, clientSecret, paymentLoading, creatingOrder]);
 
   const loadCart = async () => {
     try {
@@ -877,6 +940,13 @@ export default function CheckoutPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Reset payment state when form changes to trigger re-creation
+    if (clientSecret) {
+      setClientSecret(null);
+      setOrderId(null);
+      setPaymentError(null);
+    }
   };
 
   const validateForm = () => {
@@ -885,61 +955,112 @@ export default function CheckoutPage() {
       requiredFields.push("address", "city", "state", "zipCode");
     }
 
-    const isValid = requiredFields.every(
-      (field) => formData[field as keyof typeof formData]
-    );
+    const isValid = requiredFields.every((field) => {
+      const value = formData[field as keyof typeof formData];
+      return value && value.toString().trim() !== "";
+    });
 
-    console.log("Form validation:", { isValid, requiredFields, formData });
-    setFormValid(isValid);
+    // Validate email format
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+
+    console.log("Form validation:", {
+      isValid: isValid && emailValid,
+      requiredFields,
+      formData,
+    });
+    setFormValid(isValid && emailValid);
   };
 
-  const initializePayment = async () => {
+  const createOrder = async () => {
     try {
-      console.log("Initializing payment for total:", total);
-      setPaymentLoading(true);
+      console.log("Creating order and payment intent for total:", total);
+      setCreatingOrder(true);
       setPaymentError(null);
 
-      const result = await createPaymentIntent(total);
-      console.log("Payment intent result:", result);
+      // Prepare checkout data according to your schema
+      const checkoutData = {
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address1: formData.address,
+          address2: formData.apartment,
+          city: formData.city,
+          province: formData.state,
+          country: formData.country,
+          zip: formData.zipCode,
+          phone: formData.phone,
+        },
+        billingAddress: undefined, // Will use shipping address
+        email: formData.email,
+        phone: formData.phone,
+        deliveryMethod: formData.deliveryMethod as
+          | "standard"
+          | "express"
+          | "pickup",
+        notes: formData.notes,
+        marketingOptIn: formData.marketingOptIn,
+      };
 
-      if (result.success && result.clientSecret) {
-        console.log(
-          "Setting client secret:",
-          result.clientSecret.substring(0, 20) + "..."
-        );
+      console.log("Calling createCheckoutSession with data:", checkoutData);
+      const result = await createCheckoutSession(checkoutData);
+      console.log("Checkout session result:", result);
+
+      if (result.success && result.clientSecret && result.orderId) {
+        console.log("Order created successfully:", {
+          orderId: result.orderId,
+          clientSecret: result.clientSecret.substring(0, 20) + "...",
+        });
+
+        setOrderId(result.orderId);
         setClientSecret(result.clientSecret);
+
+        toast.success("Order created! Complete payment to confirm.");
       } else {
-        console.error("Payment intent creation failed:", result.error);
-        setPaymentError(result.error || "Failed to initialize payment");
-        toast.error(result.error || "Failed to initialize payment");
+        console.error("Checkout session creation failed:", result.error);
+        setPaymentError(result.error || "Failed to create order");
+        toast.error(result.error || "Failed to create order");
       }
     } catch (error) {
-      console.error("Error initializing payment:", error);
+      console.error("Error creating order:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to initialize payment";
+        error instanceof Error ? error.message : "Failed to create order";
       setPaymentError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setPaymentLoading(false);
+      setCreatingOrder(false);
     }
   };
 
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
-      setOrderComplete(true);
+      console.log("Payment successful, confirming order...", paymentIntentId);
 
-      toast.success(
-        "Order placed successfully! You will receive a confirmation email shortly."
-      );
+      // Confirm the payment and update order status
+      const result = await confirmPayment(paymentIntentId);
 
-      // Simulate order creation and redirect
-      setTimeout(() => {
-        router.push("/orders");
-      }, 3000);
+      if (result.success && result.order) {
+        console.log("Order confirmed:", result.order);
+        setOrderComplete(true);
+
+        toast.success(
+          "Order placed successfully! You will receive a confirmation email shortly."
+        );
+
+        // Redirect to order details after 3 seconds
+        setTimeout(() => {
+          router.push(`/orders/${result.order._id}`);
+        }, 3000);
+      } else {
+        console.error("Order confirmation failed:", result.error);
+        toast.error(
+          result.error ||
+            "Payment processed but there was an issue confirming your order. Please contact support."
+        );
+      }
     } catch (error) {
       console.error("Error handling payment success:", error);
       toast.error(
-        "Payment processed but there was an issue creating your order. Please contact support."
+        "Payment processed but there was an issue confirming your order. Please contact support."
       );
     }
   };
@@ -947,6 +1068,7 @@ export default function CheckoutPage() {
   const handlePaymentError = (error: string) => {
     console.error("Payment error:", error);
     setPaymentError(error);
+    toast.error("Payment failed: " + error);
   };
 
   if (loading) {
@@ -978,6 +1100,13 @@ export default function CheckoutPage() {
             Thank you for your purchase. Your order has been confirmed and will
             be processed shortly.
           </p>
+          {orderId && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">
+                Order ID: <span className="font-mono font-bold">{orderId}</span>
+              </p>
+            </div>
+          )}
           <div className="space-y-3">
             <Button className="w-full" asChild>
               <Link href="/orders">View Your Orders</Link>
@@ -1240,10 +1369,55 @@ export default function CheckoutPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="AL">Alabama</SelectItem>
+                            <SelectItem value="AK">Alaska</SelectItem>
+                            <SelectItem value="AZ">Arizona</SelectItem>
+                            <SelectItem value="AR">Arkansas</SelectItem>
                             <SelectItem value="CA">California</SelectItem>
+                            <SelectItem value="CO">Colorado</SelectItem>
+                            <SelectItem value="CT">Connecticut</SelectItem>
+                            <SelectItem value="DE">Delaware</SelectItem>
                             <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="GA">Georgia</SelectItem>
+                            <SelectItem value="HI">Hawaii</SelectItem>
+                            <SelectItem value="ID">Idaho</SelectItem>
+                            <SelectItem value="IL">Illinois</SelectItem>
+                            <SelectItem value="IN">Indiana</SelectItem>
+                            <SelectItem value="IA">Iowa</SelectItem>
+                            <SelectItem value="KS">Kansas</SelectItem>
+                            <SelectItem value="KY">Kentucky</SelectItem>
+                            <SelectItem value="LA">Louisiana</SelectItem>
+                            <SelectItem value="ME">Maine</SelectItem>
+                            <SelectItem value="MD">Maryland</SelectItem>
+                            <SelectItem value="MA">Massachusetts</SelectItem>
+                            <SelectItem value="MI">Michigan</SelectItem>
+                            <SelectItem value="MN">Minnesota</SelectItem>
+                            <SelectItem value="MS">Mississippi</SelectItem>
+                            <SelectItem value="MO">Missouri</SelectItem>
+                            <SelectItem value="MT">Montana</SelectItem>
+                            <SelectItem value="NE">Nebraska</SelectItem>
+                            <SelectItem value="NV">Nevada</SelectItem>
+                            <SelectItem value="NH">New Hampshire</SelectItem>
+                            <SelectItem value="NJ">New Jersey</SelectItem>
+                            <SelectItem value="NM">New Mexico</SelectItem>
                             <SelectItem value="NY">New York</SelectItem>
+                            <SelectItem value="NC">North Carolina</SelectItem>
+                            <SelectItem value="ND">North Dakota</SelectItem>
+                            <SelectItem value="OH">Ohio</SelectItem>
+                            <SelectItem value="OK">Oklahoma</SelectItem>
+                            <SelectItem value="OR">Oregon</SelectItem>
+                            <SelectItem value="PA">Pennsylvania</SelectItem>
+                            <SelectItem value="RI">Rhode Island</SelectItem>
+                            <SelectItem value="SC">South Carolina</SelectItem>
+                            <SelectItem value="SD">South Dakota</SelectItem>
+                            <SelectItem value="TN">Tennessee</SelectItem>
                             <SelectItem value="TX">Texas</SelectItem>
+                            <SelectItem value="UT">Utah</SelectItem>
+                            <SelectItem value="VT">Vermont</SelectItem>
+                            <SelectItem value="VA">Virginia</SelectItem>
+                            <SelectItem value="WA">Washington</SelectItem>
+                            <SelectItem value="WV">West Virginia</SelectItem>
+                            <SelectItem value="WI">Wisconsin</SelectItem>
+                            <SelectItem value="WY">Wyoming</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1377,7 +1551,8 @@ export default function CheckoutPage() {
                   <div>Form Valid: {formValid ? "✓" : "✗"}</div>
                   <div>Total: ${total.toFixed(2)}</div>
                   <div>Client Secret: {clientSecret ? "✓" : "✗"}</div>
-                  <div>Payment Loading: {paymentLoading ? "✓" : "✗"}</div>
+                  <div>Order ID: {orderId || "None"}</div>
+                  <div>Creating Order: {creatingOrder ? "✓" : "✗"}</div>
                   <div>Payment Error: {paymentError || "None"}</div>
                 </div>
               )}
@@ -1408,35 +1583,45 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2 text-red-700">
                       <AlertCircle className="w-4 h-4" />
                       <div>
-                        <p className="text-sm font-medium">Payment Error</p>
+                        <p className="text-sm font-medium">
+                          Order Creation Error
+                        </p>
                         <p className="text-sm">{paymentError}</p>
                       </div>
                     </div>
                     <Button
-                      onClick={initializePayment}
+                      onClick={createOrder}
                       variant="outline"
                       size="sm"
                       className="mt-2"
+                      disabled={creatingOrder}
                     >
-                      Retry Payment Setup
+                      {creatingOrder ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Retrying...
+                        </>
+                      ) : (
+                        "Retry Order Creation"
+                      )}
                     </Button>
                   </div>
                 )}
 
                 {formValid && total > 0 && (
                   <>
-                    {paymentLoading && (
+                    {creatingOrder && (
                       <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
                         <div className="flex items-center justify-center p-6">
                           <Loader2 className="w-6 h-6 animate-spin text-green-600 mr-2" />
                           <span className="text-gray-600">
-                            Preparing payment...
+                            Creating your order...
                           </span>
                         </div>
                       </div>
                     )}
 
-                    {clientSecret && !paymentLoading && (
+                    {clientSecret && orderId && !creatingOrder && (
                       <Elements
                         stripe={stripePromise}
                         options={{
@@ -1454,12 +1639,23 @@ export default function CheckoutPage() {
                         }}
                         key={clientSecret} // Force re-render when clientSecret changes
                       >
-                        <StripeShopCheckout
-                          amount={total}
-                          onPaymentSuccess={handlePaymentSuccess}
-                          onPaymentError={handlePaymentError}
-                          disabled={!formValid}
-                        />
+                        <div className="space-y-3">
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-sm text-green-700">
+                              ✅ Order created successfully!
+                              <br />
+                              <span className="font-mono text-xs">
+                                ID: {orderId}
+                              </span>
+                            </div>
+                          </div>
+                          <StripeShopCheckout
+                            amount={total}
+                            onPaymentSuccess={handlePaymentSuccess}
+                            onPaymentError={handlePaymentError}
+                            disabled={!formValid}
+                          />
+                        </div>
                       </Elements>
                     )}
                   </>
