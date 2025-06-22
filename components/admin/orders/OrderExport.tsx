@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, subDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import { exportOrders } from "@/lib/actions/orderServerActions";
 import { Button } from "@/components/ui/button";
@@ -110,10 +111,7 @@ export function OrderExport() {
     format: "csv",
   });
 
-  const [dateRange, setDateRange] = useState<{
-    from?: Date;
-    to?: Date;
-  }>({});
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const handleFilterChange = (key: keyof ExportFilters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -123,7 +121,8 @@ export function OrderExport() {
     const to = new Date();
     const from = subDays(to, days);
 
-    setDateRange({ from, to });
+    const newRange = { from, to };
+    setDateRange(newRange);
     setFilters((prev) => ({
       ...prev,
       dateFrom: format(from, "yyyy-MM-dd"),
@@ -131,17 +130,17 @@ export function OrderExport() {
     }));
   };
 
-  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+  const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
     setFilters((prev) => ({
       ...prev,
-      dateFrom: range.from ? format(range.from, "yyyy-MM-dd") : "",
-      dateTo: range.to ? format(range.to, "yyyy-MM-dd") : "",
+      dateFrom: range?.from ? format(range.from, "yyyy-MM-dd") : "",
+      dateTo: range?.to ? format(range.to, "yyyy-MM-dd") : "",
     }));
   };
 
   const formatDateRange = () => {
-    if (!dateRange.from) return "Select date range";
+    if (!dateRange?.from) return "Select date range";
     if (!dateRange.to) return format(dateRange.from, "MMM dd, yyyy");
     if (dateRange.from.getTime() === dateRange.to.getTime()) {
       return format(dateRange.from, "MMM dd, yyyy");
@@ -309,7 +308,7 @@ export function OrderExport() {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !dateRange.from && "text-muted-foreground"
+                        !dateRange?.from && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -321,9 +320,10 @@ export function OrderExport() {
                       initialFocus
                       mode="range"
                       defaultMonth={dateRange?.from}
-                      selected={{ from: dateRange.from, to: dateRange.to }}
+                      selected={dateRange}
                       onSelect={handleDateRangeChange}
                       numberOfMonths={2}
+                      className="rounded-md border-0"
                     />
                   </PopoverContent>
                 </Popover>
