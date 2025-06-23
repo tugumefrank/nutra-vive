@@ -2376,9 +2376,9 @@ export default function CheckoutPage() {
           "Order placed successfully! You will receive a confirmation email shortly."
         );
 
-        setTimeout(() => {
-          router.push(`/orders/${result.order._id}`);
-        }, 3000);
+        // setTimeout(() => {
+        //   router.push(`/orders/${result.order._id}`);
+        // }, 3000);
       } else {
         toast.error(
           result.error ||
