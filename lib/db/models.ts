@@ -850,3 +850,99 @@ export const ConsultationNote: Model<IConsultationNote> =
 export const MealPlan: Model<IMealPlan> =
   mongoose.models.MealPlan ||
   mongoose.model<IMealPlan>("MealPlan", mealPlanSchema);
+// Tracking Event Interface - for detailed tracking history
+export interface ITrackingEvent extends Document {
+  _id: string;
+  order: mongoose.Types.ObjectId; // Order ID
+  status:
+    | "order_placed"
+    | "payment_confirmed"
+    | "processing"
+    | "shipped"
+    | "in_transit"
+    | "out_for_delivery"
+    | "delivered"
+    | "exception"
+    | "returned";
+  location?: string;
+  description: string;
+  timestamp: Date;
+  carrier?: string;
+  estimatedDelivery?: Date;
+  metadata?: {
+    facility?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  isPublic: boolean; // Whether to show this event to customers
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Extended Order Tracking Info Interface
+export interface IOrderTrackingInfo {
+  orderNumber: string;
+  trackingNumber?: string;
+  status: string;
+  estimatedDelivery?: Date;
+  shippingCarrier?: string;
+  currentLocation?: string;
+  events: ITrackingEvent[];
+  canTrack: boolean;
+  isDelivered: boolean;
+  daysInTransit?: number;
+}
+
+// Tracking Event Schema
+const trackingEventSchema = new Schema<ITrackingEvent>(
+  {
+    order: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    status: {
+      type: String,
+      enum: [
+        "order_placed",
+        "payment_confirmed",
+        "processing",
+        "shipped",
+        "in_transit",
+        "out_for_delivery",
+        "delivered",
+        "exception",
+        "returned",
+      ],
+      required: true,
+    },
+    location: String,
+    description: { type: String, required: true },
+    timestamp: { type: Date, required: true },
+    carrier: String,
+    estimatedDelivery: Date,
+    metadata: {
+      facility: String,
+      city: String,
+      state: String,
+      country: String,
+      coordinates: {
+        lat: Number,
+        lng: Number,
+      },
+    },
+    isPublic: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+// Add indexes for tracking events
+trackingEventSchema.index({ order: 1 });
+trackingEventSchema.index({ status: 1 });
+trackingEventSchema.index({ timestamp: -1 });
+trackingEventSchema.index({ isPublic: 1 });
+
+// Export the new model
+export const TrackingEvent: Model<ITrackingEvent> =
+  mongoose.models.TrackingEvent ||
+  mongoose.model<ITrackingEvent>("TrackingEvent", trackingEventSchema);

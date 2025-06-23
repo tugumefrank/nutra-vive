@@ -1,0 +1,549 @@
+// "use client";
+
+// import { useState, useEffect } from "react";
+// import { motion, AnimatePresence } from "framer-motion";
+// import {
+//   ArrowLeft,
+//   RefreshCw,
+//   MapPin,
+//   Package,
+//   Star,
+//   Heart,
+//   ShoppingCart,
+//   Calendar,
+//   Truck,
+// } from "lucide-react";
+// import { Button } from "@/components/ui/button";
+// import { Card, CardContent } from "@/components/ui/card";
+// import { Badge } from "@/components/ui/badge";
+// import TrackingForm from "@/components/tracking/TrackingForm";
+// import TrackingTimeline from "@/components/tracking/TrackingTimeline";
+// import OrderDetailsCard from "@/components/tracking/OrderDetailsCard";
+// import { trackOrder } from "@/lib/actions/orderTrackingServerActions";
+// import Link from "next/link";
+// import Image from "next/image";
+
+// interface TrackingPageProps {
+//   initialOrderNumber?: string;
+//   initialEmail?: string;
+// }
+
+// export default function OrderTrackingPage({
+//   initialOrderNumber,
+//   initialEmail,
+// }: TrackingPageProps) {
+//   const [trackingInfo, setTrackingInfo] = useState<any>(null);
+//   const [order, setOrder] = useState<any>(null);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [showForm, setShowForm] = useState(true);
+//   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+//   // Auto-track if initial data is provided
+//   useEffect(() => {
+//     if (initialOrderNumber) {
+//       handleAutoTrack();
+//     }
+//   }, [initialOrderNumber, initialEmail]);
+
+//   const handleAutoTrack = async () => {
+//     if (!initialOrderNumber) return;
+
+//     setIsLoading(true);
+//     try {
+//       const result = await trackOrder({
+//         identifier: initialOrderNumber,
+//         email: initialEmail,
+//       });
+
+//       if (result.success && result.trackingInfo && result.order) {
+//         setTrackingInfo(result.trackingInfo);
+//         setOrder(result.order);
+//         setShowForm(false);
+//         setLastRefresh(new Date());
+//       }
+//     } catch (error) {
+//       console.error("Auto-tracking error:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleTrackingFound = (newTrackingInfo: any, newOrder: any) => {
+//     setTrackingInfo(newTrackingInfo);
+//     setOrder(newOrder);
+//     setShowForm(false);
+//     setLastRefresh(new Date());
+//   };
+
+//   const handleRefresh = async () => {
+//     if (!trackingInfo?.orderNumber) return;
+
+//     setIsLoading(true);
+//     try {
+//       const result = await trackOrder({
+//         identifier: trackingInfo.orderNumber,
+//         email: order?.email,
+//       });
+
+//       if (result.success && result.trackingInfo && result.order) {
+//         setTrackingInfo(result.trackingInfo);
+//         setOrder(result.order);
+//         setLastRefresh(new Date());
+//       }
+//     } catch (error) {
+//       console.error("Refresh error:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleNewSearch = () => {
+//     setTrackingInfo(null);
+//     setOrder(null);
+//     setShowForm(true);
+//     setLastRefresh(null);
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-green-900/20">
+//       {/* Header */}
+//       <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+//           <div className="flex items-center justify-between h-16">
+//             <Link href="/" className="flex items-center space-x-2">
+//               <motion.div
+//                 whileHover={{ scale: 1.05 }}
+//                 whileTap={{ scale: 0.95 }}
+//                 className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center"
+//               >
+//                 <Package className="w-5 h-5 text-white" />
+//               </motion.div>
+//               <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+//                 Nutra-Vive
+//               </span>
+//             </Link>
+
+//             <div className="flex items-center space-x-3">
+//               {trackingInfo && (
+//                 <Button
+//                   variant="outline"
+//                   size="sm"
+//                   onClick={handleRefresh}
+//                   disabled={isLoading}
+//                   className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/20"
+//                 >
+//                   <RefreshCw
+//                     className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+//                   />
+//                   Refresh
+//                 </Button>
+//               )}
+//               <Link href="/shop">
+//                 <Button variant="outline" size="sm">
+//                   <ShoppingCart className="w-4 h-4 mr-2" />
+//                   Continue Shopping
+//                 </Button>
+//               </Link>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Main Content */}
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+//         <AnimatePresence mode="wait">
+//           {showForm ? (
+//             <motion.div
+//               key="form"
+//               initial={{ opacity: 0 }}
+//               animate={{ opacity: 1 }}
+//               exit={{ opacity: 0 }}
+//               transition={{ duration: 0.3 }}
+//               className="max-w-2xl mx-auto"
+//             >
+//               <TrackingForm onTrackingFound={handleTrackingFound} />
+
+//               {/* Marketing Section */}
+//               <motion.div
+//                 initial={{ opacity: 0, y: 20 }}
+//                 animate={{ opacity: 1, y: 0 }}
+//                 transition={{ delay: 0.6 }}
+//                 className="mt-12"
+//               >
+//                 <Card className="backdrop-blur-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-0 shadow-xl">
+//                   <CardContent className="p-8 text-center">
+//                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+//                       While You Wait...
+//                     </h3>
+//                     <p className="text-gray-600 dark:text-gray-400 mb-6">
+//                       Discover more organic wellness products to enhance your
+//                       healthy lifestyle
+//                     </p>
+//                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
+//                       >
+//                         <Star className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+//                         <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+//                           Premium Quality
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400">
+//                           Organic, cold-pressed juices made fresh daily
+//                         </p>
+//                       </motion.div>
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
+//                       >
+//                         <Heart className="w-8 h-8 text-red-500 mx-auto mb-2" />
+//                         <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+//                           Wellness First
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400">
+//                           Carefully crafted for your health and vitality
+//                         </p>
+//                       </motion.div>
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
+//                       >
+//                         <Package className="w-8 h-8 text-green-500 mx-auto mb-2" />
+//                         <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+//                           Fast Delivery
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400">
+//                           Fresh products delivered to your door quickly
+//                         </p>
+//                       </motion.div>
+//                     </div>
+//                     <div className="mt-6">
+//                       <Link href="/shop">
+//                         <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
+//                           Shop Now
+//                         </Button>
+//                       </Link>
+//                     </div>
+//                   </CardContent>
+//                 </Card>
+//               </motion.div>
+//             </motion.div>
+//           ) : (
+//             <motion.div
+//               key="tracking"
+//               initial={{ opacity: 0 }}
+//               animate={{ opacity: 1 }}
+//               exit={{ opacity: 0 }}
+//               transition={{ duration: 0.3 }}
+//               className="space-y-8"
+//             >
+//               {/* Header with Order Info */}
+//               <motion.div
+//                 initial={{ opacity: 0, y: -20 }}
+//                 animate={{ opacity: 1, y: 0 }}
+//                 className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+//               >
+//                 <div>
+//                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+//                     Order Tracking
+//                   </h1>
+//                   <div className="flex flex-wrap items-center gap-4">
+//                     <Badge
+//                       variant="outline"
+//                       className="bg-white/50 dark:bg-gray-800/50"
+//                     >
+//                       <Package className="w-3 h-3 mr-1" />
+//                       {trackingInfo.orderNumber}
+//                     </Badge>
+//                     {trackingInfo.trackingNumber && (
+//                       <Badge
+//                         variant="outline"
+//                         className="bg-white/50 dark:bg-gray-800/50"
+//                       >
+//                         <MapPin className="w-3 h-3 mr-1" />
+//                         {trackingInfo.trackingNumber}
+//                       </Badge>
+//                     )}
+//                     {lastRefresh && (
+//                       <span className="text-sm text-gray-500 dark:text-gray-400">
+//                         Last updated: {lastRefresh.toLocaleTimeString()}
+//                       </span>
+//                     )}
+//                   </div>
+//                 </div>
+//                 <div className="flex items-center space-x-3">
+//                   <Button
+//                     variant="outline"
+//                     onClick={handleNewSearch}
+//                     className="border-gray-200 dark:border-gray-700"
+//                   >
+//                     <ArrowLeft className="w-4 h-4 mr-2" />
+//                     Track Another Order
+//                   </Button>
+//                 </div>
+//               </motion.div>
+
+//               {/* Status Overview */}
+//               {trackingInfo && (
+//                 <motion.div
+//                   initial={{ opacity: 0, y: 20 }}
+//                   animate={{ opacity: 1, y: 0 }}
+//                   transition={{ delay: 0.1 }}
+//                 >
+//                   <Card className="backdrop-blur-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-0 shadow-xl">
+//                     <CardContent className="p-6">
+//                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+//                         <div className="text-center">
+//                           <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
+//                             <Package className="w-6 h-6 text-green-600 dark:text-green-400" />
+//                           </div>
+//                           <h3 className="font-semibold text-gray-900 dark:text-white">
+//                             Status
+//                           </h3>
+//                           <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+//                             {trackingInfo.status.replace("_", " ")}
+//                           </p>
+//                         </div>
+//                         {trackingInfo.shippingCarrier && (
+//                           <div className="text-center">
+//                             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
+//                               <Truck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+//                             </div>
+//                             <h3 className="font-semibold text-gray-900 dark:text-white">
+//                               Carrier
+//                             </h3>
+//                             <p className="text-sm text-gray-600 dark:text-gray-400">
+//                               {trackingInfo.shippingCarrier}
+//                             </p>
+//                           </div>
+//                         )}
+//                         {trackingInfo.currentLocation && (
+//                           <div className="text-center">
+//                             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
+//                               <MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+//                             </div>
+//                             <h3 className="font-semibold text-gray-900 dark:text-white">
+//                               Location
+//                             </h3>
+//                             <p className="text-sm text-gray-600 dark:text-gray-400">
+//                               {trackingInfo.currentLocation}
+//                             </p>
+//                           </div>
+//                         )}
+//                         {trackingInfo.estimatedDelivery && (
+//                           <div className="text-center">
+//                             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
+//                               <Calendar className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+//                             </div>
+//                             <h3 className="font-semibold text-gray-900 dark:text-white">
+//                               Est. Delivery
+//                             </h3>
+//                             <p className="text-sm text-gray-600 dark:text-gray-400">
+//                               {new Date(
+//                                 trackingInfo.estimatedDelivery
+//                               ).toLocaleDateString()}
+//                             </p>
+//                           </div>
+//                         )}
+//                       </div>
+//                     </CardContent>
+//                   </Card>
+//                 </motion.div>
+//               )}
+
+//               {/* Tracking Timeline */}
+//               {trackingInfo?.events && (
+//                 <TrackingTimeline
+//                   events={trackingInfo.events}
+//                   currentStatus={trackingInfo.status}
+//                   estimatedDelivery={trackingInfo.estimatedDelivery}
+//                 />
+//               )}
+
+//               {/* Order Details */}
+//               {order && trackingInfo && (
+//                 <OrderDetailsCard order={order} trackingInfo={trackingInfo} />
+//               )}
+
+//               {/* Recommendations Section */}
+//               <motion.div
+//                 initial={{ opacity: 0, y: 20 }}
+//                 animate={{ opacity: 1, y: 0 }}
+//                 transition={{ delay: 0.5 }}
+//               >
+//                 <Card className="backdrop-blur-lg bg-white/80 dark:bg-gray-900/80 border-0 shadow-xl">
+//                   <CardContent className="p-8">
+//                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+//                       Loved your order? Explore more wellness products
+//                     </h3>
+//                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//                       {/* Placeholder for product recommendations */}
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl cursor-pointer"
+//                       >
+//                         <div className="w-full h-32 bg-green-200 dark:bg-green-800 rounded-lg mb-3"></div>
+//                         <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+//                           Green Detox Juice
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+//                           Cleanse & energize
+//                         </p>
+//                         <p className="text-lg font-bold text-green-600">
+//                           $8.99
+//                         </p>
+//                       </motion.div>
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl cursor-pointer"
+//                       >
+//                         <div className="w-full h-32 bg-purple-200 dark:bg-purple-800 rounded-lg mb-3"></div>
+//                         <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+//                           Berry Antioxidant
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+//                           Rich in vitamins
+//                         </p>
+//                         <p className="text-lg font-bold text-purple-600">
+//                           $9.99
+//                         </p>
+//                       </motion.div>
+//                       <motion.div
+//                         whileHover={{ scale: 1.05 }}
+//                         className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl cursor-pointer"
+//                       >
+//                         <div className="w-full h-32 bg-orange-200 dark:bg-orange-800 rounded-lg mb-3"></div>
+//                         <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+//                           Citrus Immunity
+//                         </h4>
+//                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+//                           Boost your health
+//                         </p>
+//                         <p className="text-lg font-bold text-orange-600">
+//                           $7.99
+//                         </p>
+//                       </motion.div>
+//                     </div>
+//                     <div className="text-center mt-6">
+//                       <Link href="/shop">
+//                         <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
+//                           Shop All Products
+//                         </Button>
+//                       </Link>
+//                     </div>
+//                   </CardContent>
+//                 </Card>
+//               </motion.div>
+//             </motion.div>
+//           )}
+//         </AnimatePresence>
+//       </div>
+//     </div>
+//   );
+// }
+import { Suspense } from "react";
+import { Metadata } from "next";
+import OrderTrackingPage from "@/components/tracking/OrderTrackingPage";
+
+type Props = {
+  searchParams: {
+    order?: string;
+    email?: string;
+    tracking?: string;
+  };
+};
+
+export function generateMetadata({ searchParams }: Props): Metadata {
+  const orderNumber = searchParams.order || searchParams.tracking;
+
+  return {
+    title: orderNumber
+      ? `Track Order ${orderNumber} | Nutra-Vive`
+      : "Track Your Order | Nutra-Vive",
+    description: orderNumber
+      ? `Track the status and delivery progress of your Nutra-Vive order ${orderNumber}`
+      : "Track your Nutra-Vive order status and delivery progress with real-time updates",
+    keywords: "order tracking, delivery status, shipping updates, Nutra-Vive",
+    openGraph: {
+      title: orderNumber ? `Track Order ${orderNumber}` : "Track Your Order",
+      description:
+        "Get real-time updates on your organic juice and tea delivery",
+      type: "website",
+      siteName: "Nutra-Vive",
+    },
+  };
+}
+
+// Loading component for better UX
+function TrackingPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-green-900/20">
+      {/* Header Skeleton */}
+      <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              <div className="w-24 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="w-32 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Skeleton */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-2xl mx-auto">
+          {/* Form Card Skeleton */}
+          <div className="backdrop-blur-lg bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-xl p-8">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl mx-auto mb-4 animate-pulse"></div>
+              <div className="w-48 h-8 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-pulse"></div>
+              <div className="w-80 h-4 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse"></div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="w-40 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="w-32 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Server Component for handling search params
+async function TrackingPageContent({ searchParams }: Props) {
+  const initialOrderNumber = searchParams.order || searchParams.tracking;
+  const initialEmail = searchParams.email;
+
+  return (
+    <OrderTrackingPage
+      initialOrderNumber={initialOrderNumber}
+      initialEmail={initialEmail}
+    />
+  );
+}
+
+// Main Page Component
+export default function TrackPage({ searchParams }: Props) {
+  return (
+    <Suspense fallback={<TrackingPageSkeleton />}>
+      <TrackingPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+// Export revalidate for ISR (optional)
+export const revalidate = 60; // Revalidate every minute for tracking updates

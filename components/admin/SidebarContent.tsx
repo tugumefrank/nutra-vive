@@ -59,7 +59,7 @@ export default function SidebarContent({
     },
     {
       name: "Shipping",
-      href: "/admin/shipping",
+      href: "/admin/tracking",
       icon: "🚚",
       section: "sales",
       description: "Delivery Tracking",

@@ -91,7 +91,7 @@ export default function OrderStatusUpdateEmail({
 
       <Section style={sharedStyles.ctaSection}>
         <Button
-          href={`${companyUrl}/orders/${orderNumber}`}
+          href={`${companyUrl}/track/${orderNumber}`}
           style={sharedStyles.button}
         >
           Track Your Order
