@@ -764,7 +764,7 @@ export default function ProductReviews({
       </motion.div>
 
       {/* Write Review Button - Prominent */}
-      {/* <motion.div
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
@@ -781,7 +781,7 @@ export default function ProductReviews({
         <p className="text-sm text-gray-600 mt-2">
           Share your experience with {productName}
         </p>
-      </motion.div> */}
+      </motion.div>
 
       {/* Filter Options */}
       {stats.total > 0 && (
