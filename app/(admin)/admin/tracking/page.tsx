@@ -313,9 +313,9 @@ async function TrackingPageContent() {
   await connectToDatabase();
   const user = await User.findOne({ clerkId: userId });
 
-  if (!user || user.role !== "admin") {
-    redirect("/");
-  }
+  //   if (!user || user.role !== "admin") {
+  //     redirect("/");
+  //   }
 
   // Fetch initial data
   const [ordersResult, statsResult] = await Promise.all([
