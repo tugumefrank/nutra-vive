@@ -348,7 +348,7 @@ export default function OrderConfirmationEmail({
 
       <Section style={sharedStyles.ctaSection}>
         <Button
-          href={`${companyUrl}/orders/${orderNumber}`}
+          href={`${companyUrl}/track?order=${orderNumber}`}
           style={sharedStyles.button}
         >
           Track Your Order

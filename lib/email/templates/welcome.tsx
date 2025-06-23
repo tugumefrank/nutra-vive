@@ -18,7 +18,7 @@ interface WelcomeProps {
 
 export default function WelcomeEmail({
   firstName,
-  companyName = "Nutra-Vive",
+  companyName = "NutraVive",
   companyUrl = "https://nutraviveholistic.com",
 }: WelcomeProps) {
   return (
@@ -101,7 +101,7 @@ export default function WelcomeEmail({
           Special Welcome Offer! 🎉
         </Text>
         <Text style={sharedStyles.discountText}>
-          Use code <Text style={sharedStyles.discountCode}>WELCOME15</Text> for
+          Use code <Text style={sharedStyles.discountCode}>WELCOMENV</Text> for
           15% off your first order
         </Text>
       </Section>

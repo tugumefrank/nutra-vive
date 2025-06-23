@@ -75,7 +75,7 @@ export default function ConsultationConfirmationEmail({
 
       <Section style={sharedStyles.ctaSection}>
         <Button
-          href={`${companyUrl}/consultations/${consultationNumber}`}
+          href={`${companyUrl}/account/consultations/${consultationNumber}`}
           style={sharedStyles.button}
         >
           View Your Request
