@@ -51,27 +51,17 @@ const navigation = [
     icon: Heart,
     badge: null,
   },
-  {
-    name: "Reviews",
-    href: "/account/reviews",
-    icon: Star,
-    badge: null,
-  },
+
   {
     name: "Promotions",
     href: "/account/promotions",
     icon: Gift,
     badge: "New",
   },
+
   {
-    name: "Notifications",
-    href: "/account/notifications",
-    icon: Bell,
-    badge: "3",
-  },
-  {
-    name: "Profile",
-    href: "/account/profile",
+    name: "Membership",
+    href: "/account/membership",
     icon: User,
     badge: null,
   },

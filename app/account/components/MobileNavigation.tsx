@@ -3,7 +3,14 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { LayoutDashboard, ShoppingBag, Heart, Truck, User } from "lucide-react";
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Heart,
+  Truck,
+  User,
+  Stethoscope,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const mobileNavigation = [
@@ -20,9 +27,9 @@ const mobileNavigation = [
     badge: null,
   },
   {
-    name: "Tracking",
-    href: "/account/tracking",
-    icon: Truck,
+    name: "Consultations",
+    href: "/account/consultations",
+    icon: Stethoscope,
     badge: null,
   },
   {
@@ -32,8 +39,8 @@ const mobileNavigation = [
     badge: null,
   },
   {
-    name: "Profile",
-    href: "/account/profile",
+    name: "membership",
+    href: "/account/membership",
     icon: User,
     badge: null,
   },

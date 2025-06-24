@@ -118,7 +118,7 @@ export default function TrackingForm({
               </p>
             </motion.div>
 
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 }}
@@ -144,7 +144,7 @@ export default function TrackingForm({
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Enter the email used for your order for additional verification
               </p>
-            </motion.div>
+            </motion.div> */}
 
             {error && (
               <motion.div
