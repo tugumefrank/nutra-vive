@@ -24,7 +24,7 @@ import {
   togglePromotionStatus as togglePromotionStatusAction,
   exportPromotions as exportPromotionsAction,
   bulkUpdatePromotions as bulkUpdatePromotionsAction,
-} from "@/lib/actions/promotionsServerActions";
+} from "@/lib/actions/promotionServerActions";
 
 // Notifications Hook
 export const useNotifications = () => {
