@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { motion } from "framer-motion";
+
 import {
   Heart,
   Filter,
@@ -192,14 +192,9 @@ async function FavoritesData() {
                     : product.category,
               };
               return (
-                <motion.div
-                  key={product._id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                >
+                <div key={product._id}>
                   <FavoriteCard product={mappedProduct} />
-                </motion.div>
+                </div>
               );
             })}
           </div>
