@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig = {
-  experimental: {
-    dynamicIO: true, // Enable the new caching system
-  },
   images: {
     domains: [
       "images.unsplash.com",
