@@ -230,7 +230,11 @@ export async function createCheckoutSession(
     try {
       const user = await User.findOne({ clerkId: userId });
       if (user) {
-        order.user = user._id;
+        // Ensure user._id is an ObjectId
+        order.user =
+          typeof user._id === "string"
+            ? new (require("mongoose").Types.ObjectId)(user._id)
+            : user._id;
       }
     } catch (error) {
       console.log("User not found in database, continuing as guest order");
