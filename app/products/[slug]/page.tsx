@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   getProductBySlug,
   getProducts,
-} from "@/lib/actions/productserverActions";
+} from "@/lib/actions/productServerActions";
 import { CheckoutLayout } from "@/components/layout/MainLayout";
 import { getRelatedProductsForCard } from "@/lib/utils/product-transformer";
 

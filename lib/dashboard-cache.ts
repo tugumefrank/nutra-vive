@@ -1,5 +1,5 @@
 import { getOrderStats } from "@/lib/actions/orderServerActions";
-import { getProductStats } from "@/lib/actions/productserverActions";
+import { getProductStats } from "@/lib/actions/productServerActions";
 import { getConsultationStats } from "@/lib/actions/consultation";
 import { getUserStats } from "@/lib/actions/userServerActions";
 

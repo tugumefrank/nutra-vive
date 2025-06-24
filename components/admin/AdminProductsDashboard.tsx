@@ -32,7 +32,7 @@ import {
   deleteProduct,
   toggleProductStatus,
   toggleFeaturedStatus,
-} from "@/lib/actions/productserverActions";
+} from "@/lib/actions/productServerActions";
 
 // Import ProductForm and CategoryForm
 import ProductForm from "./ProductForm";

@@ -36,7 +36,7 @@ import { ImageUploader } from "@/components/ui/FileUploader";
 import {
   updateProduct,
   createProduct,
-} from "@/lib/actions/productserverActions";
+} from "@/lib/actions/productServerActions";
 import { generateSKU } from "@/lib/productUtils";
 
 // Types

@@ -12,7 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { getProducts } from "@/lib/actions/productserverActions";
+import { getProducts } from "@/lib/actions/productServerActions";
 import { Product, ProductCard } from "../shop/ProductCard";
 
 export function FeaturedProducts() {

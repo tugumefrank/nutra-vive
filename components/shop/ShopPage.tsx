@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Loader2 } from "lucide-react";
 
-import { getCategories, getProducts } from "@/lib/actions/productserverActions";
+import { getCategories, getProducts } from "@/lib/actions/productServerActions";
 import { Product, ProductCard } from "./ProductCard";
 
 interface Category {
