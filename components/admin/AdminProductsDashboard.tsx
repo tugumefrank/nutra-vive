@@ -25,6 +25,10 @@ import {
 } from "lucide-react";
 
 // Import real server actions
+
+// Import ProductForm and CategoryForm
+import ProductForm from "./ProductForm";
+import CategoryForm from "./CategoryForm";
 import {
   getCategories,
   getProductStats,
@@ -33,10 +37,6 @@ import {
   toggleProductStatus,
   toggleFeaturedStatus,
 } from "@/lib/actions/productServerActions";
-
-// Import ProductForm and CategoryForm
-import ProductForm from "./ProductForm";
-import CategoryForm from "./CategoryForm";
 
 // Types
 interface IProduct {

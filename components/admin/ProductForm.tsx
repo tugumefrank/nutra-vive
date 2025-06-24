@@ -33,11 +33,12 @@ import { useUploadThing } from "@/lib/uploadthing";
 
 // Import real ImageUploader component
 import { ImageUploader } from "@/components/ui/FileUploader";
-import {
-  updateProduct,
-  createProduct,
-} from "@/lib/actions/productServerActions";
+
 import { generateSKU } from "@/lib/productUtils";
+import {
+  createProduct,
+  updateProduct,
+} from "@/lib/actions/productServerActions";
 
 // Types
 interface IProduct {

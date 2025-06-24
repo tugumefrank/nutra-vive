@@ -21,9 +21,10 @@ import {
   ProductsGridSkeleton,
   SearchAndFiltersSkeleton,
 } from "@/components/shop/skeletons/Skeletons";
-import { getCategories } from "@/lib/actions/productServerActions";
+
 import { ProductsGrid } from "@/components/shop/ProductsGrid";
 import { SearchAndFilters } from "@/components/shop/SearchAndFilters";
+import { getCategories } from "@/lib/actions/productServerActions";
 
 export const metadata: Metadata = {
   title: "Shop - Nutra-Vive Wellness Collection",

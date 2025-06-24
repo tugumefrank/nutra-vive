@@ -13,12 +13,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Star, Shield, Truck, RefreshCw, Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+import { CheckoutLayout } from "@/components/layout/MainLayout";
+import { getRelatedProductsForCard } from "@/lib/utils/product-transformer";
 import {
   getProductBySlug,
   getProducts,
 } from "@/lib/actions/productServerActions";
-import { CheckoutLayout } from "@/components/layout/MainLayout";
-import { getRelatedProductsForCard } from "@/lib/utils/product-transformer";
 
 // Import the transformer utility
 
