@@ -1,18 +1,3 @@
-// import {
-//   FullLayout,
-//   LandingLayout,
-//   MainLayout,
-// } from "@/components/layout/MainLayout";
-// import ShopPage from "@/components/shop/ShopPage"; // This is the component from the artifact
-
-// export default function Shop() {
-//   return (
-//     <LandingLayout>
-//       <ShopPage />
-//     </LandingLayout>
-//   );
-// }
-// app/shop/page.tsx
 import { Suspense } from "react";
 import { Metadata } from "next";
 import { LandingLayout } from "@/components/layout/MainLayout";
@@ -53,17 +38,28 @@ async function getCategoriesWithCache() {
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  // Await searchParams in Next.js 15+
+  const resolvedSearchParams = await searchParams;
+
   // Parse search params for SSR
   const search =
-    typeof searchParams.search === "string" ? searchParams.search : "";
+    typeof resolvedSearchParams.search === "string"
+      ? resolvedSearchParams.search
+      : "";
   const category =
-    typeof searchParams.category === "string" ? searchParams.category : "All";
+    typeof resolvedSearchParams.category === "string"
+      ? resolvedSearchParams.category
+      : "All";
   const sortBy =
-    typeof searchParams.sortBy === "string" ? searchParams.sortBy : "name";
+    typeof resolvedSearchParams.sortBy === "string"
+      ? resolvedSearchParams.sortBy
+      : "name";
   const page =
-    typeof searchParams.page === "string" ? parseInt(searchParams.page) : 1;
+    typeof resolvedSearchParams.page === "string"
+      ? parseInt(resolvedSearchParams.page)
+      : 1;
 
   return (
     <LandingLayout>
