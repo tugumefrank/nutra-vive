@@ -100,7 +100,7 @@ export default function DeliveryMethodStep({
           <p className="text-red-500 text-sm mt-3">{errors.deliveryMethod}</p>
         )}
 
-        {/* Free shipping notice */}
+        {/* Free shipping notice
         {subtotal < 25 && (
           <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-sm text-orange-700">
@@ -108,7 +108,7 @@ export default function DeliveryMethodStep({
               <strong>${(25 - subtotal).toFixed(2)} more</strong> to qualify.
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Store pickup details */}
         {formData.deliveryMethod === "pickup" && (

@@ -18,7 +18,7 @@
 // import AddressStep from "./components/AddressStep";
 // import ReviewStep from "./components/ReviewStep";
 // import PaymentStep from "./components/PaymentStep";
-// import OrderSummary from "./components/OrderSummary";
+// import OrderSummary from "./components/OrderSummary"; // Updated component
 // import SuccessPage from "./components/SuccessPage";
 
 // // Import actions and types
@@ -31,14 +31,42 @@
 // // Import validation utilities
 // import { validateStep, getStepErrors } from "./utils/validation";
 // import { checkoutSteps } from "./utils/constants";
-// import type { FormData, CartData, StepErrors } from "./types";
+// import type { FormData, StepErrors } from "./types";
+
+// // Enhanced Cart interface with promotions
+// interface CartWithPromotion {
+//   _id: string;
+//   items: Array<{
+//     _id: string;
+//     product: {
+//       _id: string;
+//       name: string;
+//       slug: string;
+//       price: number;
+//       images: string[];
+//       category?: {
+//         name: string;
+//         slug: string;
+//       };
+//     };
+//     quantity: number;
+//     price: number;
+//     originalPrice?: number;
+//   }>;
+//   subtotal: number;
+//   promotionDiscount: number;
+//   promotionCode?: string;
+//   promotionName?: string;
+//   finalTotal: number;
+//   hasPromotionApplied: boolean;
+// }
 
 // // Initialize Stripe
 // const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 // export default function CheckoutPage() {
 //   // State management
-//   const [cart, setCart] = useState<CartData | null>(null);
+//   const [cart, setCart] = useState<CartWithPromotion | null>(null);
 //   const [loading, setLoading] = useState(true);
 //   const [currentStep, setCurrentStep] = useState(1);
 //   const [orderComplete, setOrderComplete] = useState(false);
@@ -67,13 +95,33 @@
 
 //   const router = useRouter();
 
-//   // Calculate totals
-//   const subtotal =
-//     cart?.items.reduce((sum, item) => sum + item.quantity * item.price, 0) || 0;
-//   const shipping =
-//     formData.deliveryMethod === "pickup" ? 0 : subtotal >= 25 ? 0 : 0;
-//   const tax = 0;
-//   const total = subtotal + shipping + tax;
+//   // Calculate totals using cart finalTotal (after promotions)
+//   const cartSubtotal = cart?.subtotal || 0;
+//   const promotionDiscount = cart?.promotionDiscount || 0;
+//   const afterPromotionTotal = cart?.finalTotal || 0; // This is subtotal - promotionDiscount
+
+//   // Calculate shipping based on after-promotion total
+//   const shipping = calculateShipping(
+//     afterPromotionTotal,
+//     formData.deliveryMethod
+//   );
+
+//   // Calculate tax on (after-promotion total + shipping)
+//   const tax = calculateTax(afterPromotionTotal + shipping);
+
+//   // Final order total
+//   const total = afterPromotionTotal + shipping + tax;
+
+//   // Helper functions for calculations
+//   function calculateShipping(amount: number, method: string): number {
+//     if (method === "pickup") return 0;
+//     if (amount >= 25) return 0; // Free shipping over $25 after promotions
+//     return method === "express" ? 9.99 : 5.99;
+//   }
+
+//   function calculateTax(amount: number): number {
+//     return Math.round(amount * 0.08 * 100) / 100; // 8% tax
+//   }
 
 //   // Load cart data
 //   useEffect(() => {
@@ -91,6 +139,17 @@
 //       }
 //     }
 //   }, [currentStep, formData, clientSecret, creatingOrder, paymentError, total]);
+
+//   // Reset payment-related state when cart changes (e.g., when promotion is applied/removed)
+//   useEffect(() => {
+//     if (currentStep === 5 && (clientSecret || orderId)) {
+//       // Cart changed while on payment step, need to recreate order
+//       setClientSecret(null);
+//       setOrderId(null);
+//       setPaymentError(null);
+//       setCreatingOrder(false);
+//     }
+//   }, [cart?.finalTotal, cart?.promotionDiscount]); // Watch for cart total changes
 
 //   const loadCart = async () => {
 //     try {
@@ -114,6 +173,29 @@
 //       router.push("/cart");
 //     } finally {
 //       setLoading(false);
+//     }
+//   };
+
+//   // Handle cart updates from promotion applications/removals
+//   const handleCartUpdate = (updatedCart: CartWithPromotion) => {
+//     setCart(updatedCart);
+
+//     // Show updated totals message
+//     const oldTotal = total;
+//     const newAfterPromotionTotal = updatedCart.finalTotal;
+//     const newShipping = calculateShipping(
+//       newAfterPromotionTotal,
+//       formData.deliveryMethod
+//     );
+//     const newTax = calculateTax(newAfterPromotionTotal + newShipping);
+//     const newTotal = newAfterPromotionTotal + newShipping + newTax;
+
+//     if (newTotal !== oldTotal) {
+//       toast.info(`Order total updated: $${newTotal.toFixed(2)}`, {
+//         description: updatedCart.hasPromotionApplied
+//           ? `Saved $${updatedCart.promotionDiscount.toFixed(2)} with promotion`
+//           : "Promotion removed",
+//       });
 //     }
 //   };
 
@@ -256,10 +338,6 @@
 //         toast.success(
 //           "Order placed successfully! You will receive a confirmation email shortly."
 //         );
-
-//         // setTimeout(() => {
-//         //   router.push(`/orders/${result.order._id}`);
-//         // }, 3000);
 //       } else {
 //         toast.error(
 //           result.error ||
@@ -298,7 +376,7 @@
 //       formData,
 //       onInputChange: handleInputChange,
 //       errors: stepErrors[currentStep] || {},
-//       subtotal,
+//       subtotal: afterPromotionTotal, // Use after-promotion total for step calculations
 //       shipping,
 //     };
 
@@ -428,10 +506,13 @@
 //           <div className="lg:col-span-1">
 //             <OrderSummary
 //               cart={cart}
-//               subtotal={subtotal}
+//               cartSubtotal={cartSubtotal}
+//               promotionDiscount={promotionDiscount}
+//               afterPromotionTotal={afterPromotionTotal}
 //               shipping={shipping}
 //               tax={tax}
 //               total={total}
+//               onCartUpdate={handleCartUpdate} // Pass the cart update handler
 //             />
 //           </div>
 //         </div>
@@ -462,7 +543,7 @@ import DeliveryMethodStep from "./components/DeliveryMethodStep";
 import AddressStep from "./components/AddressStep";
 import ReviewStep from "./components/ReviewStep";
 import PaymentStep from "./components/PaymentStep";
-import OrderSummary from "./components/OrderSummary";
+import OrderSummary from "./components/OrderSummary"; // Updated component
 import SuccessPage from "./components/SuccessPage";
 
 // Import actions and types
@@ -558,7 +639,7 @@ export default function CheckoutPage() {
 
   // Helper functions for calculations
   function calculateShipping(amount: number, method: string): number {
-    if (method === "pickup") return 0;
+    if (method === "pickup") return 0; // Always free for pickup
     if (amount >= 25) return 0; // Free shipping over $25 after promotions
     return method === "express" ? 9.99 : 5.99;
   }
@@ -584,6 +665,17 @@ export default function CheckoutPage() {
     }
   }, [currentStep, formData, clientSecret, creatingOrder, paymentError, total]);
 
+  // Reset payment-related state when cart changes (e.g., when promotion is applied/removed)
+  useEffect(() => {
+    if (currentStep === 5 && (clientSecret || orderId)) {
+      // Cart changed while on payment step, need to recreate order
+      setClientSecret(null);
+      setOrderId(null);
+      setPaymentError(null);
+      setCreatingOrder(false);
+    }
+  }, [cart?.finalTotal, cart?.promotionDiscount]); // Watch for cart total changes
+
   const loadCart = async () => {
     try {
       setLoading(true);
@@ -606,6 +698,29 @@ export default function CheckoutPage() {
       router.push("/cart");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle cart updates from promotion applications/removals
+  const handleCartUpdate = (updatedCart: CartWithPromotion) => {
+    setCart(updatedCart);
+
+    // Show updated totals message
+    const oldTotal = total;
+    const newAfterPromotionTotal = updatedCart.finalTotal;
+    const newShipping = calculateShipping(
+      newAfterPromotionTotal,
+      formData.deliveryMethod
+    );
+    const newTax = calculateTax(newAfterPromotionTotal + newShipping);
+    const newTotal = newAfterPromotionTotal + newShipping + newTax;
+
+    if (newTotal !== oldTotal) {
+      toast.info(`Order total updated: $${newTotal.toFixed(2)}`, {
+        description: updatedCart.hasPromotionApplied
+          ? `Saved $${updatedCart.promotionDiscount.toFixed(2)} with promotion`
+          : "Promotion removed",
+      });
     }
   };
 
@@ -696,19 +811,8 @@ export default function CheckoutPage() {
       setCreatingOrder(true);
       setPaymentError(null);
 
-      const checkoutData = {
-        shippingAddress: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          address1: formData.address,
-          address2: formData.apartment,
-          city: formData.city,
-          province: formData.state,
-          country: formData.country,
-          zip: formData.zipCode,
-          phone: formData.phone,
-        },
-        billingAddress: undefined,
+      // Conditionally include shipping address based on delivery method
+      const baseCheckoutData = {
         email: formData.email,
         phone: formData.phone,
         deliveryMethod: formData.deliveryMethod as
@@ -718,6 +822,41 @@ export default function CheckoutPage() {
         notes: formData.notes,
         marketingOptIn: formData.marketingOptIn,
       };
+
+      // Only include shipping address for non-pickup orders
+      const checkoutData =
+        formData.deliveryMethod === "pickup"
+          ? {
+              ...baseCheckoutData,
+              // For pickup orders, use minimal address with just name and contact info
+              shippingAddress: {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                address1: "Store Pickup", // Placeholder for pickup
+                address2: "",
+                city: "Store Location",
+                province: "N/A",
+                country: formData.country,
+                zip: "00000",
+                phone: formData.phone,
+              },
+              billingAddress: undefined,
+            }
+          : {
+              ...baseCheckoutData,
+              shippingAddress: {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                address1: formData.address,
+                address2: formData.apartment,
+                city: formData.city,
+                province: formData.state,
+                country: formData.country,
+                zip: formData.zipCode,
+                phone: formData.phone,
+              },
+              billingAddress: undefined,
+            };
 
       const result = await createCheckoutSession(checkoutData);
 
@@ -748,10 +887,6 @@ export default function CheckoutPage() {
         toast.success(
           "Order placed successfully! You will receive a confirmation email shortly."
         );
-
-        // setTimeout(() => {
-        //   router.push(`/orders/${result.order._id}`);
-        // }, 3000);
       } else {
         toast.error(
           result.error ||
@@ -926,6 +1061,7 @@ export default function CheckoutPage() {
               shipping={shipping}
               tax={tax}
               total={total}
+              onCartUpdate={handleCartUpdate} // Pass the cart update handler
             />
           </div>
         </div>

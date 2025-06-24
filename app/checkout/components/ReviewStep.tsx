@@ -149,7 +149,7 @@ export default function ReviewStep({
           </div>
 
           {/* Order Summary */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl sm:hidden">
             <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
