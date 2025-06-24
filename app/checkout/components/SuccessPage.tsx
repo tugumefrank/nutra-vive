@@ -54,7 +54,7 @@ export default function SuccessPage({ orderId }: SuccessPageProps) {
             Order Confirmed! 🎉
           </h1>
           <p className="text-gray-600 text-lg">
-            Thank you for choosing Nutra-Vive! Your wellness journey
+            Thank you for choosing Nutra Vive! Your wellness journey
             continues...
           </p>
         </motion.div>
@@ -133,8 +133,8 @@ export default function SuccessPage({ orderId }: SuccessPageProps) {
             size="lg"
             asChild
           >
-            <Link href="/orders">
-              View Order Details
+            <Link href={`/track/${orderId}`}>
+              Track Your Order
               <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
           </Button>

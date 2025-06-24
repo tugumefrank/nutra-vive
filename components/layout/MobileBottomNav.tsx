@@ -13,6 +13,9 @@ import {
   User,
   Settings,
   UserCog,
+  TelescopeIcon,
+  BookDashed,
+  Book,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCartSelectors } from "@/hooks/useCartSelectors";
@@ -63,11 +66,11 @@ export function MobileBottomNav() {
         isActive: pathname.startsWith("/shop"),
       },
       {
-        href: "/favorites",
-        label: "Favorites",
-        icon: Heart,
-        isActive: pathname === "/favorites",
-        badge: isAuthenticated && favoriteCount > 0 ? favoriteCount : null,
+        href: "/consultation",
+        label: "Consultation",
+        icon: Book,
+        isActive: pathname === "/consultation",
+
         requiresAuth: true,
       },
       {
