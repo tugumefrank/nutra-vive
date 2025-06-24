@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { motion } from "framer-motion";
+
 import {
   Truck,
   Search,
@@ -127,14 +127,9 @@ async function TrackingData() {
           </h2>
           <div className="grid gap-4">
             {activeShipments.map((order) => (
-              <motion.div
-                key={order._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div>
                 <TrackingWidget order={order} />
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
