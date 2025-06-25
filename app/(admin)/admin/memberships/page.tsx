@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 interface MembershipsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     page?: string;
     search?: string;
     tier?: string;
@@ -26,40 +26,40 @@ interface MembershipsPageProps {
     status?: string;
     sort?: string;
     order?: string;
-  };
+  }>;
 }
 
 export default async function MembershipsPage({
   searchParams,
 }: MembershipsPageProps) {
   // Parse search parameters
-  const page = parseInt(searchParams.page || "1");
-  const search = searchParams.search || "";
-  const tier = searchParams.tier as
+  const page = parseInt((await searchParams).page || "1");
+  const search = ((await searchParams).search || "") as string;
+  const tier = (await searchParams).tier as
     | "basic"
     | "premium"
     | "vip"
     | "elite"
     | undefined;
-  const billingFrequency = searchParams.billingFrequency as
+  const billingFrequency = (await searchParams).billingFrequency as
     | "monthly"
     | "quarterly"
     | "yearly"
     | undefined;
   const isActive =
-    searchParams.status === "active"
+    (await searchParams).status === "active"
       ? true
-      : searchParams.status === "inactive"
+      : (await searchParams).status === "inactive"
         ? false
         : undefined;
   const sortBy =
-    (searchParams.sort as
+    ((await searchParams).sort as
       | "name"
       | "price"
       | "tier"
       | "totalSubscribers"
       | "createdAt") || "createdAt";
-  const sortOrder = (searchParams.order as "asc" | "desc") || "desc";
+  const sortOrder = ((await searchParams).order as "asc" | "desc") || "desc";
 
   // Fetch data server-side
   const [membershipsData, statsData, categoriesData] = await Promise.all([
@@ -100,7 +100,7 @@ export default async function MembershipsPage({
             <MembershipsList
               initialMemberships={membershipsData.memberships}
               initialPagination={membershipsData.pagination}
-              searchParams={searchParams}
+              searchParams={await searchParams}
             />
           </Suspense>
         </div>

@@ -1,4 +1,3 @@
-// app/admin/memberships/components/MembershipDialog.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -83,7 +82,7 @@ const membershipSchema = z.object({
         }),
         categoryName: z.string().min(1, "Category name is required"),
         quantity: z.number().min(0, "Quantity must be positive"),
-        allowedProducts: z.array(z.string()).default([]),
+        allowedProducts: z.array(z.string()),
       })
     )
     .min(1, "At least one product allocation is required"),
@@ -370,24 +369,29 @@ export default function MembershipDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogHeader className="px-4 sm:px-6">
+          <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl">
             <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-white">
-              <Crown className="h-5 w-5" />
+              <Crown className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            {isEditMode ? "Edit Membership" : "Create New Membership"}
+            <span className="truncate">
+              {isEditMode ? "Edit Membership" : "Create New Membership"}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 sm:space-y-6"
+          >
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-5 mx-4 sm:mx-6">
                 <TabsTrigger value="basic" className="text-xs">
                   Basic
                 </TabsTrigger>
@@ -405,8 +409,8 @@ export default function MembershipDialog() {
                 </TabsTrigger>
               </TabsList>
 
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="space-y-6 py-4">
+              <ScrollArea className="h-[400px] sm:h-[500px] px-4 sm:px-6">
+                <div className="space-y-4 sm:space-y-6 py-4">
                   {/* Basic Information Tab */}
                   <TabsContent value="basic" className="space-y-6 mt-0">
                     <motion.div
@@ -422,7 +426,7 @@ export default function MembershipDialog() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
                               name="name"
@@ -496,17 +500,17 @@ export default function MembershipDialog() {
                             )}
                           />
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <FormField
                               control={form.control}
                               name="isActive"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base">
+                                    <FormLabel className="text-sm sm:text-base">
                                       Active
                                     </FormLabel>
-                                    <FormDescription>
+                                    <FormDescription className="text-xs sm:text-sm">
                                       Allow users to subscribe
                                     </FormDescription>
                                   </div>
@@ -524,13 +528,13 @@ export default function MembershipDialog() {
                               control={form.control}
                               name="isPopular"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base flex items-center gap-1">
+                                    <FormLabel className="text-sm sm:text-base flex items-center gap-1">
                                       <Sparkles className="h-4 w-4" />
                                       Popular
                                     </FormLabel>
-                                    <FormDescription>
+                                    <FormDescription className="text-xs sm:text-sm">
                                       Highlight this plan
                                     </FormDescription>
                                   </div>
@@ -562,7 +566,7 @@ export default function MembershipDialog() {
                                       }
                                     />
                                   </FormControl>
-                                  <FormDescription>
+                                  <FormDescription className="text-xs sm:text-sm">
                                     Lower numbers appear first
                                   </FormDescription>
                                   <FormMessage />
@@ -590,7 +594,7 @@ export default function MembershipDialog() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <FormField
                               control={form.control}
                               name="price"
@@ -693,7 +697,7 @@ export default function MembershipDialog() {
                             <Package className="h-5 w-5" />
                             Product Allocations
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Define how many products from each category members
                             can select
                           </p>
@@ -722,7 +726,7 @@ export default function MembershipDialog() {
                                   </Button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                   <FormField
                                     control={form.control}
                                     name={`productAllocations.${index}.categoryId`}
@@ -834,7 +838,7 @@ export default function MembershipDialog() {
                             <Gift className="h-5 w-5" />
                             Custom Benefits
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Add special perks like webinars, exclusive content,
                             or services
                           </p>
@@ -863,7 +867,7 @@ export default function MembershipDialog() {
                                   </Button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                   <FormField
                                     control={form.control}
                                     name={`customBenefits.${index}.type`}
@@ -952,7 +956,7 @@ export default function MembershipDialog() {
                                           {...field}
                                         />
                                       </FormControl>
-                                      <FormDescription>
+                                      <FormDescription className="text-xs sm:text-sm">
                                         Additional value information like
                                         discount amounts
                                       </FormDescription>
@@ -980,7 +984,7 @@ export default function MembershipDialog() {
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg">Features</CardTitle>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             List the key features of this membership
                           </p>
                         </CardHeader>
@@ -1042,7 +1046,7 @@ export default function MembershipDialog() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <FormField
                               control={form.control}
                               name="deliveryFrequency"
@@ -1096,7 +1100,7 @@ export default function MembershipDialog() {
                                       }
                                     />
                                   </FormControl>
-                                  <FormDescription>
+                                  <FormDescription className="text-xs sm:text-sm">
                                     Leave empty for no limit
                                   </FormDescription>
                                   <FormMessage />
@@ -1105,18 +1109,18 @@ export default function MembershipDialog() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <FormField
                               control={form.control}
                               name="freeDelivery"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base flex items-center gap-2">
+                                    <FormLabel className="text-sm sm:text-base flex items-center gap-2">
                                       <Truck className="h-4 w-4" />
                                       Free Delivery
                                     </FormLabel>
-                                    <FormDescription>
+                                    <FormDescription className="text-xs sm:text-sm">
                                       Include free delivery
                                     </FormDescription>
                                   </div>
@@ -1134,13 +1138,13 @@ export default function MembershipDialog() {
                               control={form.control}
                               name="prioritySupport"
                               render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base flex items-center gap-2">
+                                    <FormLabel className="text-sm sm:text-base flex items-center gap-2">
                                       <Headphones className="h-4 w-4" />
                                       Priority Support
                                     </FormLabel>
-                                    <FormDescription>
+                                    <FormDescription className="text-xs sm:text-sm">
                                       Provide priority customer support
                                     </FormDescription>
                                   </div>
@@ -1222,7 +1226,7 @@ export default function MembershipDialog() {
                                     {...field}
                                   />
                                 </FormControl>
-                                <FormDescription>
+                                <FormDescription className="text-xs sm:text-sm">
                                   Icon name for display purposes
                                 </FormDescription>
                                 <FormMessage />
