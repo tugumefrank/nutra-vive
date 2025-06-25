@@ -788,47 +788,24 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { toast } from "sonner";
+
+// Import the proper membership cart server actions
 import {
   getMembershipCart,
   updateMembershipCartItem,
-  getMembershipCartSummary,
+  removeFromMembershipCart,
+  clearMembershipCart,
   type MembershipCartWithPromotion,
+  type MembershipCartItem,
 } from "@/lib/actions/membershipCartServerActions";
+
+// Import regular promotion actions
 import {
   applyPromotionToCart,
-  clearCart,
-  removeFromCart,
   removePromotionFromCart,
 } from "@/lib/actions/cartServerActions";
-import { validatePromotionCode } from "@/lib/actions/promotionValidationServerAction";
 
-// Enhanced Cart Item Interface for Membership
-interface MembershipCartItem {
-  _id: string;
-  product: {
-    _id: string;
-    name: string;
-    slug: string;
-    price: number;
-    compareAtPrice?: number;
-    images: string[];
-    category?: {
-      _id: string;
-      name: string;
-      slug: string;
-    };
-    promotionEligible?: boolean;
-    isDiscounted?: boolean;
-  };
-  quantity: number;
-  price: number;
-  originalPrice?: number;
-  membershipPrice: number;
-  isFreeFromMembership: boolean;
-  membershipSavings: number;
-  categoryId?: string;
-  categoryName?: string;
-}
+import { validatePromotionCode } from "@/lib/actions/promotionValidationServerAction";
 
 export default function MembershipCartPage() {
   const [cart, setCart] = useState<MembershipCartWithPromotion | null>(null);
@@ -849,31 +826,22 @@ export default function MembershipCartPage() {
   const loadCart = async () => {
     try {
       setLoading(true);
+      console.log("Loading membership cart...");
+
       const result = await getMembershipCart();
+      console.log("Cart result:", result);
 
       if (result.success && result.cart) {
-        setCart({
-          _id: result.cart._id ?? "",
-          items: result.cart.items ?? [],
-          subtotal: result.cart.subtotal ?? 0,
-          membershipDiscount: 0,
-          promotionDiscount: result.cart.promotionDiscount ?? 0,
-          finalTotal: result.cart.finalTotal ?? 0,
-          shippingAmount: result.cart.shippingAmount ?? 0,
-          taxAmount: result.cart.taxAmount ?? 0,
-          totalAmount: result.cart.totalAmount ?? 0,
-          hasPromotionApplied: result.cart.hasPromotionApplied ?? false,
-          hasMembershipApplied: false,
-          promotionCode: result.cart.promotionCode,
-          promotionName: result.cart.promotionName,
-          membershipInfo: undefined,
-        });
+        setCart(result.cart);
         // Set promotion code in input if one is applied
         if (result.cart.promotionCode) {
           setPromotionCode(result.cart.promotionCode);
         }
       } else {
-        // Initialize empty cart with proper structure
+        console.error("Failed to load cart:", result.error);
+        toast.error(result.error || "Failed to load cart");
+
+        // Initialize empty cart
         setCart({
           _id: "",
           items: [],
@@ -904,25 +872,11 @@ export default function MembershipCartPage() {
     try {
       setUpdatingItems((prev) => new Set(prev).add(itemId));
 
+      console.log(`Updating item ${productId} to quantity ${newQuantity}`);
       const result = await updateMembershipCartItem(productId, newQuantity);
 
       if (result.success && result.cart) {
-        setCart({
-          _id: result.cart._id ?? "",
-          items: result.cart.items ?? [],
-          subtotal: result.cart.subtotal ?? 0,
-          membershipDiscount: 0,
-          promotionDiscount: result.cart.promotionDiscount ?? 0,
-          finalTotal: result.cart.finalTotal ?? 0,
-          shippingAmount: result.cart.shippingAmount ?? 0,
-          taxAmount: result.cart.taxAmount ?? 0,
-          totalAmount: result.cart.totalAmount ?? 0,
-          hasPromotionApplied: result.cart.hasPromotionApplied ?? false,
-          hasMembershipApplied: false,
-          promotionCode: result.cart.promotionCode,
-          promotionName: result.cart.promotionName,
-          membershipInfo: undefined,
-        });
+        setCart(result.cart);
 
         if (newQuantity === 0) {
           toast.success("Item removed from cart");
@@ -930,6 +884,7 @@ export default function MembershipCartPage() {
           toast.success("Cart updated");
         }
       } else {
+        console.error("Failed to update cart:", result.error);
         toast.error(result.error || "Failed to update item");
       }
     } catch (error) {
@@ -948,13 +903,19 @@ export default function MembershipCartPage() {
     try {
       setUpdatingItems((prev) => new Set(prev).add(itemId));
 
-      const result = await removeFromCart(productId);
+      console.log(`Removing item ${productId} from cart`);
+      const result = await removeFromMembershipCart(productId);
 
-      if (result.success && result.cart) {
-        // Reload the membership cart to get updated allocation info
-        await loadCart();
+      if (result.success) {
+        if (result.cart) {
+          setCart(result.cart);
+        } else {
+          // Item was last item, reload cart to get empty state
+          await loadCart();
+        }
         toast.success("Item removed from cart");
       } else {
+        console.error("Failed to remove item:", result.error);
         toast.error(result.error || "Failed to remove item");
       }
     } catch (error) {
@@ -971,25 +932,16 @@ export default function MembershipCartPage() {
 
   const clearCartItems = async () => {
     try {
-      const result = await clearCart();
+      console.log("Clearing cart...");
+      const result = await clearMembershipCart();
 
       if (result.success) {
-        setCart({
-          _id: "",
-          items: [],
-          subtotal: 0,
-          membershipDiscount: 0,
-          promotionDiscount: 0,
-          finalTotal: 0,
-          shippingAmount: 0,
-          taxAmount: 0,
-          totalAmount: 0,
-          hasPromotionApplied: false,
-          hasMembershipApplied: false,
-        });
+        // Reload cart to get fresh state
+        await loadCart();
         setPromotionCode("");
         toast.success("Cart cleared");
       } else {
+        console.error("Failed to clear cart:", result.error);
         toast.error(result.error || "Failed to clear cart");
       }
     } catch (error) {
@@ -1006,6 +958,7 @@ export default function MembershipCartPage() {
 
     try {
       setApplyingPromotion(true);
+      console.log(`Applying promotion code: ${promotionCode}`);
 
       // First validate the promotion
       const validation = await validatePromotionCode(promotionCode.trim());
@@ -1018,12 +971,10 @@ export default function MembershipCartPage() {
       // Apply the promotion
       const result = await applyPromotionToCart(promotionCode.trim());
 
-      if (result.success && result.cart) {
-        setCart({
-          ...result.cart,
-          membershipDiscount: 0,
-          hasMembershipApplied: false,
-        });
+      if (result.success) {
+        // Reload membership cart to get updated totals
+        await loadCart();
+
         toast.success(
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0">
@@ -1043,6 +994,7 @@ export default function MembershipCartPage() {
           </div>
         );
       } else {
+        console.error("Failed to apply promotion:", result.error);
         toast.error(result.error || "Failed to apply promotion");
       }
     } catch (error) {
@@ -1055,17 +1007,16 @@ export default function MembershipCartPage() {
 
   const removePromotion = async () => {
     try {
+      console.log("Removing promotion...");
       const result = await removePromotionFromCart();
 
-      if (result.success && result.cart) {
-        setCart({
-          ...result.cart,
-          membershipDiscount: 0,
-          hasMembershipApplied: false,
-        });
+      if (result.success) {
+        // Reload membership cart to get updated totals
+        await loadCart();
         setPromotionCode("");
         toast.success("Promotion removed");
       } else {
+        console.error("Failed to remove promotion:", result.error);
         toast.error("Failed to remove promotion");
       }
     } catch (error) {
@@ -1201,7 +1152,7 @@ export default function MembershipCartPage() {
           {/* Cart Items Section */}
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
             {/* Membership Benefits Card */}
-            {cart.membershipInfo && (
+            {cart.membershipInfo && cart.hasMembershipApplied && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1214,7 +1165,7 @@ export default function MembershipCartPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-amber-800 capitalize">
-                        {cart.membershipInfo.tier} Member Benefits
+                        {cart.membershipInfo.tier} Member Benefits Active
                       </h3>
                       <p className="text-sm text-amber-600">
                         You've saved $
@@ -1262,7 +1213,7 @@ export default function MembershipCartPage() {
                                 <div
                                   className="bg-gradient-to-r from-amber-400 to-orange-400 h-2 rounded-full transition-all duration-300"
                                   style={{
-                                    width: `${(allocation.used / allocation.allocated) * 100}%`,
+                                    width: `${Math.min(100, (allocation.used / allocation.allocated) * 100)}%`,
                                   }}
                                 />
                               </div>
