@@ -1983,3 +1983,59 @@ export async function getCategories(): Promise<{
     };
   }
 }
+// Add this function to your membershipServerActions.ts file
+
+// Get Current User's Memberships (for account page)
+export async function getCurrentUserMemberships(): Promise<{
+  success: boolean;
+  userMemberships?: any[];
+  error?: string;
+}> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return {
+        success: false,
+        error: "Authentication required",
+      };
+    }
+
+    await connectToDatabase();
+
+    // Find the user by Clerk ID first
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    // Get user's memberships using the database user ID
+    const userMemberships = await UserMembership.find({
+      user: user._id,
+    })
+      .populate(
+        "membership",
+        "name tier price billingFrequency deliveryFrequency productAllocations features customBenefits"
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(
+      `✅ Fetched ${userMemberships.length} memberships for user ${user.email}`
+    );
+
+    return {
+      success: true,
+      userMemberships: userMemberships.map((um) => serializeUserMembership(um)),
+    };
+  } catch (error) {
+    console.error("❌ Error fetching current user memberships:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to fetch memberships",
+    };
+  }
+}
