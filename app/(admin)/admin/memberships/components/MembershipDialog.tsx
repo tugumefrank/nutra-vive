@@ -26,6 +26,7 @@
 //   Save,
 //   X,
 //   Sparkles,
+//   AlertCircle,
 // } from "lucide-react";
 // import {
 //   Dialog,
@@ -58,12 +59,16 @@
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { ScrollArea } from "@/components/ui/scroll-area";
 // import { Separator } from "@/components/ui/separator";
-// import { useMemberships } from "./MembershipsProvider";
+
 // import {
 //   createMembership,
 //   updateMembership,
-// } from "@/lib/actions/membershipServerActions";
+// } from "../../../../../lib/actions/membershipServerActions";
+// import { useMemberships } from "./MembershipsProvider";
 
+// // =========================================================
+// // 1. Zod Schema: Define the shape of data the FORM handles
+// // =========================================================
 // const membershipSchema = z.object({
 //   name: z.string().min(1, "Membership name is required"),
 //   description: z.string().optional(),
@@ -72,17 +77,16 @@
 //   // Pricing
 //   price: z.number().min(0, "Price must be positive"),
 //   billingFrequency: z.enum(["monthly", "quarterly", "yearly"]),
+//   currency: z.string().min(1, "Currency is required"),
 
 //   // Product Allocations
 //   productAllocations: z
 //     .array(
 //       z.object({
-//         categoryId: z.string().refine((val) => val !== "none", {
-//           message: "Category is required",
-//         }),
+//         categoryId: z.string().min(1, "Category is required"),
 //         categoryName: z.string().min(1, "Category name is required"),
-//         quantity: z.number().min(0, "Quantity must be positive"),
-//         allowedProducts: z.array(z.string()).default([]),
+//         quantity: z.number().int().min(0, "Quantity must be positive"),
+//         allowedProducts: z.array(z.string()).optional(),
 //       })
 //     )
 //     .min(1, "At least one product allocation is required"),
@@ -103,7 +107,7 @@
 //   features: z.array(z.string()).default([]),
 
 //   // Configuration
-//   maxProductsPerMonth: z.number().min(0).optional(),
+//   maxProductsPerMonth: z.number().int().min(0).optional(),
 //   deliveryFrequency: z.enum(["weekly", "bi-weekly", "monthly"]),
 //   freeDelivery: z.boolean().default(false),
 //   prioritySupport: z.boolean().default(false),
@@ -111,13 +115,14 @@
 //   // Display
 //   isActive: z.boolean().default(true),
 //   isPopular: z.boolean().default(false),
-//   sortOrder: z.number().default(0),
+//   sortOrder: z.number().int().min(0).default(0),
 //   color: z.string().optional(),
 //   icon: z.string().optional(),
 // });
 
 // type MembershipForm = z.infer<typeof membershipSchema>;
 
+// // Helper Interfaces & Constants
 // interface TierOption {
 //   value: "basic" | "premium" | "vip" | "elite";
 //   label: string;
@@ -170,6 +175,24 @@
 //   { value: "#ec4899", label: "Pink" },
 // ];
 
+// // Tab to field mapping for error detection
+// const tabFieldMapping = {
+//   basic: [
+//     "name",
+//     "tier",
+//     "description",
+//     "isActive",
+//     "isPopular",
+//     "sortOrder",
+//     "color",
+//     "icon",
+//   ],
+//   pricing: ["price", "billingFrequency", "currency"],
+//   products: ["productAllocations", "maxProductsPerMonth"],
+//   benefits: ["customBenefits", "features"],
+//   settings: ["deliveryFrequency", "freeDelivery", "prioritySupport"],
+// };
+
 // export default function MembershipDialog() {
 //   const {
 //     isCreateDialogOpen,
@@ -187,14 +210,20 @@
 //   const isOpen = isCreateDialogOpen || isEditDialogOpen;
 //   const isEditMode = isEditDialogOpen && selectedMembership;
 
+//   // Debug: log categories when they change
+//   useEffect(() => {
+//     console.log("Available categories:", categories);
+//   }, [categories]);
+
 //   const form = useForm<MembershipForm>({
-//     resolver: zodResolver(membershipSchema),
+//     resolver: zodResolver(membershipSchema) as any,
 //     defaultValues: {
 //       name: "",
 //       description: "",
 //       tier: "basic",
 //       price: 0,
 //       billingFrequency: "monthly",
+//       currency: "USD",
 //       productAllocations: [],
 //       customBenefits: [],
 //       features: [],
@@ -204,7 +233,7 @@
 //       isActive: true,
 //       isPopular: false,
 //       sortOrder: 0,
-//       color: "default",
+//       color: undefined,
 //       icon: undefined,
 //       maxProductsPerMonth: undefined,
 //     },
@@ -228,31 +257,39 @@
 //     name: "customBenefits",
 //   });
 
-//   const {
-//     fields: featureFields,
-//     append: appendFeature,
-//     remove: removeFeature,
-//   } = useFieldArray({
-//     control: form.control,
-//     name: "features",
-//   });
-
-//   // Reset form when dialog opens/closes or membership changes
+//   // Fixed useEffect for better form reset handling
 //   useEffect(() => {
 //     if (isOpen) {
 //       setActiveTab("basic");
 
-//       if (isEditMode) {
-//         // Populate form with existing membership data
-//         form.reset({
+//       if (isEditMode && selectedMembership) {
+//         const allocations =
+//           selectedMembership.productAllocations?.map((pa: any) => {
+//             const categoryId = extractId(pa.categoryId);
+//             return {
+//               categoryId,
+//               categoryName: pa.categoryName || "",
+//               quantity: pa.quantity || 0,
+//               allowedProducts: Array.isArray(pa.allowedProducts)
+//                 ? pa.allowedProducts.map(extractId)
+//                 : [],
+//             };
+//           }) || [];
+
+//         const formData: MembershipForm = {
 //           name: selectedMembership.name || "",
 //           description: selectedMembership.description || "",
 //           tier: selectedMembership.tier || "basic",
 //           price: selectedMembership.price || 0,
 //           billingFrequency: selectedMembership.billingFrequency || "monthly",
-//           productAllocations: selectedMembership.productAllocations || [],
-//           customBenefits: selectedMembership.customBenefits || [],
-//           features: selectedMembership.features || [],
+//           currency: selectedMembership.currency || "USD",
+//           productAllocations: allocations,
+//           customBenefits: Array.isArray(selectedMembership.customBenefits)
+//             ? selectedMembership.customBenefits
+//             : [],
+//           features: Array.isArray(selectedMembership.features)
+//             ? selectedMembership.features
+//             : [],
 //           deliveryFrequency: selectedMembership.deliveryFrequency || "monthly",
 //           freeDelivery: selectedMembership.freeDelivery || false,
 //           prioritySupport: selectedMembership.prioritySupport || false,
@@ -262,40 +299,91 @@
 //               : true,
 //           isPopular: selectedMembership.isPopular || false,
 //           sortOrder: selectedMembership.sortOrder || 0,
-//           color: selectedMembership.color || "default",
+//           color: selectedMembership.color || undefined,
 //           icon: selectedMembership.icon || undefined,
 //           maxProductsPerMonth:
 //             selectedMembership.maxProductsPerMonth || undefined,
-//         });
+//         };
+
+//         setTimeout(() => {
+//           form.reset(formData);
+//         }, 100);
 //       } else {
-//         // Reset to default values for create
-//         form.reset({
-//           name: "",
-//           description: "",
-//           tier: "basic",
-//           price: 0,
-//           billingFrequency: "monthly",
-//           productAllocations: [],
-//           customBenefits: [],
-//           features: [],
-//           deliveryFrequency: "monthly",
-//           freeDelivery: false,
-//           prioritySupport: false,
-//           isActive: true,
-//           isPopular: false,
-//           sortOrder: 0,
-//           color: "default",
-//           icon: undefined,
-//           maxProductsPerMonth: undefined,
-//         });
+//         setTimeout(() => {
+//           form.reset({
+//             name: "",
+//             description: "",
+//             tier: "basic",
+//             price: 0,
+//             billingFrequency: "monthly",
+//             currency: "USD",
+//             productAllocations: [],
+//             customBenefits: [],
+//             features: [],
+//             deliveryFrequency: "monthly",
+//             freeDelivery: false,
+//             prioritySupport: false,
+//             isActive: true,
+//             isPopular: false,
+//             sortOrder: 0,
+//             color: undefined,
+//             icon: undefined,
+//             maxProductsPerMonth: undefined,
+//           });
+//         }, 100);
 //       }
 //     }
 //   }, [isOpen, isEditMode, selectedMembership, form]);
 
+//   // Function to detect which tab has errors
+//   const getTabWithErrors = (errors: any) => {
+//     for (const [tabName, fields] of Object.entries(tabFieldMapping)) {
+//       if (
+//         fields.some((field) => {
+//           if (field.includes(".")) {
+//             // Handle nested fields like productAllocations.0.categoryId
+//             const parts = field.split(".");
+//             let current = errors;
+//             for (const part of parts) {
+//               if (current && current[part]) {
+//                 current = current[part];
+//               } else {
+//                 return false;
+//               }
+//             }
+//             return true;
+//           }
+//           return errors[field];
+//         })
+//       ) {
+//         return tabName;
+//       }
+//     }
+
+//     // Check for productAllocations errors specifically
+//     if (errors.productAllocations) {
+//       return "products";
+//     }
+
+//     return null;
+//   };
+//   const extractId = (value: any): string => {
+//     if (!value) return "";
+//     if (typeof value === "string") return value;
+
+//     // Defensive fallback if value is still a raw ObjectId for any reason
+//     if (typeof value === "object" && value !== null) {
+//       if (value.toHexString && typeof value.toHexString === "function") {
+//         return value.toHexString();
+//       }
+//       if (value._id) return String(value._id);
+//     }
+
+//     return String(value);
+//   };
 //   const onSubmit = async (data: MembershipForm) => {
 //     setIsLoading(true);
 //     try {
-//       // Transform data before sending to server
 //       const submitData = {
 //         ...data,
 //         color: data.color === "default" ? undefined : data.color,
@@ -303,8 +391,18 @@
 
 //       let result;
 
-//       if (isEditMode) {
-//         result = await updateMembership(selectedMembership._id, submitData);
+//       if (isEditMode && selectedMembership) {
+//         const fixedSubmitData = {
+//           ...submitData,
+//           productAllocations: submitData.productAllocations.map((alloc) => ({
+//             ...alloc,
+//             allowedProducts: alloc.allowedProducts ?? [],
+//           })),
+//         };
+//         result = await updateMembership(
+//           selectedMembership._id,
+//           fixedSubmitData
+//         );
 //         if (result.success) {
 //           toast.success("Membership updated successfully");
 //           setIsEditDialogOpen(false);
@@ -313,7 +411,14 @@
 //           toast.error(result.error || "Failed to update membership");
 //         }
 //       } else {
-//         result = await createMembership(submitData);
+//         const fixedSubmitData = {
+//           ...submitData,
+//           productAllocations: submitData.productAllocations.map((alloc) => ({
+//             ...alloc,
+//             allowedProducts: alloc.allowedProducts ?? [],
+//           })),
+//         };
+//         result = await createMembership(fixedSubmitData);
 //         if (result.success) {
 //           toast.success("Membership created successfully");
 //           setIsCreateDialogOpen(false);
@@ -323,11 +428,69 @@
 //         }
 //       }
 //     } catch (error) {
-//       toast.error("An unexpected error occurred");
+//       console.error("Submission error:", error);
+
+//       // Check for validation errors and show appropriate tab
+//       const formErrors = form.formState.errors;
+//       const errorTab = getTabWithErrors(formErrors);
+
+//       if (errorTab && errorTab !== activeTab) {
+//         setActiveTab(errorTab);
+//         toast.error(
+//           `Please check the "${errorTab}" tab for validation errors`,
+//           {
+//             icon: <AlertCircle className="h-4 w-4" />,
+//             duration: 4000,
+//           }
+//         );
+//       } else {
+//         toast.error("Please fix the validation errors before submitting");
+//       }
 //     } finally {
 //       setIsLoading(false);
 //     }
 //   };
+//   // Watch for allocation fields to trigger re-renders
+//   const watchedAllocations = form.watch("productAllocations");
+//   useEffect(() => {
+//     if (isEditMode && selectedMembership && categories?.length) {
+//       const currentAllocations = form.getValues("productAllocations");
+
+//       if (currentAllocations && currentAllocations.length > 0) {
+//         const patchedAllocations = currentAllocations.map((alloc) => {
+//           const categoryId = extractId(alloc.categoryId);
+//           const matchingCategory = categories.find((c) => c._id === categoryId);
+
+//           return {
+//             ...alloc,
+//             categoryId,
+//             categoryName: matchingCategory?.name || alloc.categoryName || "",
+//           };
+//         });
+
+//         form.setValue("productAllocations", patchedAllocations, {
+//           shouldValidate: false,
+//           shouldDirty: false,
+//         });
+//       }
+//     }
+//   }, [categories, isEditMode, selectedMembership, form]);
+
+//   // Enhanced form submission with error detection
+//   const handleFormSubmit = form.handleSubmit(onSubmit, (errors) => {
+//     console.log("Form validation errors:", errors);
+
+//     const errorTab = getTabWithErrors(errors);
+//     if (errorTab && errorTab !== activeTab) {
+//       setActiveTab(errorTab);
+//       toast.error(`Please check the "${errorTab}" tab for validation errors`, {
+//         icon: <AlertCircle className="h-4 w-4" />,
+//         duration: 4000,
+//       });
+//     } else {
+//       toast.error("Please fix the validation errors before submitting");
+//     }
+//   });
 
 //   const handleClose = () => {
 //     if (isEditMode) {
@@ -339,7 +502,7 @@
 
 //   const addAllocation = () => {
 //     appendAllocation({
-//       categoryId: "none",
+//       categoryId: "",
 //       categoryName: "",
 //       quantity: 1,
 //       allowedProducts: [],
@@ -355,9 +518,22 @@
 //     });
 //   };
 
+//   const handleAddFeatureInput = (
+//     event: React.KeyboardEvent<HTMLInputElement>
+//   ) => {
+//     if (event.key === "Enter" && event.currentTarget.value.trim()) {
+//       addFeature(event.currentTarget.value.trim());
+//       event.currentTarget.value = "";
+//     }
+//   };
+
 //   const addFeature = (feature: string) => {
 //     if (feature.trim()) {
-//       appendFeature(feature.trim());
+//       form.setValue(
+//         "features",
+//         [...form.getValues("features"), feature.trim()],
+//         { shouldValidate: true, shouldDirty: true }
+//       );
 //     }
 //   };
 
@@ -366,6 +542,15 @@
 //     (option) => option.value === selectedTier
 //   );
 //   const TierIcon = selectedTierOption?.icon || Package;
+
+//   function removeFeature(index: number): void {
+//     const features = form.getValues("features");
+//     const updated = [...features.slice(0, index), ...features.slice(index + 1)];
+//     form.setValue("features", updated, {
+//       shouldValidate: true,
+//       shouldDirty: true,
+//     });
+//   }
 
 //   return (
 //     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -382,10 +567,7 @@
 //         </DialogHeader>
 
 //         <Form {...form}>
-//           <form
-//             onSubmit={form.handleSubmit(onSubmit)}
-//             className="space-y-4 sm:space-y-6"
-//           >
+//           <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-6">
 //             <Tabs
 //               value={activeTab}
 //               onValueChange={setActiveTab}
@@ -574,6 +756,76 @@
 //                               )}
 //                             />
 //                           </div>
+
+//                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+//                             <FormField
+//                               control={form.control}
+//                               name="color"
+//                               render={({ field }) => (
+//                                 <FormItem>
+//                                   <FormLabel className="flex items-center gap-2">
+//                                     <Palette className="h-4 w-4" />
+//                                     Card Color
+//                                   </FormLabel>
+//                                   <Select
+//                                     onValueChange={field.onChange}
+//                                     value={field.value || ""}
+//                                   >
+//                                     <FormControl>
+//                                       <SelectTrigger>
+//                                         <SelectValue placeholder="Select a color" />
+//                                       </SelectTrigger>
+//                                     </FormControl>
+//                                     <SelectContent>
+//                                       {colorOptions.map((color) => (
+//                                         <SelectItem
+//                                           key={color.value}
+//                                           value={color.value}
+//                                         >
+//                                           <div className="flex items-center gap-2">
+//                                             <div
+//                                               className="h-4 w-4 rounded-full"
+//                                               style={{
+//                                                 backgroundColor: color.value,
+//                                               }}
+//                                             />
+//                                             {color.label}
+//                                           </div>
+//                                         </SelectItem>
+//                                       ))}
+//                                     </SelectContent>
+//                                   </Select>
+//                                   <FormDescription>
+//                                     Visual color for the membership card.
+//                                   </FormDescription>
+//                                   <FormMessage />
+//                                 </FormItem>
+//                               )}
+//                             />
+//                             <FormField
+//                               control={form.control}
+//                               name="icon"
+//                               render={({ field }) => (
+//                                 <FormItem>
+//                                   <FormLabel className="flex items-center gap-2">
+//                                     <Crown className="h-4 w-4" />
+//                                     Icon Name
+//                                   </FormLabel>
+//                                   <FormControl>
+//                                     <Input
+//                                       placeholder="e.g., Crown, Package"
+//                                       {...field}
+//                                       value={field.value || ""}
+//                                     />
+//                                   </FormControl>
+//                                   <FormDescription>
+//                                     Name of a Lucide React icon. (Optional)
+//                                   </FormDescription>
+//                                   <FormMessage />
+//                                 </FormItem>
+//                               )}
+//                             />
+//                           </div>
 //                         </CardContent>
 //                       </Card>
 //                     </motion.div>
@@ -655,6 +907,19 @@
 //                                 </FormItem>
 //                               )}
 //                             />
+//                             <FormField
+//                               control={form.control}
+//                               name="currency"
+//                               render={({ field }) => (
+//                                 <FormItem>
+//                                   <FormLabel>Currency</FormLabel>
+//                                   <FormControl>
+//                                     <Input placeholder="e.g., USD" {...field} />
+//                                   </FormControl>
+//                                   <FormMessage />
+//                                 </FormItem>
+//                               )}
+//                             />
 //                           </div>
 
 //                           {/* Price Preview */}
@@ -685,6 +950,7 @@
 //                   </TabsContent>
 
 //                   {/* Product Allocations Tab */}
+//                   {/* Product Allocations Tab */}
 //                   <TabsContent value="products" className="space-y-6 mt-0">
 //                     <motion.div
 //                       initial={{ opacity: 0, y: 20 }}
@@ -703,135 +969,242 @@
 //                           </p>
 //                         </CardHeader>
 //                         <CardContent className="space-y-4">
-//                           <AnimatePresence>
-//                             {allocationFields.map((field, index) => (
-//                               <motion.div
-//                                 key={field.id}
-//                                 initial={{ opacity: 0, height: 0 }}
-//                                 animate={{ opacity: 1, height: "auto" }}
-//                                 exit={{ opacity: 0, height: 0 }}
-//                                 className="p-4 border rounded-lg space-y-4"
-//                               >
-//                                 <div className="flex items-center justify-between">
-//                                   <h4 className="font-medium">
-//                                     Allocation {index + 1}
-//                                   </h4>
-//                                   <Button
-//                                     type="button"
-//                                     variant="ghost"
-//                                     size="sm"
-//                                     onClick={() => removeAllocation(index)}
+//                           {/* Debug Info - Remove in production */}
+//                           {process.env.NODE_ENV === "development" &&
+//                             isEditMode && (
+//                               <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+//                                 <strong>Debug Info:</strong>
+//                                 <div>
+//                                   Form allocations:{" "}
+//                                   {JSON.stringify(
+//                                     watchedAllocations?.map((a) => ({
+//                                       id: a.categoryId,
+//                                       name: a.categoryName,
+//                                     })),
+//                                     null,
+//                                     2
+//                                   )}
+//                                 </div>
+//                                 <div>
+//                                   Available categories:{" "}
+//                                   {JSON.stringify(
+//                                     categories?.map((c) => ({
+//                                       id: c._id,
+//                                       name: c.name,
+//                                     })),
+//                                     null,
+//                                     2
+//                                   )}
+//                                 </div>
+//                               </div>
+//                             )}
+
+//                           {!categories || categories.length === 0 ? (
+//                             <div className="text-center py-8">
+//                               <div className="flex items-center justify-center space-x-2">
+//                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+//                                 <span className="text-muted-foreground">
+//                                   Loading categories...
+//                                 </span>
+//                               </div>
+//                             </div>
+//                           ) : (
+//                             <>
+//                               <AnimatePresence>
+//                                 {allocationFields.map((field, index) => (
+//                                   <motion.div
+//                                     key={field.id}
+//                                     initial={{ opacity: 0, height: 0 }}
+//                                     animate={{ opacity: 1, height: "auto" }}
+//                                     exit={{ opacity: 0, height: 0 }}
+//                                     className="p-4 border rounded-lg space-y-4"
 //                                   >
-//                                     <Trash2 className="h-4 w-4" />
-//                                   </Button>
-//                                 </div>
+//                                     <div className="flex items-center justify-between">
+//                                       <h4 className="font-medium">
+//                                         Allocation {index + 1}
+//                                       </h4>
+//                                       <Button
+//                                         type="button"
+//                                         variant="ghost"
+//                                         size="sm"
+//                                         onClick={() => removeAllocation(index)}
+//                                       >
+//                                         <Trash2 className="h-4 w-4" />
+//                                       </Button>
+//                                     </div>
 
-//                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-//                                   <FormField
-//                                     control={form.control}
-//                                     name={`productAllocations.${index}.categoryId`}
-//                                     render={({ field }) => (
-//                                       <FormItem>
-//                                         <FormLabel>Category</FormLabel>
-//                                         <Select
-//                                           onValueChange={(value) => {
-//                                             if (value !== "none") {
-//                                               field.onChange(value);
-//                                               const category = categories.find(
-//                                                 (c: Category) => c._id === value
-//                                               );
-//                                               if (category) {
-//                                                 form.setValue(
-//                                                   `productAllocations.${index}.categoryName`,
-//                                                   category.name
-//                                                 );
-//                                               }
-//                                             } else {
-//                                               field.onChange("");
-//                                               form.setValue(
-//                                                 `productAllocations.${index}.categoryName`,
-//                                                 ""
-//                                               );
-//                                             }
-//                                           }}
-//                                           value={field.value || "none"}
-//                                         >
+//                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+//                                       <FormField
+//                                         control={form.control}
+//                                         name={`productAllocations.${index}.categoryId`}
+//                                         render={({ field }) => (
+//                                           <FormItem>
+//                                             <FormLabel>Category</FormLabel>
+//                                             <Select
+//                                               onValueChange={(value) => {
+//                                                 field.onChange(value);
+//                                                 const category =
+//                                                   categories.find(
+//                                                     (c: Category) =>
+//                                                       c._id === value
+//                                                   );
+//                                                 if (category) {
+//                                                   form.setValue(
+//                                                     `productAllocations.${index}.categoryName`,
+//                                                     category.name
+//                                                   );
+//                                                 }
+//                                               }}
+//                                               value={field.value || ""}
+//                                             >
+//                                               <FormControl>
+//                                                 <SelectTrigger>
+//                                                   <SelectValue placeholder="Select category" />
+//                                                 </SelectTrigger>
+//                                               </FormControl>
+//                                               <SelectContent>
+//                                                 {categories.map((category) => (
+//                                                   <SelectItem
+//                                                     key={category._id}
+//                                                     value={category._id}
+//                                                   >
+//                                                     {category.name}
+//                                                   </SelectItem>
+//                                                 ))}
+//                                               </SelectContent>
+//                                             </Select>
+//                                             <FormMessage />
+//                                           </FormItem>
+//                                         )}
+//                                       />
+//                                       <FormField
+//                                         control={form.control}
+//                                         name={`productAllocations.${index}.quantity`}
+//                                         render={({ field }) => (
+//                                           <FormItem>
+//                                             <FormLabel>Quantity</FormLabel>
+//                                             <FormControl>
+//                                               <Input
+//                                                 type="number"
+//                                                 min="0"
+//                                                 placeholder="1"
+//                                                 {...field}
+//                                                 onChange={(e) =>
+//                                                   field.onChange(
+//                                                     parseInt(e.target.value) ||
+//                                                       0
+//                                                   )
+//                                                 }
+//                                               />
+//                                             </FormControl>
+//                                             <FormMessage />
+//                                           </FormItem>
+//                                         )}
+//                                       />
+//                                     </div>
+//                                     <FormField
+//                                       control={form.control}
+//                                       name={`productAllocations.${index}.allowedProducts`}
+//                                       render={({ field }) => (
+//                                         <FormItem>
+//                                           <FormLabel>
+//                                             Allowed Specific Products (Optional)
+//                                           </FormLabel>
 //                                           <FormControl>
-//                                             <SelectTrigger>
-//                                               <SelectValue placeholder="Select category" />
-//                                             </SelectTrigger>
+//                                             <Textarea
+//                                               placeholder="Enter product IDs, separated by commas (e.g., prod123, prod456)"
+//                                               value={
+//                                                 field.value?.join(", ") || ""
+//                                               }
+//                                               onChange={(e) => {
+//                                                 const productIds =
+//                                                   e.target.value
+//                                                     .split(",")
+//                                                     .map((id) => id.trim())
+//                                                     .filter((id) => id !== "");
+//                                                 field.onChange(productIds);
+//                                               }}
+//                                               className="resize-none"
+//                                             />
 //                                           </FormControl>
-//                                           <SelectContent>
-//                                             <SelectItem value="none">
-//                                               Select a category
-//                                             </SelectItem>
-//                                             {categories.map(
-//                                               (category: Category) => (
-//                                                 <SelectItem
-//                                                   key={category._id}
-//                                                   value={category._id}
-//                                                 >
-//                                                   {category.name}
-//                                                 </SelectItem>
-//                                               )
-//                                             )}
-//                                           </SelectContent>
-//                                         </Select>
-//                                         <FormMessage />
-//                                       </FormItem>
-//                                     )}
-//                                   />
+//                                           <FormDescription>
+//                                             List specific product IDs if the
+//                                             allocation is limited to certain
+//                                             products.
+//                                           </FormDescription>
+//                                           <FormMessage />
+//                                         </FormItem>
+//                                       )}
+//                                     />
+//                                   </motion.div>
+//                                 ))}
+//                               </AnimatePresence>
+//                               <Button
+//                                 type="button"
+//                                 variant="outline"
+//                                 className="w-full"
+//                                 onClick={addAllocation}
+//                               >
+//                                 <Plus className="h-4 w-4 mr-2" /> Add Product
+//                                 Allocation
+//                               </Button>
+//                             </>
+//                           )}
+//                         </CardContent>
+//                       </Card>
 
-//                                   <FormField
-//                                     control={form.control}
-//                                     name={`productAllocations.${index}.quantity`}
-//                                     render={({ field }) => (
-//                                       <FormItem>
-//                                         <FormLabel>Quantity</FormLabel>
-//                                         <FormControl>
-//                                           <Input
-//                                             type="number"
-//                                             min="0"
-//                                             placeholder="1"
-//                                             {...field}
-//                                             onChange={(e) =>
-//                                               field.onChange(
-//                                                 parseInt(e.target.value) || 0
-//                                               )
-//                                             }
-//                                           />
-//                                         </FormControl>
-//                                         <FormMessage />
-//                                       </FormItem>
-//                                     )}
+//                       <Card>
+//                         <CardHeader>
+//                           <CardTitle className="text-lg flex items-center gap-2">
+//                             <Package className="h-5 w-5" />
+//                             Monthly Product Limit
+//                           </CardTitle>
+//                           <p className="text-xs sm:text-sm text-muted-foreground">
+//                             Set a maximum number of products a member can
+//                             receive per month, across all categories. Leave
+//                             empty for no limit.
+//                           </p>
+//                         </CardHeader>
+//                         <CardContent>
+//                           <FormField
+//                             control={form.control}
+//                             name="maxProductsPerMonth"
+//                             render={({ field }) => (
+//                               <FormItem>
+//                                 <FormLabel>Max Products Per Month</FormLabel>
+//                                 <FormControl>
+//                                   <Input
+//                                     type="number"
+//                                     min="0"
+//                                     placeholder="e.g., 5"
+//                                     {...field}
+//                                     value={field.value ?? ""}
+//                                     onChange={(e) => {
+//                                       const val = e.target.value;
+//                                       field.onChange(
+//                                         val === ""
+//                                           ? undefined
+//                                           : parseInt(val) || 0
+//                                       );
+//                                     }}
 //                                   />
-//                                 </div>
-//                               </motion.div>
-//                             ))}
-//                           </AnimatePresence>
-
-//                           <Button
-//                             type="button"
-//                             variant="outline"
-//                             onClick={addAllocation}
-//                             className="w-full"
-//                           >
-//                             <Plus className="mr-2 h-4 w-4" />
-//                             Add Product Allocation
-//                           </Button>
+//                                 </FormControl>
+//                                 <FormMessage />
+//                               </FormItem>
+//                             )}
+//                           />
 //                         </CardContent>
 //                       </Card>
 //                     </motion.div>
 //                   </TabsContent>
 
-//                   {/* Benefits Tab */}
+//                   {/* Custom Benefits Tab */}
 //                   <TabsContent value="benefits" className="space-y-6 mt-0">
 //                     <motion.div
 //                       initial={{ opacity: 0, y: 20 }}
 //                       animate={{ opacity: 1, y: 0 }}
 //                       className="space-y-6"
 //                     >
-//                       {/* Custom Benefits */}
 //                       <Card>
 //                         <CardHeader>
 //                           <CardTitle className="text-lg flex items-center gap-2">
@@ -839,8 +1212,7 @@
 //                             Custom Benefits
 //                           </CardTitle>
 //                           <p className="text-xs sm:text-sm text-muted-foreground">
-//                             Add special perks like webinars, exclusive content,
-//                             or services
+//                             Define unique advantages for this membership tier.
 //                           </p>
 //                         </CardHeader>
 //                         <CardContent className="space-y-4">
@@ -866,8 +1238,23 @@
 //                                     <Trash2 className="h-4 w-4" />
 //                                   </Button>
 //                                 </div>
-
 //                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+//                                   <FormField
+//                                     control={form.control}
+//                                     name={`customBenefits.${index}.title`}
+//                                     render={({ field }) => (
+//                                       <FormItem>
+//                                         <FormLabel>Title</FormLabel>
+//                                         <FormControl>
+//                                           <Input
+//                                             placeholder="e.g., Exclusive Webinar Access"
+//                                             {...field}
+//                                           />
+//                                         </FormControl>
+//                                         <FormMessage />
+//                                       </FormItem>
+//                                     )}
+//                                   />
 //                                   <FormField
 //                                     control={form.control}
 //                                     name={`customBenefits.${index}.type`}
@@ -875,14 +1262,8 @@
 //                                       <FormItem>
 //                                         <FormLabel>Type</FormLabel>
 //                                         <Select
-//                                           onValueChange={(value) => {
-//                                             if (value !== "none") {
-//                                               field.onChange(value);
-//                                             } else {
-//                                               field.onChange("other");
-//                                             }
-//                                           }}
-//                                           value={field.value || "other"}
+//                                           onValueChange={field.onChange}
+//                                           value={field.value}
 //                                         >
 //                                           <FormControl>
 //                                             <SelectTrigger>
@@ -907,25 +1288,7 @@
 //                                       </FormItem>
 //                                     )}
 //                                   />
-
-//                                   <FormField
-//                                     control={form.control}
-//                                     name={`customBenefits.${index}.title`}
-//                                     render={({ field }) => (
-//                                       <FormItem>
-//                                         <FormLabel>Title</FormLabel>
-//                                         <FormControl>
-//                                           <Input
-//                                             placeholder="e.g., Monthly Health Webinar"
-//                                             {...field}
-//                                           />
-//                                         </FormControl>
-//                                         <FormMessage />
-//                                       </FormItem>
-//                                     )}
-//                                   />
 //                                 </div>
-
 //                                 <FormField
 //                                   control={form.control}
 //                                   name={`customBenefits.${index}.description`}
@@ -934,7 +1297,7 @@
 //                                       <FormLabel>Description</FormLabel>
 //                                       <FormControl>
 //                                         <Textarea
-//                                           placeholder="Describe this benefit..."
+//                                           placeholder="Detailed explanation of the benefit..."
 //                                           className="resize-none"
 //                                           {...field}
 //                                         />
@@ -943,7 +1306,6 @@
 //                                     </FormItem>
 //                                   )}
 //                                 />
-
 //                                 <FormField
 //                                   control={form.control}
 //                                   name={`customBenefits.${index}.value`}
@@ -952,13 +1314,14 @@
 //                                       <FormLabel>Value (Optional)</FormLabel>
 //                                       <FormControl>
 //                                         <Input
-//                                           placeholder="e.g., 20% off, Free shipping"
+//                                           placeholder="e.g., 20% OFF, Q1 2024"
 //                                           {...field}
+//                                           value={field.value || ""}
 //                                         />
 //                                       </FormControl>
-//                                       <FormDescription className="text-xs sm:text-sm">
-//                                         Additional value information like
-//                                         discount amounts
+//                                       <FormDescription>
+//                                         Additional context or value for the
+//                                         benefit.
 //                                       </FormDescription>
 //                                       <FormMessage />
 //                                     </FormItem>
@@ -967,65 +1330,70 @@
 //                               </motion.div>
 //                             ))}
 //                           </AnimatePresence>
-
 //                           <Button
 //                             type="button"
 //                             variant="outline"
-//                             onClick={addBenefit}
 //                             className="w-full"
+//                             onClick={addBenefit}
 //                           >
-//                             <Plus className="mr-2 h-4 w-4" />
-//                             Add Custom Benefit
+//                             <Plus className="h-4 w-4 mr-2" /> Add Custom Benefit
 //                           </Button>
 //                         </CardContent>
 //                       </Card>
 
-//                       {/* Features */}
 //                       <Card>
 //                         <CardHeader>
-//                           <CardTitle className="text-lg">Features</CardTitle>
+//                           <CardTitle className="text-lg flex items-center gap-2">
+//                             <Star className="h-5 w-5" />
+//                             Key Features
+//                           </CardTitle>
 //                           <p className="text-xs sm:text-sm text-muted-foreground">
-//                             List the key features of this membership
+//                             List main features or selling points of this
+//                             membership.
 //                           </p>
 //                         </CardHeader>
 //                         <CardContent className="space-y-4">
-//                           <div className="space-y-2">
-//                             {featureFields.map((field, index) => (
-//                               <div
-//                                 key={field.id}
-//                                 className="flex items-center gap-2"
-//                               >
-//                                 <Input
-//                                   value={form.watch(`features.${index}`) || ""}
-//                                   onChange={(e) =>
-//                                     form.setValue(
-//                                       `features.${index}`,
-//                                       e.target.value
-//                                     )
-//                                   }
-//                                   placeholder="Enter feature"
-//                                 />
-//                                 <Button
-//                                   type="button"
-//                                   variant="ghost"
-//                                   size="sm"
-//                                   onClick={() => removeFeature(index)}
-//                                 >
-//                                   <Trash2 className="h-4 w-4" />
-//                                 </Button>
-//                               </div>
-//                             ))}
-//                           </div>
-
-//                           <Button
-//                             type="button"
-//                             variant="outline"
-//                             onClick={() => addFeature("")}
-//                             className="w-full"
-//                           >
-//                             <Plus className="mr-2 h-4 w-4" />
-//                             Add Feature
-//                           </Button>
+//                           <FormField
+//                             control={form.control}
+//                             name="features"
+//                             render={({ field }) => (
+//                               <FormItem>
+//                                 <FormLabel>Add Feature</FormLabel>
+//                                 <FormControl>
+//                                   <Input
+//                                     placeholder="Type a feature and press Enter"
+//                                     onKeyDown={handleAddFeatureInput}
+//                                   />
+//                                 </FormControl>
+//                                 <FormMessage />
+//                                 <div className="flex flex-wrap gap-2 mt-2">
+//                                   <AnimatePresence>
+//                                     {field.value?.map((feature, index) => (
+//                                       <motion.div
+//                                         key={feature + index}
+//                                         initial={{ opacity: 0, scale: 0.8 }}
+//                                         animate={{ opacity: 1, scale: 1 }}
+//                                         exit={{ opacity: 0, scale: 0.8 }}
+//                                         transition={{ duration: 0.2 }}
+//                                       >
+//                                         <Badge
+//                                           variant="secondary"
+//                                           className="flex items-center gap-1 pr-1 cursor-pointer"
+//                                           onClick={() => removeFeature(index)}
+//                                         >
+//                                           {feature}
+//                                           <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+//                                         </Badge>
+//                                       </motion.div>
+//                                     ))}
+//                                   </AnimatePresence>
+//                                 </div>
+//                                 <FormDescription>
+//                                   Press Enter to add. Click a tag to remove.
+//                                 </FormDescription>
+//                               </FormItem>
+//                             )}
+//                           />
 //                         </CardContent>
 //                       </Card>
 //                     </motion.div>
@@ -1042,173 +1410,47 @@
 //                         <CardHeader>
 //                           <CardTitle className="text-lg flex items-center gap-2">
 //                             <Settings className="h-5 w-5" />
-//                             Configuration
+//                             Advanced Settings
 //                           </CardTitle>
-//                         </CardHeader>
-//                         <CardContent className="space-y-6">
-//                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//                             <FormField
-//                               control={form.control}
-//                               name="deliveryFrequency"
-//                               render={({ field }) => (
-//                                 <FormItem>
-//                                   <FormLabel>Delivery Frequency</FormLabel>
-//                                   <Select
-//                                     onValueChange={field.onChange}
-//                                     value={field.value}
-//                                   >
-//                                     <FormControl>
-//                                       <SelectTrigger>
-//                                         <SelectValue placeholder="Select frequency" />
-//                                       </SelectTrigger>
-//                                     </FormControl>
-//                                     <SelectContent>
-//                                       <SelectItem value="weekly">
-//                                         Weekly
-//                                       </SelectItem>
-//                                       <SelectItem value="bi-weekly">
-//                                         Bi-weekly
-//                                       </SelectItem>
-//                                       <SelectItem value="monthly">
-//                                         Monthly
-//                                       </SelectItem>
-//                                     </SelectContent>
-//                                   </Select>
-//                                   <FormMessage />
-//                                 </FormItem>
-//                               )}
-//                             />
-
-//                             <FormField
-//                               control={form.control}
-//                               name="maxProductsPerMonth"
-//                               render={({ field }) => (
-//                                 <FormItem>
-//                                   <FormLabel>
-//                                     Max Products/Month (Optional)
-//                                   </FormLabel>
-//                                   <FormControl>
-//                                     <Input
-//                                       type="number"
-//                                       min="0"
-//                                       placeholder="No limit"
-//                                       {...field}
-//                                       onChange={(e) =>
-//                                         field.onChange(
-//                                           parseInt(e.target.value) || undefined
-//                                         )
-//                                       }
-//                                     />
-//                                   </FormControl>
-//                                   <FormDescription className="text-xs sm:text-sm">
-//                                     Leave empty for no limit
-//                                   </FormDescription>
-//                                   <FormMessage />
-//                                 </FormItem>
-//                               )}
-//                             />
-//                           </div>
-
-//                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//                             <FormField
-//                               control={form.control}
-//                               name="freeDelivery"
-//                               render={({ field }) => (
-//                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
-//                                   <div className="space-y-0.5">
-//                                     <FormLabel className="text-sm sm:text-base flex items-center gap-2">
-//                                       <Truck className="h-4 w-4" />
-//                                       Free Delivery
-//                                     </FormLabel>
-//                                     <FormDescription className="text-xs sm:text-sm">
-//                                       Include free delivery
-//                                     </FormDescription>
-//                                   </div>
-//                                   <FormControl>
-//                                     <Switch
-//                                       checked={field.value}
-//                                       onCheckedChange={field.onChange}
-//                                     />
-//                                   </FormControl>
-//                                 </FormItem>
-//                               )}
-//                             />
-
-//                             <FormField
-//                               control={form.control}
-//                               name="prioritySupport"
-//                               render={({ field }) => (
-//                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
-//                                   <div className="space-y-0.5">
-//                                     <FormLabel className="text-sm sm:text-base flex items-center gap-2">
-//                                       <Headphones className="h-4 w-4" />
-//                                       Priority Support
-//                                     </FormLabel>
-//                                     <FormDescription className="text-xs sm:text-sm">
-//                                       Provide priority customer support
-//                                     </FormDescription>
-//                                   </div>
-//                                   <FormControl>
-//                                     <Switch
-//                                       checked={field.value}
-//                                       onCheckedChange={field.onChange}
-//                                     />
-//                                   </FormControl>
-//                                 </FormItem>
-//                               )}
-//                             />
-//                           </div>
-//                         </CardContent>
-//                       </Card>
-
-//                       <Card>
-//                         <CardHeader>
-//                           <CardTitle className="text-lg flex items-center gap-2">
-//                             <Palette className="h-5 w-5" />
-//                             Display Settings
-//                           </CardTitle>
+//                           <p className="text-xs sm:text-sm text-muted-foreground">
+//                             Configure delivery, support, and other options.
+//                           </p>
 //                         </CardHeader>
 //                         <CardContent className="space-y-4">
 //                           <FormField
 //                             control={form.control}
-//                             name="color"
+//                             name="deliveryFrequency"
 //                             render={({ field }) => (
 //                               <FormItem>
-//                                 <FormLabel>Theme Color (Optional)</FormLabel>
+//                                 <FormLabel className="flex items-center gap-2">
+//                                   <Truck className="h-4 w-4" />
+//                                   Delivery Frequency
+//                                 </FormLabel>
 //                                 <Select
 //                                   onValueChange={field.onChange}
-//                                   value={field.value || "default"}
+//                                   value={field.value}
 //                                 >
 //                                   <FormControl>
 //                                     <SelectTrigger>
-//                                       <SelectValue placeholder="Select color" />
+//                                       <SelectValue placeholder="Select delivery frequency" />
 //                                     </SelectTrigger>
 //                                   </FormControl>
 //                                   <SelectContent>
-//                                     <SelectItem value="default">
-//                                       <div className="flex items-center gap-2">
-//                                         <div className="w-4 h-4 rounded-full border border-gray-300 bg-transparent" />
-//                                         Default
-//                                       </div>
+//                                     <SelectItem value="weekly">
+//                                       Weekly
 //                                     </SelectItem>
-//                                     {colorOptions.map((color) => (
-//                                       <SelectItem
-//                                         key={color.value}
-//                                         value={color.value}
-//                                       >
-//                                         <div className="flex items-center gap-2">
-//                                           <div
-//                                             className="w-4 h-4 rounded-full border"
-//                                             style={{
-//                                               backgroundColor: color.value,
-//                                             }}
-//                                           />
-//                                           {color.label}
-//                                         </div>
-//                                       </SelectItem>
-//                                     ))}
+//                                     <SelectItem value="bi-weekly">
+//                                       Bi-Weekly
+//                                     </SelectItem>
+//                                     <SelectItem value="monthly">
+//                                       Monthly
+//                                     </SelectItem>
 //                                   </SelectContent>
 //                                 </Select>
+//                                 <FormDescription>
+//                                   How often products are delivered or access is
+//                                   refreshed.
+//                                 </FormDescription>
 //                                 <FormMessage />
 //                               </FormItem>
 //                             )}
@@ -1216,20 +1458,48 @@
 
 //                           <FormField
 //                             control={form.control}
-//                             name="icon"
+//                             name="freeDelivery"
 //                             render={({ field }) => (
-//                               <FormItem>
-//                                 <FormLabel>Icon (Optional)</FormLabel>
+//                               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
+//                                 <div className="space-y-0.5">
+//                                   <FormLabel className="text-sm sm:text-base flex items-center gap-1">
+//                                     <Truck className="h-4 w-4" />
+//                                     Free Delivery
+//                                   </FormLabel>
+//                                   <FormDescription className="text-xs sm:text-sm">
+//                                     Members receive free delivery on all orders.
+//                                   </FormDescription>
+//                                 </div>
 //                                 <FormControl>
-//                                   <Input
-//                                     placeholder="e.g., crown, star, diamond"
-//                                     {...field}
+//                                   <Switch
+//                                     checked={field.value}
+//                                     onCheckedChange={field.onChange}
 //                                   />
 //                                 </FormControl>
-//                                 <FormDescription className="text-xs sm:text-sm">
-//                                   Icon name for display purposes
-//                                 </FormDescription>
-//                                 <FormMessage />
+//                               </FormItem>
+//                             )}
+//                           />
+
+//                           <FormField
+//                             control={form.control}
+//                             name="prioritySupport"
+//                             render={({ field }) => (
+//                               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
+//                                 <div className="space-y-0.5">
+//                                   <FormLabel className="text-sm sm:text-base flex items-center gap-1">
+//                                     <Headphones className="h-4 w-4" />
+//                                     Priority Support
+//                                   </FormLabel>
+//                                   <FormDescription className="text-xs sm:text-sm">
+//                                     Members get expedited customer support.
+//                                   </FormDescription>
+//                                 </div>
+//                                 <FormControl>
+//                                   <Switch
+//                                     checked={field.value}
+//                                     onCheckedChange={field.onChange}
+//                                   />
+//                                 </FormControl>
 //                               </FormItem>
 //                             )}
 //                           />
@@ -1239,49 +1509,43 @@
 //                   </TabsContent>
 //                 </div>
 //               </ScrollArea>
-//             </Tabs>
 
-//             {/* Footer Actions */}
-//             <div className="flex items-center justify-between pt-6 border-t">
-//               <Button
-//                 type="button"
-//                 variant="outline"
-//                 onClick={handleClose}
-//                 disabled={isLoading}
-//               >
-//                 <X className="mr-2 h-4 w-4" />
-//                 Cancel
-//               </Button>
-
-//               <div className="flex items-center gap-3">
-//                 <Badge variant="outline" className="text-xs">
-//                   Tab{" "}
-//                   {[
-//                     "basic",
-//                     "pricing",
-//                     "products",
-//                     "benefits",
-//                     "settings",
-//                   ].indexOf(activeTab) + 1}{" "}
-//                   of 5
-//                 </Badge>
-
+//               {/* Dialog Footer with Save Button */}
+//               <div className="flex justify-end p-4 sm:p-6 border-t pt-4">
 //                 <Button type="submit" disabled={isLoading}>
 //                   {isLoading ? (
-//                     <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
+//                     <span className="flex items-center">
+//                       <svg
+//                         className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+//                         xmlns="http://www.w3.org/2000/svg"
+//                         fill="none"
+//                         viewBox="0 0 24 24"
+//                       >
+//                         <circle
+//                           className="opacity-25"
+//                           cx="12"
+//                           cy="12"
+//                           r="10"
+//                           stroke="currentColor"
+//                           strokeWidth="4"
+//                         ></circle>
+//                         <path
+//                           className="opacity-75"
+//                           fill="currentColor"
+//                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+//                         ></path>
+//                       </svg>
+//                       Saving...
+//                     </span>
 //                   ) : (
-//                     <Save className="mr-2 h-4 w-4" />
+//                     <span className="flex items-center gap-2">
+//                       <Save className="h-4 w-4" />
+//                       {isEditMode ? "Save Changes" : "Create Membership"}
+//                     </span>
 //                   )}
-//                   {isLoading
-//                     ? isEditMode
-//                       ? "Updating..."
-//                       : "Creating..."
-//                     : isEditMode
-//                       ? "Update Membership"
-//                       : "Create Membership"}
 //                 </Button>
 //               </div>
-//             </div>
+//             </Tabs>
 //           </form>
 //         </Form>
 //       </DialogContent>
@@ -1316,6 +1580,7 @@ import {
   Save,
   X,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -1348,58 +1613,15 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useMemberships } from "./MembershipsProvider";
+
 import {
   createMembership,
   updateMembership,
-} from "@/lib/actions/membershipServerActions";
-
-// --- START: Corrected Import Paths ---
-// Assuming MembershipDialog.tsx is located at: ./app/(admin)/admin/memberships/components/MembershipDialog.tsx
-//
-// 1. Corrected path for MembershipsProvider:
-//    If MembershipsProvider is a sibling component (in the same 'components' directory):
-//    import { useMemberships } from "./MembershipsProvider"; // This was the previous attempt
-//    However, the error suggests it's not. A common pattern for providers is one level up.
-//    Let's assume MembershipsProvider.tsx is located at:
-//    ./app/(admin)/admin/memberships/MembershipsProvider.tsx
-
-// 2. Corrected path for membershipServerActions:
-//    The error indicates '@/lib/actions/membershipServerActions' was remapped to '/app/lib/actions/membershipServerActions'
-//    and then failed. This often implies 'lib' is at the project root.
-//    To reach it from ./app/(admin)/admin/memberships/components/MembershipDialog.tsx:
-//    - From 'components' to 'memberships': ..
-//    - From 'memberships' to 'admin': ../..
-//    - From 'admin' to '(admin)': ../../..
-//    - From '(admin)' to 'app': ../../../..
-//    - From 'app' to project root (where 'lib' is): ../../../../..  <-- This would be the path if 'lib' is truly outside 'app'
-//
-//    However, the error's remapping to '/app/lib...' suggests 'app' is the base.
-//    Let's try a relative path that assumes 'lib' is at the root of the project, one level up from 'app'.
-//    If your project structure is:
-//    - project-root/
-//      - app/
-//        - (admin)/
-//          - admin/
-//            - memberships/
-//              - components/
-//                - MembershipDialog.tsx (current file)
-//      - lib/
-//        - actions/
-//          - membershipServerActions.ts
-//
-//    Then the path from MembershipDialog.tsx to lib/actions/... would be:
-//    ../../../../lib/actions/membershipServerActions
-//
-//    Given the persistent error, there might be a subtle difference in your exact folder structure
-//    or how aliases are configured/resolved in your specific Next.js setup.
-//    I'm going with the most common successful relative path for this structure.
-
-// --- END: Corrected Import Paths ---
+} from "../../../../../lib/actions/membershipServerActions";
+import { useMemberships } from "./MembershipsProvider";
 
 // =========================================================
 // 1. Zod Schema: Define the shape of data the FORM handles
-//    This should NOT include Mongoose ObjectIDs or backend-only fields.
 // =========================================================
 const membershipSchema = z.object({
   name: z.string().min(1, "Membership name is required"),
@@ -1409,16 +1631,16 @@ const membershipSchema = z.object({
   // Pricing
   price: z.number().min(0, "Price must be positive"),
   billingFrequency: z.enum(["monthly", "quarterly", "yearly"]),
-  currency: z.string().min(1, "Currency is required"), // Added based on IMembership
+  currency: z.string().min(1, "Currency is required"),
 
-  // Product Allocations - categoryId and allowedProducts will be strings from the form
+  // Product Allocations
   productAllocations: z
     .array(
       z.object({
-        categoryId: z.string().min(1, "Category is required"), // Form will handle categoryId as string
+        categoryId: z.string().min(1, "Category is required"),
         categoryName: z.string().min(1, "Category name is required"),
         quantity: z.number().int().min(0, "Quantity must be positive"),
-        allowedProducts: z.array(z.string()).optional(), // Form will handle product IDs as strings
+        allowedProducts: z.array(z.string()).optional(),
       })
     )
     .min(1, "At least one product allocation is required"),
@@ -1433,10 +1655,10 @@ const membershipSchema = z.object({
         value: z.string().optional(),
       })
     )
-    .default([]), // Ensure it defaults to an empty array
+    .default([]),
 
   // Features
-  features: z.array(z.string()).default([]), // Ensure it defaults to an empty array
+  features: z.array(z.string()).default([]),
 
   // Configuration
   maxProductsPerMonth: z.number().int().min(0).optional(),
@@ -1452,15 +1674,9 @@ const membershipSchema = z.object({
   icon: z.string().optional(),
 });
 
-// =========================================================
-// 2. MembershipForm Type: Inferred from the Zod schema
-//    This is the type React Hook Form will use internally.
-// =========================================================
 type MembershipForm = z.infer<typeof membershipSchema>;
 
-// =========================================================
-// Helper Interfaces & Constants (as you had them)
-// =========================================================
+// Helper Interfaces & Constants
 interface TierOption {
   value: "basic" | "premium" | "vip" | "elite";
   label: string;
@@ -1482,57 +1698,10 @@ interface ColorOption {
   label: string;
 }
 
-// Category type based on your context's categories
 interface Category {
-  _id: string; // Assuming category IDs are strings in the frontend categories list
-  name: string;
-}
-
-// =========================================================
-// IMembership: Your Mongoose Model Interface (for reference)
-// =========================================================
-// This interface defines the shape of data in your database.
-// When using selectedMembership, you'll need to transform it
-// to match MembershipForm before resetting the form.
-/*
-interface IMembership extends Document {
   _id: string;
   name: string;
-  description?: string;
-  tier: "basic" | "premium" | "vip" | "elite";
-  price: number;
-  billingFrequency: "monthly" | "quarterly" | "yearly";
-  currency: string;
-  productAllocations: {
-    categoryId: mongoose.Types.ObjectId;
-    categoryName: string;
-    quantity: number;
-    allowedProducts?: mongoose.Types.ObjectId[];
-  }[];
-  customBenefits: {
-    title: string;
-    description: string;
-    type: "webinar" | "content" | "discount" | "service" | "other";
-    value?: string;
-  }[];
-  features: string[];
-  maxProductsPerMonth?: number;
-  deliveryFrequency: "weekly" | "bi-weekly" | "monthly";
-  freeDelivery: boolean;
-  prioritySupport: boolean;
-  isActive: boolean;
-  isPopular: boolean;
-  sortOrder: number;
-  color?: string;
-  icon?: string;
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
-  totalSubscribers: number;
-  totalRevenue: number;
-  createdAt: Date;
-  updatedAt: Date;
 }
-*/
 
 const tierOptions: TierOption[] = [
   { value: "basic", label: "Basic", icon: Package, color: "#3b82f6" },
@@ -1560,13 +1729,123 @@ const colorOptions: ColorOption[] = [
   { value: "#ec4899", label: "Pink" },
 ];
 
+// Tab to field mapping for error detection
+const tabFieldMapping = {
+  basic: [
+    "name",
+    "tier",
+    "description",
+    "isActive",
+    "isPopular",
+    "sortOrder",
+    "color",
+    "icon",
+  ],
+  pricing: ["price", "billingFrequency", "currency"],
+  products: ["productAllocations", "maxProductsPerMonth"],
+  benefits: ["customBenefits", "features"],
+  settings: ["deliveryFrequency", "freeDelivery", "prioritySupport"],
+};
+
+// Helper function to extract ID from various formats
+const extractId = (value: any): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null) {
+    // Handle nested objects like { _id: "...", name: "..." }
+    if (value._id) {
+      const id = value._id;
+      if (typeof id === "string") return id;
+      if (id.toHexString && typeof id.toHexString === "function") {
+        return id.toHexString();
+      }
+      return String(id);
+    }
+    // Handle MongoDB ObjectId directly
+    if (value.toHexString && typeof value.toHexString === "function") {
+      return value.toHexString();
+    }
+    // Handle case where the whole object is the ID
+    if (value.toString && value.toString() !== "[object Object]") {
+      return value.toString();
+    }
+  }
+  return String(value);
+};
+
+// Helper function to prepare form data from membership
+const prepareFormData = (
+  membership: any,
+  categories: Category[]
+): MembershipForm => {
+  console.log("=== prepareFormData Debug ===");
+  console.log("Raw membership:", membership);
+  console.log("Available categories:", categories);
+
+  // Process product allocations with proper category resolution
+  const allocations =
+    membership.productAllocations?.map((pa: any, index: number) => {
+      console.log(`Processing allocation ${index}:`, pa);
+
+      const rawCategoryId = pa.categoryId;
+      console.log(`Raw categoryId for allocation ${index}:`, rawCategoryId);
+
+      const categoryId = extractId(rawCategoryId);
+      console.log(`Extracted categoryId for allocation ${index}:`, categoryId);
+
+      const matchingCategory = categories.find((c) => c._id === categoryId);
+      console.log(
+        `Matching category for allocation ${index}:`,
+        matchingCategory
+      );
+
+      const result = {
+        categoryId,
+        categoryName: matchingCategory?.name || pa.categoryName || "",
+        quantity: pa.quantity || 0,
+        allowedProducts: Array.isArray(pa.allowedProducts)
+          ? pa.allowedProducts.map(extractId)
+          : [],
+      };
+
+      console.log(`Final allocation ${index}:`, result);
+      return result;
+    }) || [];
+
+  console.log("Final allocations:", allocations);
+  console.log("=== End prepareFormData Debug ===");
+
+  return {
+    name: membership.name || "",
+    description: membership.description || "",
+    tier: membership.tier || "basic",
+    price: membership.price || 0,
+    billingFrequency: membership.billingFrequency || "monthly",
+    currency: membership.currency || "USD",
+    productAllocations: allocations,
+    customBenefits: Array.isArray(membership.customBenefits)
+      ? membership.customBenefits
+      : [],
+    features: Array.isArray(membership.features) ? membership.features : [],
+    deliveryFrequency: membership.deliveryFrequency || "monthly",
+    freeDelivery: membership.freeDelivery || false,
+    prioritySupport: membership.prioritySupport || false,
+    isActive: membership.isActive !== undefined ? membership.isActive : true,
+    isPopular: membership.isPopular || false,
+    sortOrder: membership.sortOrder || 0,
+    color: membership.color || undefined,
+    icon: membership.icon || undefined,
+    maxProductsPerMonth: membership.maxProductsPerMonth || undefined,
+  };
+};
+
 export default function MembershipDialog() {
   const {
     isCreateDialogOpen,
     setIsCreateDialogOpen,
     isEditDialogOpen,
     setIsEditDialogOpen,
-    selectedMembership, // This is IMembership | null
+    selectedMembership,
     categories,
     refreshMemberships,
   } = useMemberships();
@@ -1577,18 +1856,15 @@ export default function MembershipDialog() {
   const isOpen = isCreateDialogOpen || isEditDialogOpen;
   const isEditMode = isEditDialogOpen && selectedMembership;
 
-  // =========================================================
-  // 3. useForm Initialization: Ensure default values align with MembershipForm
-  // =========================================================
   const form = useForm<MembershipForm>({
-    resolver: zodResolver(membershipSchema) as any, // Type assertion to avoid type mismatch error
+    resolver: zodResolver(membershipSchema) as any,
     defaultValues: {
       name: "",
       description: "",
       tier: "basic",
       price: 0,
       billingFrequency: "monthly",
-      currency: "USD", // Explicitly set default for currency
+      currency: "USD",
       productAllocations: [],
       customBenefits: [],
       features: [],
@@ -1598,9 +1874,9 @@ export default function MembershipDialog() {
       isActive: true,
       isPopular: false,
       sortOrder: 0,
-      color: undefined, // Optional fields should default to undefined or a specific value if required
-      icon: undefined, // Optional fields should default to undefined
-      maxProductsPerMonth: undefined, // Optional fields should default to undefined
+      color: undefined,
+      icon: undefined,
+      maxProductsPerMonth: undefined,
     },
   });
 
@@ -1609,7 +1885,7 @@ export default function MembershipDialog() {
     append: appendAllocation,
     remove: removeAllocation,
   } = useFieldArray({
-    control: form.control, // 'control' type will now match MembershipForm correctly
+    control: form.control,
     name: "productAllocations",
   });
 
@@ -1618,138 +1894,162 @@ export default function MembershipDialog() {
     append: appendBenefit,
     remove: removeBenefit,
   } = useFieldArray({
-    control: form.control, // 'control' type will now match MembershipForm correctly
+    control: form.control,
     name: "customBenefits",
   });
 
-  // Remove useFieldArray for features, as features is a simple string array
-
-  // =========================================================
-  // 4. useEffect for Reset: Transform IMembership to MembershipForm
-  // =========================================================
+  // Single useEffect to handle form reset and category population
   useEffect(() => {
-    if (isOpen) {
-      setActiveTab("basic");
+    if (!isOpen) return;
 
-      if (isEditMode && selectedMembership) {
-        // Explicitly map selectedMembership (IMembership) to MembershipForm
-        const formValues: MembershipForm = {
-          name: selectedMembership.name || "",
-          description: selectedMembership.description || "",
-          tier: selectedMembership.tier || "basic",
-          price: selectedMembership.price || 0,
-          billingFrequency: selectedMembership.billingFrequency || "monthly",
-          currency: selectedMembership.currency || "USD",
-          productAllocations:
-            selectedMembership.productAllocations?.map(
-              (pa: {
-                categoryId: string | { toString: () => string };
-                categoryName: string;
-                quantity: number;
-                allowedProducts?: (string | { toString: () => string })[];
-              }): {
-                categoryId: string;
-                categoryName: string;
-                quantity: number;
-                allowedProducts: string[];
-              } => ({
-                // Ensure categoryId is correctly converted to string if it's an ObjectId
-                categoryId:
-                  typeof pa.categoryId === "object" &&
-                  pa.categoryId !== null &&
-                  "toString" in pa.categoryId
-                    ? pa.categoryId.toString()
-                    : String(pa.categoryId || ""), // Fallback for safety
-                categoryName: pa.categoryName,
-                quantity: pa.quantity,
-                allowedProducts:
-                  pa.allowedProducts?.map(
-                    (p: string | { toString: () => string }): string =>
-                      typeof p === "object" && p !== null && "toString" in p
-                        ? p.toString()
-                        : String(p || "")
-                  ) || [], // Convert ObjectIds to strings, ensure array
-              })
-            ) || [], // Ensure array if productAllocations itself is optional
-          customBenefits: Array.isArray(selectedMembership.customBenefits)
-            ? selectedMembership.customBenefits
-            : [], // Always array
-          features: Array.isArray(selectedMembership.features)
-            ? selectedMembership.features
-            : [], // Always array
-          deliveryFrequency: selectedMembership.deliveryFrequency || "monthly",
-          freeDelivery: selectedMembership.freeDelivery || false,
-          prioritySupport: selectedMembership.prioritySupport || false,
-          isActive:
-            selectedMembership.isActive !== undefined
-              ? selectedMembership.isActive
-              : true, // Handle boolean explicitly
-          isPopular: selectedMembership.isPopular || false, // Handle boolean explicitly
-          sortOrder: selectedMembership.sortOrder || 0, // Handle number explicitly
-          color: selectedMembership.color || undefined, // Ensure optional string is undefined if not present
-          icon: selectedMembership.icon || undefined, // Ensure optional string is undefined if not present
-          maxProductsPerMonth:
-            selectedMembership.maxProductsPerMonth || undefined, // Ensure optional number is undefined
-        };
-        form.reset(formValues);
-      } else {
-        // Reset to default values for create mode
-        form.reset({
-          name: "",
-          description: "",
-          tier: "basic",
-          price: 0,
-          billingFrequency: "monthly",
-          currency: "USD",
-          productAllocations: [],
-          customBenefits: [],
-          features: [],
-          deliveryFrequency: "monthly",
-          freeDelivery: false,
-          prioritySupport: false,
-          isActive: true,
-          isPopular: false,
-          sortOrder: 0,
-          color: undefined,
-          icon: undefined,
-          maxProductsPerMonth: undefined,
+    setActiveTab("basic");
+
+    if (isEditMode && selectedMembership && categories?.length > 0) {
+      console.log("Setting up edit mode with categories:", categories.length);
+      console.log("Selected membership:", selectedMembership);
+
+      const formData = prepareFormData(selectedMembership, categories);
+      console.log(
+        "Prepared form data allocations:",
+        formData.productAllocations
+      );
+
+      // Reset form with the prepared data
+      form.reset(formData);
+
+      // Double-check and force update the form values to ensure Select components get the right values
+      setTimeout(() => {
+        formData.productAllocations.forEach((allocation, index) => {
+          console.log(`Setting allocation ${index}:`, allocation);
+
+          // Ensure we have a valid string ID
+          const categoryId = allocation.categoryId;
+          if (
+            categoryId &&
+            typeof categoryId === "string" &&
+            categoryId !== "[object Object]"
+          ) {
+            form.setValue(
+              `productAllocations.${index}.categoryId`,
+              categoryId,
+              {
+                shouldValidate: false,
+                shouldDirty: false,
+              }
+            );
+            form.setValue(
+              `productAllocations.${index}.categoryName`,
+              allocation.categoryName,
+              {
+                shouldValidate: false,
+                shouldDirty: false,
+              }
+            );
+            console.log(
+              `Successfully set allocation ${index} categoryId to:`,
+              categoryId
+            );
+          } else {
+            console.error(
+              `Invalid categoryId for allocation ${index}:`,
+              categoryId
+            );
+            // Try to find the category by name as fallback
+            const categoryByName = categories.find(
+              (c) => c.name === allocation.categoryName
+            );
+            if (categoryByName) {
+              console.log(
+                `Found category by name, setting ID to:`,
+                categoryByName._id
+              );
+              form.setValue(
+                `productAllocations.${index}.categoryId`,
+                categoryByName._id,
+                {
+                  shouldValidate: false,
+                  shouldDirty: false,
+                }
+              );
+            }
+          }
         });
+
+        // Trigger a re-render by updating a dummy field
+        form.trigger("productAllocations");
+      }, 100);
+    } else if (!isEditMode) {
+      // Reset to default values for create mode
+      form.reset({
+        name: "",
+        description: "",
+        tier: "basic",
+        price: 0,
+        billingFrequency: "monthly",
+        currency: "USD",
+        productAllocations: [],
+        customBenefits: [],
+        features: [],
+        deliveryFrequency: "monthly",
+        freeDelivery: false,
+        prioritySupport: false,
+        isActive: true,
+        isPopular: false,
+        sortOrder: 0,
+        color: undefined,
+        icon: undefined,
+        maxProductsPerMonth: undefined,
+      });
+    }
+  }, [isOpen, isEditMode, selectedMembership, categories, form]);
+
+  // Function to detect which tab has errors
+  const getTabWithErrors = (errors: any) => {
+    for (const [tabName, fields] of Object.entries(tabFieldMapping)) {
+      if (
+        fields.some((field) => {
+          if (field.includes(".")) {
+            const parts = field.split(".");
+            let current = errors;
+            for (const part of parts) {
+              if (current && current[part]) {
+                current = current[part];
+              } else {
+                return false;
+              }
+            }
+            return true;
+          }
+          return errors[field];
+        })
+      ) {
+        return tabName;
       }
     }
-  }, [isOpen, isEditMode, selectedMembership, form]); // Dependencies correct
 
-  // =========================================================
-  // onSubmit: Transform form data back to IMembership shape (for server)
-  // =========================================================
+    if (errors.productAllocations) {
+      return "products";
+    }
+
+    return null;
+  };
+
   const onSubmit = async (data: MembershipForm) => {
     setIsLoading(true);
     try {
-      // Transform data before sending to server
-      // Note: Server-side (actions) will likely handle converting string IDs back to ObjectIds
-      // and adding createdBy/updatedBy, createdAt/updatedAt.
       const submitData = {
         ...data,
-        color: data.color === "default" ? undefined : data.color, // Your existing logic
-        // If your backend expects currency, it's already in data.currency
-        // You might need to transform productAllocations.categoryId back to ObjectId on server
-        // You might need to transform allowedProducts back to ObjectId on server
+        color: data.color === "default" ? undefined : data.color,
+        productAllocations: data.productAllocations.map((alloc) => ({
+          ...alloc,
+          allowedProducts: alloc.allowedProducts ?? [],
+        })),
       };
 
       let result;
 
       if (isEditMode && selectedMembership) {
-        // Ensure allowedProducts is always an array (never undefined)
-        const fixedSubmitData = {
-          ...submitData,
-          productAllocations: submitData.productAllocations.map((alloc) => ({
-            ...alloc,
-            allowedProducts: alloc.allowedProducts ?? [],
-          })),
-        };
-        result = await updateMembership(
-          selectedMembership._id,
-          fixedSubmitData
-        ); // Use original _id
+        result = await updateMembership(selectedMembership._id, submitData);
         if (result.success) {
           toast.success("Membership updated successfully");
           setIsEditDialogOpen(false);
@@ -1758,15 +2058,7 @@ export default function MembershipDialog() {
           toast.error(result.error || "Failed to update membership");
         }
       } else {
-        // Ensure allowedProducts is always a defined array for each allocation
-        const fixedSubmitData = {
-          ...submitData,
-          productAllocations: submitData.productAllocations.map((alloc) => ({
-            ...alloc,
-            allowedProducts: alloc.allowedProducts ?? [],
-          })),
-        };
-        result = await createMembership(fixedSubmitData);
+        result = await createMembership(submitData);
         if (result.success) {
           toast.success("Membership created successfully");
           setIsCreateDialogOpen(false);
@@ -1776,12 +2068,42 @@ export default function MembershipDialog() {
         }
       }
     } catch (error) {
-      console.error("Submission error:", error); // Log the actual error
-      toast.error("An unexpected error occurred");
+      console.error("Submission error:", error);
+
+      const formErrors = form.formState.errors;
+      const errorTab = getTabWithErrors(formErrors);
+
+      if (errorTab && errorTab !== activeTab) {
+        setActiveTab(errorTab);
+        toast.error(
+          `Please check the "${errorTab}" tab for validation errors`,
+          {
+            icon: <AlertCircle className="h-4 w-4" />,
+            duration: 4000,
+          }
+        );
+      } else {
+        toast.error("Please fix the validation errors before submitting");
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleFormSubmit = form.handleSubmit(onSubmit, (errors) => {
+    console.log("Form validation errors:", errors);
+
+    const errorTab = getTabWithErrors(errors);
+    if (errorTab && errorTab !== activeTab) {
+      setActiveTab(errorTab);
+      toast.error(`Please check the "${errorTab}" tab for validation errors`, {
+        icon: <AlertCircle className="h-4 w-4" />,
+        duration: 4000,
+      });
+    } else {
+      toast.error("Please fix the validation errors before submitting");
+    }
+  });
 
   const handleClose = () => {
     if (isEditMode) {
@@ -1793,7 +2115,7 @@ export default function MembershipDialog() {
 
   const addAllocation = () => {
     appendAllocation({
-      categoryId: "none", // Default string for new allocation
+      categoryId: "",
       categoryName: "",
       quantity: 1,
       allowedProducts: [],
@@ -1809,17 +2131,15 @@ export default function MembershipDialog() {
     });
   };
 
-  // For adding a feature from an input field
   const handleAddFeatureInput = (
     event: React.KeyboardEvent<HTMLInputElement>
   ) => {
     if (event.key === "Enter" && event.currentTarget.value.trim()) {
       addFeature(event.currentTarget.value.trim());
-      event.currentTarget.value = ""; // Clear input after adding
+      event.currentTarget.value = "";
     }
   };
 
-  // Original addFeature function remains (if called from elsewhere)
   const addFeature = (feature: string) => {
     if (feature.trim()) {
       form.setValue(
@@ -1830,20 +2150,20 @@ export default function MembershipDialog() {
     }
   };
 
-  const selectedTier = form.watch("tier");
-  const selectedTierOption = tierOptions.find(
-    (option) => option.value === selectedTier
-  );
-  const TierIcon = selectedTierOption?.icon || Package; // Fallback icon
-
-  function removeFeature(index: number): void {
+  const removeFeature = (index: number): void => {
     const features = form.getValues("features");
     const updated = [...features.slice(0, index), ...features.slice(index + 1)];
     form.setValue("features", updated, {
       shouldValidate: true,
       shouldDirty: true,
     });
-  }
+  };
+
+  const selectedTier = form.watch("tier");
+  const selectedTierOption = tierOptions.find(
+    (option) => option.value === selectedTier
+  );
+  const TierIcon = selectedTierOption?.icon || Package;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -1860,10 +2180,7 @@ export default function MembershipDialog() {
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 sm:space-y-6"
-          >
+          <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-6">
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -2052,7 +2369,7 @@ export default function MembershipDialog() {
                               )}
                             />
                           </div>
-                          {/* Color and Icon fields can be added here or in settings tab */}
+
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
@@ -2065,7 +2382,7 @@ export default function MembershipDialog() {
                                   </FormLabel>
                                   <Select
                                     onValueChange={field.onChange}
-                                    value={field.value || ""} // Ensure controlled component
+                                    value={field.value || ""}
                                   >
                                     <FormControl>
                                       <SelectTrigger>
@@ -2245,7 +2562,7 @@ export default function MembershipDialog() {
                     </motion.div>
                   </TabsContent>
 
-                  {/* Product Allocations Tab */}
+                  {/* Product Allocations Tab - CLEANED UP */}
                   <TabsContent value="products" className="space-y-6 mt-0">
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -2264,154 +2581,223 @@ export default function MembershipDialog() {
                           </p>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          <AnimatePresence>
-                            {allocationFields.map((field, index) => (
-                              <motion.div
-                                key={field.id}
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="p-4 border rounded-lg space-y-4"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium">
-                                    Allocation {index + 1}
-                                  </h4>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeAllocation(index)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                          {!categories || categories.length === 0 ? (
+                            <div className="text-center py-8">
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                <span className="text-muted-foreground">
+                                  Loading categories...
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <AnimatePresence>
+                                {allocationFields.map((field, index) => {
+                                  const currentCategoryId = form.watch(
+                                    `productAllocations.${index}.categoryId`
+                                  );
+                                  const currentCategoryName = form.watch(
+                                    `productAllocations.${index}.categoryName`
+                                  );
 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name={`productAllocations.${index}.categoryId`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Category</FormLabel>
-                                        <Select
-                                          onValueChange={(value) => {
-                                            if (value !== "none") {
-                                              field.onChange(value);
-                                              const category = categories.find(
-                                                (c: Category) => c._id === value
-                                              );
-                                              if (category) {
-                                                form.setValue(
-                                                  `productAllocations.${index}.categoryName`,
-                                                  category.name
-                                                );
-                                              }
-                                            } else {
-                                              field.onChange(""); // Clear categoryId
-                                              form.setValue(
-                                                `productAllocations.${index}.categoryName`,
-                                                ""
-                                              );
-                                            }
-                                          }}
-                                          value={field.value || "none"} // Ensure "none" for initial selection
+                                  return (
+                                    <motion.div
+                                      key={field.id}
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className="p-4 border rounded-lg space-y-4"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-medium">
+                                          Allocation {index + 1}
+                                        </h4>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            removeAllocation(index)
+                                          }
                                         >
-                                          <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="none" disabled>
-                                              Select a category
-                                            </SelectItem>
-                                            {categories.map((category) => (
-                                              <SelectItem
-                                                key={category._id}
-                                                value={category._id}
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+
+                                      {/* Debug info in development */}
+                                      {process.env.NODE_ENV ===
+                                        "development" && (
+                                        <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                                          <div>
+                                            Current ID: {currentCategoryId}
+                                          </div>
+                                          <div>
+                                            Current Name: {currentCategoryName}
+                                          </div>
+                                          <div>
+                                            Field Value: {JSON.stringify(field)}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <FormField
+                                          control={form.control}
+                                          name={`productAllocations.${index}.categoryId`}
+                                          render={({
+                                            field: categoryField,
+                                          }) => (
+                                            <FormItem>
+                                              <FormLabel>Category</FormLabel>
+                                              <Select
+                                                key={`category-${index}-${currentCategoryId}`} // Force re-render when value changes
+                                                onValueChange={(value) => {
+                                                  console.log(
+                                                    `Setting category ${index} to:`,
+                                                    value
+                                                  );
+                                                  categoryField.onChange(value);
+                                                  const category =
+                                                    categories.find(
+                                                      (c: Category) =>
+                                                        c._id === value
+                                                    );
+                                                  if (category) {
+                                                    form.setValue(
+                                                      `productAllocations.${index}.categoryName`,
+                                                      category.name,
+                                                      { shouldValidate: true }
+                                                    );
+                                                  }
+                                                }}
+                                                value={
+                                                  categoryField.value &&
+                                                  typeof categoryField.value ===
+                                                    "string" &&
+                                                  categoryField.value !==
+                                                    "[object Object]"
+                                                    ? categoryField.value
+                                                    : ""
+                                                }
                                               >
-                                                {category.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name={`productAllocations.${index}.quantity`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Quantity</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            placeholder="1"
-                                            {...field}
-                                            onChange={(e) =>
-                                              field.onChange(
-                                                parseInt(e.target.value) || 0
-                                              )
-                                            }
-                                          />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                {/* Allowed Products (optional) */}
-                                <FormField
-                                  control={form.control}
-                                  name={`productAllocations.${index}.allowedProducts`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>
-                                        Allowed Specific Products (Optional)
-                                      </FormLabel>
-                                      <FormControl>
-                                        <Textarea
-                                          placeholder="Enter product IDs, separated by commas (e.g., prod123, prod456)"
-                                          value={field.value?.join(", ") || ""}
-                                          onChange={(e) => {
-                                            // Split string by commas, trim each, filter out empty strings
-                                            const productIds = e.target.value
-                                              .split(",")
-                                              .map((id) => id.trim())
-                                              .filter((id) => id !== "");
-                                            field.onChange(productIds);
-                                          }}
-                                          className="resize-none"
+                                                <FormControl>
+                                                  <SelectTrigger>
+                                                    <SelectValue placeholder="Select category">
+                                                      {currentCategoryName ||
+                                                        "Select category"}
+                                                    </SelectValue>
+                                                  </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                  {categories.map(
+                                                    (category) => (
+                                                      <SelectItem
+                                                        key={category._id}
+                                                        value={category._id}
+                                                      >
+                                                        {category.name}
+                                                      </SelectItem>
+                                                    )
+                                                  )}
+                                                </SelectContent>
+                                              </Select>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
                                         />
-                                      </FormControl>
-                                      <FormDescription>
-                                        List specific product IDs if the
-                                        allocation is limited to certain
-                                        products.
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={addAllocation}
-                          >
-                            <Plus className="h-4 w-4 mr-2" /> Add Product
-                            Allocation
-                          </Button>
+
+                                        <FormField
+                                          control={form.control}
+                                          name={`productAllocations.${index}.quantity`}
+                                          render={({
+                                            field: quantityField,
+                                          }) => (
+                                            <FormItem>
+                                              <FormLabel>Quantity</FormLabel>
+                                              <FormControl>
+                                                <Input
+                                                  type="number"
+                                                  min="0"
+                                                  placeholder="1"
+                                                  {...quantityField}
+                                                  onChange={(e) =>
+                                                    quantityField.onChange(
+                                                      parseInt(
+                                                        e.target.value
+                                                      ) || 0
+                                                    )
+                                                  }
+                                                />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </div>
+
+                                      <FormField
+                                        control={form.control}
+                                        name={`productAllocations.${index}.allowedProducts`}
+                                        render={({
+                                          field: allowedProductsField,
+                                        }) => (
+                                          <FormItem>
+                                            <FormLabel>
+                                              Allowed Specific Products
+                                              (Optional)
+                                            </FormLabel>
+                                            <FormControl>
+                                              <Textarea
+                                                placeholder="Enter product IDs, separated by commas (e.g., prod123, prod456)"
+                                                value={
+                                                  allowedProductsField.value?.join(
+                                                    ", "
+                                                  ) || ""
+                                                }
+                                                onChange={(e) => {
+                                                  const productIds =
+                                                    e.target.value
+                                                      .split(",")
+                                                      .map((id) => id.trim())
+                                                      .filter(
+                                                        (id) => id !== ""
+                                                      );
+                                                  allowedProductsField.onChange(
+                                                    productIds
+                                                  );
+                                                }}
+                                                className="resize-none"
+                                              />
+                                            </FormControl>
+                                            <FormDescription>
+                                              List specific product IDs if the
+                                              allocation is limited to certain
+                                              products.
+                                            </FormDescription>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </motion.div>
+                                  );
+                                })}
+                              </AnimatePresence>
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                onClick={addAllocation}
+                              >
+                                <Plus className="h-4 w-4 mr-2" /> Add Product
+                                Allocation
+                              </Button>
+                            </>
+                          )}
                         </CardContent>
                       </Card>
-                      {/* Max Products Per Month */}
+
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
@@ -2437,7 +2823,7 @@ export default function MembershipDialog() {
                                     min="0"
                                     placeholder="e.g., 5"
                                     {...field}
-                                    value={field.value ?? ""} // Handle undefined gracefully
+                                    value={field.value ?? ""}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       field.onChange(
@@ -2599,7 +2985,7 @@ export default function MembershipDialog() {
                           </Button>
                         </CardContent>
                       </Card>
-                      {/* Features List */}
+
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
@@ -2629,7 +3015,7 @@ export default function MembershipDialog() {
                                   <AnimatePresence>
                                     {field.value?.map((feature, index) => (
                                       <motion.div
-                                        key={feature + index} // Simple key for display, consider unique IDs if features can duplicate
+                                        key={feature + index}
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.8 }}

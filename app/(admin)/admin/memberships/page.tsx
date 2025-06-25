@@ -11,6 +11,7 @@ import MembershipsList from "./components/MembershipsList";
 import MembershipsStats from "./components/MembershipsStats";
 import MembershipDialog from "./components/MembershipDialog";
 import { MembershipsProvider } from "./components/MembershipsProvider";
+import { ca } from "date-fns/locale";
 
 export const metadata: Metadata = {
   title: "Memberships | Admin Dashboard | Nutra-Vive",
@@ -76,7 +77,7 @@ export default async function MembershipsPage({
     getMembershipStats(),
     getCategories(),
   ]);
-
+  console.log(categoriesData);
   if (membershipsData.error) {
     throw new Error(membershipsData.error);
   }
