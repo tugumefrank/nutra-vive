@@ -32,6 +32,7 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   imageUrl?: string;
+  stripeCustomerId?: string;
   role: "user" | "admin";
   createdAt: Date;
   updatedAt: Date;
@@ -405,6 +406,8 @@ const userSchema = new Schema<IUser>(
     lastName: String,
     imageUrl: String,
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    // Stripe integration
+    stripeCustomerId: { type: String, unique: true, sparse: true },
   },
   { timestamps: true }
 );
@@ -806,6 +809,7 @@ trackingEventSchema.index({ isPublic: 1 });
 // User indexes
 userSchema.index({ clerkId: 1 });
 userSchema.index({ email: 1 });
+userSchema.index({ stripeCustomerId: 1 });
 
 // Category indexes
 categorySchema.index({ slug: 1 });
@@ -954,6 +958,9 @@ export interface IMembership extends Document {
   sortOrder: number;
   color?: string; // For UI theming
   icon?: string; // Icon name or URL
+
+  // Stripe integration
+  stripePriceId?: string; // Store Stripe price ID for subscriptions
 
   // Admin tracking
   createdBy: mongoose.Types.ObjectId;
@@ -1139,6 +1146,8 @@ const membershipSchema = new Schema<IMembership>(
       required: true,
     },
     currency: { type: String, default: "USD" },
+    // Stripe integration
+    stripePriceId: { type: String, unique: true, sparse: true },
 
     // Product Allocations
     productAllocations: [
@@ -1404,6 +1413,7 @@ membershipOrderSchema.index({ user: 1 });
 membershipOrderSchema.index({ status: 1 });
 membershipOrderSchema.index({ deliveryDate: 1 });
 membershipOrderSchema.index({ orderNumber: 1 });
+membershipSchema.index({ stripePriceId: 1 });
 
 membershipAnalyticsSchema.index({ membership: 1 });
 membershipAnalyticsSchema.index({ period: 1, periodStart: 1 });
