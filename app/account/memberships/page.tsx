@@ -25,7 +25,7 @@ export default async function MembershipsPage() {
         </div>
 
         <Suspense fallback={<MembershipLoadingSkeleton />}>
-          <MembershipDashboard userId={userId} />
+          <MembershipDashboard />
         </Suspense>
       </div>
     </div>
