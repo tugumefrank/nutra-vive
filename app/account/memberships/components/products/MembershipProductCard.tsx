@@ -53,7 +53,8 @@ export function MembershipProductCard({
       const result = await addToMembershipCart(product._id, 1);
 
       if (result.success) {
-        if (result.membershipInfo?.isFree) {
+        // Adjust this check to use the correct property from MembershipInfo
+        if (canGetFree && showMembershipPrice) {
           toast.success(`${product.name} added to cart for FREE! 🎉`);
         } else {
           toast.success(`${product.name} added to cart`);
