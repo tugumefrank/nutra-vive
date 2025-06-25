@@ -911,3 +911,522 @@ export const CustomerPromotionUsage: Model<ICustomerPromotionUsage> =
 export const TrackingEvent: Model<ITrackingEvent> =
   mongoose.models.TrackingEvent ||
   mongoose.model<ITrackingEvent>("TrackingEvent", trackingEventSchema);
+
+export interface IMembership extends Document {
+  _id: string;
+  name: string;
+  description?: string;
+  tier: "basic" | "premium" | "vip" | "elite";
+
+  // Pricing Configuration
+  price: number;
+  billingFrequency: "monthly" | "quarterly" | "yearly";
+  currency: string;
+
+  // Product Allocations
+  productAllocations: {
+    categoryId: mongoose.Types.ObjectId;
+    categoryName: string;
+    quantity: number;
+    allowedProducts?: mongoose.Types.ObjectId[]; // Specific products if restricted
+  }[];
+
+  // Custom Benefits
+  customBenefits: {
+    title: string;
+    description: string;
+    type: "webinar" | "content" | "discount" | "service" | "other";
+    value?: string; // e.g., "20% off", "Free delivery"
+  }[];
+
+  // Membership Features
+  features: string[]; // Array of feature descriptions
+
+  // Limits and Restrictions
+  maxProductsPerMonth?: number;
+  deliveryFrequency: "weekly" | "bi-weekly" | "monthly";
+  freeDelivery: boolean;
+  prioritySupport: boolean;
+
+  // Metadata
+  isActive: boolean;
+  isPopular: boolean; // For highlighting in UI
+  sortOrder: number;
+  color?: string; // For UI theming
+  icon?: string; // Icon name or URL
+
+  // Admin tracking
+  createdBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
+
+  // Analytics
+  totalSubscribers: number;
+  totalRevenue: number;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IUserMembership extends Document {
+  _id: string;
+  user: mongoose.Types.ObjectId;
+  membership: mongoose.Types.ObjectId;
+
+  // Subscription Details
+  subscriptionId?: string; // Stripe subscription ID
+  status: "active" | "cancelled" | "expired" | "paused" | "trial";
+  startDate: Date;
+  endDate?: Date;
+  nextBillingDate?: Date;
+
+  // Payment Information
+  paymentMethod?: string;
+  lastPaymentDate?: Date;
+  lastPaymentAmount?: number;
+
+  // Usage Tracking
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  usageResetDate: Date;
+
+  // Benefits Tracking
+  productUsage: {
+    categoryId: mongoose.Types.ObjectId;
+    categoryName: string;
+    allocatedQuantity: number;
+    usedQuantity: number;
+    availableQuantity: number;
+    lastUsed?: Date;
+  }[];
+
+  customBenefitsUsed: {
+    benefitId: string;
+    title: string;
+    usedAt: Date;
+    value?: string;
+  }[];
+
+  // Auto-renewal
+  autoRenewal: boolean;
+
+  // Membership History
+  previousMemberships: {
+    membershipId: mongoose.Types.ObjectId;
+    startDate: Date;
+    endDate: Date;
+    reason?: string; // upgrade, downgrade, cancellation
+  }[];
+
+  // Admin Notes
+  notes?: string;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IMembershipOrder extends Document {
+  _id: string;
+  userMembership: mongoose.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
+  membership: mongoose.Types.ObjectId;
+
+  // Order Details
+  orderNumber: string;
+
+  // Products Selected
+  selectedProducts: {
+    product: mongoose.Types.ObjectId;
+    productName: string;
+    categoryId: mongoose.Types.ObjectId;
+    categoryName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    membershipPrice: number; // Discounted/free price
+    savings: number;
+  }[];
+
+  // Delivery Information
+  deliveryDate: Date;
+  deliveryAddress: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    province: string;
+    country: string;
+    zip: string;
+    phone?: string;
+  };
+
+  // Order Status
+  status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+
+  // Totals
+  subtotal: number;
+  membershipDiscount: number;
+  shippingCost: number;
+  totalAmount: number;
+
+  // Tracking
+  trackingNumber?: string;
+  shippedAt?: Date;
+  deliveredAt?: Date;
+
+  // Special Instructions
+  specialInstructions?: string;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IMembershipAnalytics extends Document {
+  _id: string;
+  membership: mongoose.Types.ObjectId;
+  period: "daily" | "weekly" | "monthly" | "yearly";
+  periodStart: Date;
+  periodEnd: Date;
+
+  // Metrics
+  newSubscribers: number;
+  cancelledSubscribers: number;
+  activeSubscribers: number;
+  revenue: number;
+  ordersCount: number;
+  averageOrderValue: number;
+
+  // Product Usage
+  popularProducts: {
+    productId: mongoose.Types.ObjectId;
+    productName: string;
+    timesSelected: number;
+  }[];
+
+  // Customer Satisfaction
+  averageRating?: number;
+  feedbackCount?: number;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// MEMBERSHIP SCHEMAS
+// ============================================================================
+
+const membershipSchema = new Schema<IMembership>(
+  {
+    name: { type: String, required: true },
+    description: String,
+    tier: {
+      type: String,
+      enum: ["basic", "premium", "vip", "elite"],
+      required: true,
+    },
+
+    // Pricing
+    price: { type: Number, required: true, min: 0 },
+    billingFrequency: {
+      type: String,
+      enum: ["monthly", "quarterly", "yearly"],
+      required: true,
+    },
+    currency: { type: String, default: "USD" },
+
+    // Product Allocations
+    productAllocations: [
+      {
+        categoryId: {
+          type: Schema.Types.ObjectId,
+          ref: "Category",
+          required: true,
+        },
+        categoryName: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 0 },
+        allowedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      },
+    ],
+
+    // Custom Benefits
+    customBenefits: [
+      {
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        type: {
+          type: String,
+          enum: ["webinar", "content", "discount", "service", "other"],
+          default: "other",
+        },
+        value: String,
+      },
+    ],
+
+    features: [String],
+
+    // Limits
+    maxProductsPerMonth: { type: Number, min: 0 },
+    deliveryFrequency: {
+      type: String,
+      enum: ["weekly", "bi-weekly", "monthly"],
+      default: "monthly",
+    },
+    freeDelivery: { type: Boolean, default: false },
+    prioritySupport: { type: Boolean, default: false },
+
+    // Status and Display
+    isActive: { type: Boolean, default: true },
+    isPopular: { type: Boolean, default: false },
+    sortOrder: { type: Number, default: 0 },
+    color: String,
+    icon: String,
+
+    // Admin tracking
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+
+    // Analytics
+    totalSubscribers: { type: Number, default: 0 },
+    totalRevenue: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+const userMembershipSchema = new Schema<IUserMembership>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    membership: {
+      type: Schema.Types.ObjectId,
+      ref: "Membership",
+      required: true,
+    },
+
+    // Subscription
+    subscriptionId: String,
+    status: {
+      type: String,
+      enum: ["active", "cancelled", "expired", "paused", "trial"],
+      default: "active",
+    },
+    startDate: { type: Date, required: true },
+    endDate: Date,
+    nextBillingDate: Date,
+
+    // Payment
+    paymentMethod: String,
+    lastPaymentDate: Date,
+    lastPaymentAmount: Number,
+
+    // Usage Period
+    currentPeriodStart: { type: Date, required: true },
+    currentPeriodEnd: { type: Date, required: true },
+    usageResetDate: { type: Date, required: true },
+
+    // Usage Tracking
+    productUsage: [
+      {
+        categoryId: {
+          type: Schema.Types.ObjectId,
+          ref: "Category",
+          required: true,
+        },
+        categoryName: { type: String, required: true },
+        allocatedQuantity: { type: Number, required: true, min: 0 },
+        usedQuantity: { type: Number, default: 0, min: 0 },
+        availableQuantity: { type: Number, required: true, min: 0 },
+        lastUsed: Date,
+      },
+    ],
+
+    customBenefitsUsed: [
+      {
+        benefitId: { type: String, required: true },
+        title: { type: String, required: true },
+        usedAt: { type: Date, default: Date.now },
+        value: String,
+      },
+    ],
+
+    autoRenewal: { type: Boolean, default: true },
+
+    previousMemberships: [
+      {
+        membershipId: { type: Schema.Types.ObjectId, ref: "Membership" },
+        startDate: Date,
+        endDate: Date,
+        reason: String,
+      },
+    ],
+
+    notes: String,
+  },
+  { timestamps: true }
+);
+
+const membershipOrderSchema = new Schema<IMembershipOrder>(
+  {
+    userMembership: {
+      type: Schema.Types.ObjectId,
+      ref: "UserMembership",
+      required: true,
+    },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    membership: {
+      type: Schema.Types.ObjectId,
+      ref: "Membership",
+      required: true,
+    },
+
+    orderNumber: { type: String, required: true, unique: true },
+
+    selectedProducts: [
+      {
+        product: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        productName: { type: String, required: true },
+        categoryId: {
+          type: Schema.Types.ObjectId,
+          ref: "Category",
+          required: true,
+        },
+        categoryName: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        unitPrice: { type: Number, required: true },
+        totalPrice: { type: Number, required: true },
+        membershipPrice: { type: Number, required: true },
+        savings: { type: Number, default: 0 },
+      },
+    ],
+
+    deliveryDate: { type: Date, required: true },
+    deliveryAddress: {
+      firstName: { type: String, required: true },
+      lastName: { type: String, required: true },
+      address1: { type: String, required: true },
+      address2: String,
+      city: { type: String, required: true },
+      province: { type: String, required: true },
+      country: { type: String, required: true },
+      zip: { type: String, required: true },
+      phone: String,
+    },
+
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "preparing",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
+      default: "pending",
+    },
+
+    subtotal: { type: Number, required: true },
+    membershipDiscount: { type: Number, default: 0 },
+    shippingCost: { type: Number, default: 0 },
+    totalAmount: { type: Number, required: true },
+
+    trackingNumber: String,
+    shippedAt: Date,
+    deliveredAt: Date,
+    specialInstructions: String,
+  },
+  { timestamps: true }
+);
+
+const membershipAnalyticsSchema = new Schema<IMembershipAnalytics>(
+  {
+    membership: {
+      type: Schema.Types.ObjectId,
+      ref: "Membership",
+      required: true,
+    },
+    period: {
+      type: String,
+      enum: ["daily", "weekly", "monthly", "yearly"],
+      required: true,
+    },
+    periodStart: { type: Date, required: true },
+    periodEnd: { type: Date, required: true },
+
+    newSubscribers: { type: Number, default: 0 },
+    cancelledSubscribers: { type: Number, default: 0 },
+    activeSubscribers: { type: Number, default: 0 },
+    revenue: { type: Number, default: 0 },
+    ordersCount: { type: Number, default: 0 },
+    averageOrderValue: { type: Number, default: 0 },
+
+    popularProducts: [
+      {
+        productId: { type: Schema.Types.ObjectId, ref: "Product" },
+        productName: String,
+        timesSelected: { type: Number, default: 0 },
+      },
+    ],
+
+    averageRating: Number,
+    feedbackCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+// ============================================================================
+// INDEXES
+// ============================================================================
+
+membershipSchema.index({ tier: 1 });
+membershipSchema.index({ isActive: 1 });
+membershipSchema.index({ billingFrequency: 1 });
+membershipSchema.index({ price: 1 });
+membershipSchema.index({ sortOrder: 1 });
+
+userMembershipSchema.index({ user: 1 });
+userMembershipSchema.index({ membership: 1 });
+userMembershipSchema.index({ status: 1 });
+userMembershipSchema.index({ currentPeriodStart: 1, currentPeriodEnd: 1 });
+userMembershipSchema.index({ nextBillingDate: 1 });
+userMembershipSchema.index({ user: 1, status: 1 });
+
+membershipOrderSchema.index({ userMembership: 1 });
+membershipOrderSchema.index({ user: 1 });
+membershipOrderSchema.index({ status: 1 });
+membershipOrderSchema.index({ deliveryDate: 1 });
+membershipOrderSchema.index({ orderNumber: 1 });
+
+membershipAnalyticsSchema.index({ membership: 1 });
+membershipAnalyticsSchema.index({ period: 1, periodStart: 1 });
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+export const Membership: Model<IMembership> =
+  mongoose.models.Membership ||
+  mongoose.model<IMembership>("Membership", membershipSchema);
+
+export const UserMembership: Model<IUserMembership> =
+  mongoose.models.UserMembership ||
+  mongoose.model<IUserMembership>("UserMembership", userMembershipSchema);
+
+export const MembershipOrder: Model<IMembershipOrder> =
+  mongoose.models.MembershipOrder ||
+  mongoose.model<IMembershipOrder>("MembershipOrder", membershipOrderSchema);
+
+export const MembershipAnalytics: Model<IMembershipAnalytics> =
+  mongoose.models.MembershipAnalytics ||
+  mongoose.model<IMembershipAnalytics>(
+    "MembershipAnalytics",
+    membershipAnalyticsSchema
+  );
