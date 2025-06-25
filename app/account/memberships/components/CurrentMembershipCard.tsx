@@ -14,7 +14,7 @@ import {
   Gift,
   Star,
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 
 interface CurrentMembershipCardProps {
   membership: {
@@ -74,6 +74,29 @@ const tierConfig = {
     badgeVariant: "destructive" as const,
   },
 };
+
+// Helper function to format relative time
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffInMs = date.getTime() - now.getTime();
+  const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInDays < 0) {
+    return `${Math.abs(diffInDays)} days ago`;
+  } else if (diffInDays === 0) {
+    return "Today";
+  } else if (diffInDays === 1) {
+    return "Tomorrow";
+  } else if (diffInDays < 7) {
+    return `In ${diffInDays} days`;
+  } else if (diffInDays < 30) {
+    const weeks = Math.ceil(diffInDays / 7);
+    return `In ${weeks} week${weeks > 1 ? "s" : ""}`;
+  } else {
+    const months = Math.ceil(diffInDays / 30);
+    return `In ${months} month${months > 1 ? "s" : ""}`;
+  }
+}
 
 export function CurrentMembershipCard({
   membership,
@@ -169,9 +192,7 @@ export function CurrentMembershipCard({
             </div>
             <div className="text-xs text-blue-600/70 dark:text-blue-400/70">
               {membership.nextBillingDate
-                ? formatDistanceToNow(new Date(membership.nextBillingDate), {
-                    addSuffix: true,
-                  })
+                ? formatRelativeTime(new Date(membership.nextBillingDate))
                 : "No upcoming billing"}
             </div>
           </div>
