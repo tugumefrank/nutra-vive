@@ -11,6 +11,52 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-05-28.basil",
 });
 
+// Helper function to create incomplete UserMembership
+async function createIncompleteUserMembership(
+  userId: string,
+  membership: any,
+  subscriptionId: string
+) {
+  try {
+    // Check if already exists
+    const existing = await UserMembership.findOne({
+      user: userId,
+      subscriptionId: subscriptionId,
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Initialize product usage tracking
+    const productUsage = membership.productAllocations.map(
+      (allocation: any) => ({
+        categoryId: allocation.categoryId,
+        categoryName: allocation.categoryName,
+        allocatedQuantity: allocation.quantity,
+        usedQuantity: 0,
+        availableQuantity: allocation.quantity,
+      })
+    );
+
+    const userMembership = new UserMembership({
+      user: userId,
+      membership: membership._id,
+      subscriptionId: subscriptionId,
+      status: "incomplete", // Will be updated to "active" by webhook
+      startDate: new Date(),
+      productUsage,
+    });
+
+    await userMembership.save();
+    console.log(`Created incomplete membership for user ${userId}`);
+    return userMembership;
+  } catch (error) {
+    console.error("Error creating incomplete membership:", error);
+    throw error;
+  }
+}
+
 // Create Stripe subscription for membership
 export async function createMembershipSubscription(
   membershipId: string
@@ -45,15 +91,48 @@ export async function createMembershipSubscription(
     // Check if user already has an active membership
     const existingMembership = await UserMembership.findOne({
       user: user._id,
-      status: "active",
+      status: { $in: ["active", "incomplete"] },
     });
 
     if (existingMembership) {
-      return {
-        success: false,
-        error:
-          "You already have an active membership. Please cancel it first to subscribe to a new one.",
-      };
+      // If there's an incomplete membership, check if the subscription is still valid
+      if (
+        existingMembership.status === "incomplete" &&
+        existingMembership.subscriptionId
+      ) {
+        try {
+          const existingSubscription = await stripe.subscriptions.retrieve(
+            existingMembership.subscriptionId
+          );
+
+          // If subscription exists and is incomplete, return its client secret
+          if (existingSubscription.status === "incomplete") {
+            const latestInvoice = await stripe.invoices.retrieve(
+              existingSubscription.latest_invoice as string,
+              { expand: ["payment_intent"] }
+            );
+
+            const paymentIntent = (latestInvoice as any).payment_intent as Stripe.PaymentIntent;
+
+            if (paymentIntent?.client_secret) {
+              return {
+                success: true,
+                clientSecret: paymentIntent.client_secret,
+                subscriptionId: existingSubscription.id,
+              };
+            }
+          }
+        } catch (error) {
+          console.warn("Existing subscription not found, creating new one");
+          // Continue to create new subscription
+        }
+      } else {
+        return {
+          success: false,
+          error:
+            "You already have an active membership. Please cancel it first to subscribe to a new one.",
+        };
+      }
     }
 
     console.log("Creating subscription for membership:", membership.name);
@@ -124,6 +203,13 @@ export async function createMembershipSubscription(
         latest_invoice: subscription.latest_invoice ? "Present" : "Missing",
       });
 
+      // Create UserMembership record with incomplete status to prevent duplicates
+      await createIncompleteUserMembership(
+        user._id,
+        membership,
+        subscription.id
+      );
+
       const invoice = subscription.latest_invoice as Stripe.Invoice;
 
       if (!invoice) {
@@ -136,9 +222,7 @@ export async function createMembershipSubscription(
           }
         );
 
-        const altInvoice = retrievedSub.latest_invoice as Stripe.Invoice & {
-          payment_intent?: Stripe.PaymentIntent;
-        };
+        const altInvoice = retrievedSub.latest_invoice as any;
         if (altInvoice?.payment_intent) {
           const altPaymentIntent =
             altInvoice.payment_intent as Stripe.PaymentIntent;
@@ -158,16 +242,10 @@ export async function createMembershipSubscription(
       console.log("Invoice details:", {
         id: invoice.id,
         status: invoice.status,
-        payment_intent: (
-          invoice as Stripe.Invoice & { payment_intent?: Stripe.PaymentIntent }
-        ).payment_intent
-          ? "Present"
-          : "Missing",
+        payment_intent: (invoice as any).payment_intent ? "Present" : "Missing",
       });
 
-      const paymentIntent = (
-        invoice as Stripe.Invoice & { payment_intent?: Stripe.PaymentIntent }
-      ).payment_intent as Stripe.PaymentIntent;
+      const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
 
       if (!paymentIntent) {
         console.log(
@@ -329,12 +407,33 @@ export async function confirmMembershipSubscription(
       expand: ["latest_invoice.payment_intent"],
     })) as Stripe.Subscription;
 
-    if (subscription.status !== "active") {
+    // Check subscription status and payment intent
+    const latestInvoice = subscription.latest_invoice as any;
+    const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent;
+
+    const isSubscriptionValid =
+      subscription.status === "active" ||
+      (subscription.status === "incomplete" &&
+        paymentIntent?.status === "succeeded");
+
+    if (!isSubscriptionValid) {
+      console.log("Subscription validation failed:", {
+        subscriptionStatus: subscription.status,
+        paymentIntentStatus: paymentIntent?.status,
+        subscriptionId,
+      });
+
       return {
         success: false,
         error: "Subscription is not active. Please complete payment.",
       };
     }
+
+    console.log("Subscription validation passed:", {
+      subscriptionStatus: subscription.status,
+      paymentIntentStatus: paymentIntent?.status,
+      subscriptionId,
+    });
 
     const membershipId = subscription.metadata.membershipId;
     if (!membershipId) {

@@ -1101,7 +1101,7 @@ export interface IUserMembership extends Document {
 
   // Subscription Details
   subscriptionId?: string; // Stripe subscription ID
-  status: "active" | "cancelled" | "expired" | "paused" | "trial";
+  status: "active" | "cancelled" | "expired" | "paused" | "trial" | "incomplete";
   startDate: Date;
   endDate?: Date;
   nextBillingDate?: Date;
@@ -1340,7 +1340,7 @@ const userMembershipSchema = new Schema<IUserMembership>(
     subscriptionId: String,
     status: {
       type: String,
-      enum: ["active", "cancelled", "expired", "paused", "trial"],
+      enum: ["active", "cancelled", "expired", "paused", "trial", "incomplete"],
       default: "active",
     },
     startDate: { type: Date, required: true },
