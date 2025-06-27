@@ -12,7 +12,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { getProducts } from "@/lib/actions/productServerActions";
 import { EnhancedProductCard } from "../shop/ProductCard";
 import { Product } from "@/types";
 import { getFeaturedProductsWithMembership } from "@/lib/actions/membershipProductServerActions";

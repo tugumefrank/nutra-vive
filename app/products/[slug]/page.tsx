@@ -15,7 +15,7 @@ import { Star, Shield, Truck, RefreshCw, Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { CheckoutLayout } from "@/components/layout/MainLayout";
-import { getRelatedProductsForCard } from "@/lib/utils/product-transformer";
+import { getRelatedProductsForCard } from "@/lib/actions/membershipProductServerActions";
 import {
   getProductBySlug,
   getProducts,
@@ -61,16 +61,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Get related products (same category, excluding current product)
-  const relatedProductsData = await getProducts({
-    category: product.category?._id,
-    isActive: true,
-    limit: 4,
-  });
-
-  // Transform related products using the utility function
-  const relatedProducts = getRelatedProductsForCard(
-    relatedProductsData.products,
+  // Get related products with membership context
+  const relatedProducts = await getRelatedProductsForCard(
+    product.category?._id,
     product._id,
     4 // Limit to 4 products
   );

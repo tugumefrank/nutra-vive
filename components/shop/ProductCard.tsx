@@ -1289,7 +1289,13 @@
 // }
 "use client";
 
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  useEffect,
+} from "react";
 import {
   Heart,
   Star,
@@ -1356,32 +1362,27 @@ export function EnhancedProductCard({
   // Favorites functionality
   const { isFavorite, toggleProductFavorite } = useStandaloneFavorites();
 
-  // Memoize expensive calculations to prevent re-renders
+  // Direct cart state access for immediate updates - add cart as dependency
   const cartData = useMemo(() => {
     if (!isSignedIn || !product)
       return {
         inCart: false,
         quantity: 0,
-        isProductLoading: false,
       };
 
     const inCart = isInCart(product._id);
     const quantity = getItemQuantity(product._id);
-    const isProductLoading =
-      isAddingToCart[product._id] || isUpdatingItem[product._id] || false;
 
     return {
       inCart,
       quantity,
-      isProductLoading,
     };
   }, [
     isSignedIn,
     product._id,
     isInCart,
     getItemQuantity,
-    isAddingToCart,
-    isUpdatingItem,
+    cart, // Add cart as dependency to force immediate re-render
   ]);
 
   // Memoize membership calculations
@@ -1433,10 +1434,6 @@ export function EnhancedProductCard({
         return;
       }
 
-      if (cartData.isProductLoading) {
-        return;
-      }
-
       // Check membership allocation before adding
       if (
         membershipData.effectivelyFree &&
@@ -1446,10 +1443,12 @@ export function EnhancedProductCard({
         return;
       }
 
+      // Instant optimistic update - await to ensure immediate state change
       try {
+        // Await to ensure the optimistic update completes immediately
         await addToCartOptimistic(product, 1);
 
-        // Show membership-specific success message
+        // Show immediate success message
         if (membershipData.effectivelyFree) {
           toast.success(
             <div className="flex items-center space-x-2">
@@ -1458,16 +1457,16 @@ export function EnhancedProductCard({
             </div>
           );
         } else {
-          toast.success("Added to cart successfully!");
+          toast.success("Added to cart!");
         }
       } catch (error) {
         console.error("Failed to add to cart:", error);
+        // Only show error if the optimistic update fails
         toast.error("Failed to add item to cart");
       }
     },
     [
       isSignedIn,
-      cartData.isProductLoading,
       membershipData.effectivelyFree,
       membershipData.remainingAllocation,
       addToCartOptimistic,
@@ -1483,10 +1482,6 @@ export function EnhancedProductCard({
 
       if (!isSignedIn) {
         handleSignInRedirect();
-        return;
-      }
-
-      if (cartData.isProductLoading) {
         return;
       }
 
@@ -1509,16 +1504,19 @@ export function EnhancedProductCard({
         return;
       }
 
+      // Instant optimistic update - no loading state needed
       try {
-        await updateQuantityOptimistic(product._id, newQty);
+        // Fire and forget - optimistic update happens immediately
+        updateQuantityOptimistic(product._id, newQty);
 
-        // Show success message for membership items
+        // Only show success message for significant changes or membership items
         if (membershipData.effectivelyFree && change > 0) {
           toast.success(
             <div className="flex items-center space-x-2">
               <Crown className="w-4 h-4 text-amber-500" />
-              <span>Updated FREE membership item!</span>
-            </div>
+              <span>Updated FREE item!</span>
+            </div>,
+            { duration: 1500 } // Shorter duration
           );
         }
       } catch (error) {
@@ -1528,7 +1526,6 @@ export function EnhancedProductCard({
     },
     [
       isSignedIn,
-      cartData.isProductLoading,
       cartData.quantity,
       membershipData.effectivelyFree,
       membershipData.remainingAllocation,
@@ -1536,6 +1533,76 @@ export function EnhancedProductCard({
       product._id,
       handleSignInRedirect,
     ]
+  );
+
+  // Debounced quantity state
+  const [tempQuantity, setTempQuantity] = useState<string>(
+    cartData.quantity.toString()
+  );
+
+  // Update temp quantity when cart quantity changes
+  useEffect(() => {
+    setTempQuantity(cartData.quantity.toString());
+  }, [cartData.quantity]);
+
+  const handleDirectQuantityChange = useCallback(
+    async (newQty: number) => {
+      if (!isSignedIn) {
+        handleSignInRedirect();
+        return;
+      }
+
+      // Validate membership allocation
+      if (
+        newQty > cartData.quantity &&
+        membershipData.effectivelyFree &&
+        membershipData.remainingAllocation < newQty - cartData.quantity
+      ) {
+        toast.error(
+          `Only ${membershipData.remainingAllocation} items remaining in your membership allocation`
+        );
+        return;
+      }
+
+      // Don't allow negative quantities
+      if (newQty < 0) {
+        return;
+      }
+
+      try {
+        updateQuantityOptimistic(product._id, newQty);
+      } catch (error) {
+        console.error("Failed to update quantity:", error);
+        toast.error("Failed to update quantity");
+      }
+    },
+    [
+      isSignedIn,
+      cartData.quantity,
+      membershipData.effectivelyFree,
+      membershipData.remainingAllocation,
+      updateQuantityOptimistic,
+      product._id,
+      handleSignInRedirect,
+    ]
+  );
+
+  // Debounced input handler
+  const handleQuantityInput = useCallback(
+    (value: string) => {
+      setTempQuantity(value);
+
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue) && numValue !== cartData.quantity) {
+        // Debounce the actual update
+        const timeoutId = setTimeout(() => {
+          handleDirectQuantityChange(numValue);
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+      }
+    },
+    [cartData.quantity, handleDirectQuantityChange]
   );
 
   const handleViewCart = useCallback(
@@ -1591,15 +1658,13 @@ export function EnhancedProductCard({
       <button
         ref={heartRef}
         onClick={handleToggleFavorite}
-        disabled={cartData.isProductLoading}
         className={cn(
           position,
           "p-2 rounded-full transition-all duration-300 z-10 shadow-md heart-button heart-transition",
           isProductFavorite
             ? "bg-red-500 text-white hover:bg-red-600"
             : "bg-white/90 text-gray-600 hover:bg-red-50 hover:text-red-500",
-          heartAnimation,
-          cartData.isProductLoading && "opacity-50 cursor-not-allowed"
+          heartAnimation
         )}
       >
         <Heart
@@ -1614,71 +1679,67 @@ export function EnhancedProductCard({
     )
   );
 
-  // Membership Benefits Component
+  // Compact Membership Benefits Component
   const MembershipBenefits = React.memo(
     ({ className = "" }: { className?: string }) => {
       if (!showMembershipBenefits || !membershipData.membershipInfo)
         return null;
 
       return (
-        <div className={cn("space-y-2", className)}>
-          {/* Free Badge */}
-          {membershipData.effectivelyFree && (
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-sm font-bold flex items-center justify-center shadow-lg">
-              <Crown className="w-4 h-4 mr-1" />
-              FREE with Membership
-            </div>
-          )}
-
-          {/* Membership Info */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">
-                {membershipData.membershipInfo.membershipTier} Member Benefits
-              </span>
-              <Badge
-                variant="outline"
-                className="text-xs bg-white text-amber-600 border-amber-300"
-              >
-                <Sparkles className="w-3 h-3 mr-1" />
-                {membershipData.membershipInfo.categoryName}
-              </Badge>
-            </div>
-
+        <div className={cn("space-y-1.5", className)}>
+          {/* Compact Membership Info */}
+          <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-2.5">
             {membershipData.effectivelyFree ? (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-amber-700 font-medium">You Save:</span>
-                  <span className="text-amber-800 font-bold">
-                    ${membershipData.membershipInfo.savings.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-amber-600">
-                  <span>Remaining this month:</span>
-                  <span className="font-semibold">
-                    {membershipData.remainingAllocation} items
+              <div className="space-y-1.5">
+                {/* Header with savings */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Crown className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-700">
+                      FREE • Save $
+                      {membershipData.membershipInfo.savings.toFixed(2)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-amber-600 font-medium">
+                    {membershipData.remainingAllocation} left
                   </span>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="w-full bg-amber-200 rounded-full h-2 mt-2">
+                {/* Compact Progress Bar */}
+                <div className="w-full bg-amber-200 rounded-full h-1.5">
                   <div
-                    className="bg-gradient-to-r from-amber-400 to-orange-400 h-2 rounded-full transition-all duration-300"
+                    className="bg-gradient-to-r from-amber-400 to-orange-400 h-1.5 rounded-full transition-all duration-300"
                     style={{
                       width: `${Math.min(100, ((membershipData.membershipInfo.totalAllocation - membershipData.membershipInfo.remainingAllocation) / membershipData.membershipInfo.totalAllocation) * 100)}%`,
                     }}
                   />
                 </div>
-                <div className="text-xs text-amber-600 text-center">
-                  {membershipData.membershipInfo.usedAllocation} of{" "}
-                  {membershipData.membershipInfo.totalAllocation} used
+
+                {/* Usage info */}
+                <div className="flex items-center justify-between text-xs text-amber-600">
+                  <span>
+                    {membershipData.membershipInfo.membershipTier} Member
+                  </span>
+                  <span>
+                    {membershipData.membershipInfo.usedAllocation}/
+                    {membershipData.membershipInfo.totalAllocation} used
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-amber-600 flex items-center">
-                <Info className="w-3 h-3 mr-1" />
-                No allocations remaining for{" "}
-                {membershipData.membershipInfo.categoryName}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="text-xs font-medium text-amber-700">
+                    {membershipData.membershipInfo.membershipTier} Member
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Info className="w-3 h-3 text-amber-500" />
+                  <span className="text-xs text-amber-600">
+                    No allocation left
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -1739,7 +1800,10 @@ export function EnhancedProductCard({
             !membershipData.effectivelyFree && (
               <div className="absolute top-3 left-3">
                 <span className="px-3 py-1 bg-white/90 text-green-600 text-xs font-semibold rounded-full">
-                  {typeof product.category === 'object' ? product.category.name : product.category}
+                  {typeof product.category === "object" &&
+                  product.category !== null
+                    ? (product.category as { name: string }).name
+                    : product.category}
                 </span>
               </div>
             )}
@@ -1789,13 +1853,6 @@ export function EnhancedProductCard({
               </div>
             </div>
           )}
-
-          {/* Loading Overlay */}
-          {cartData.isProductLoading && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-            </div>
-          )}
         </div>
 
         {/* Product Info */}
@@ -1805,7 +1862,11 @@ export function EnhancedProductCard({
             <div className="flex items-center justify-between mb-2">
               {showCategory && product.category && (
                 <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
-                  {typeof product.category === 'object' ? product.category.name : product.category}
+                  {typeof product.category === "object" &&
+                  product.category !== null &&
+                  "name" in product.category
+                    ? (product.category as { name: string }).name
+                    : product.category}
                 </span>
               )}
               <div className="flex items-center space-x-1">
@@ -1855,139 +1916,143 @@ export function EnhancedProductCard({
           <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
             {isSignedIn && cartData.inCart ? (
               <>
-                {/* Price and Quantity Controls Row */}
-                <div className="flex items-center justify-between">
+                {/* Price Display - Only for non-membership items */}
+                {!membershipData.effectivelyFree && (
                   <div className="flex flex-col">
-                    {membershipData.effectivelyFree ? (
-                      <div className="space-y-1">
-                        <span className="text-2xl font-bold text-amber-600 flex items-center">
-                          FREE
-                          <Crown className="w-5 h-5 ml-1" />
-                        </span>
-                        <span className="text-sm text-gray-500 line-through">
-                          ${product.price.toFixed(2)}
-                        </span>
-                      </div>
-                    ) : (
-                      <div>
-                        {product.compareAtPrice &&
-                          product.compareAtPrice > product.price && (
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm text-gray-500 line-through">
-                                ${product.compareAtPrice.toFixed(2)}
-                              </span>
-                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
-                                {discountPercentage}% OFF
-                              </span>
-                            </div>
-                          )}
-                        <span className="text-2xl font-bold text-green-600">
-                          ${product.price.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quantity Controls */}
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 rounded-xl p-1",
-                      membershipData.effectivelyFree
-                        ? "bg-amber-50"
-                        : "bg-green-50"
-                    )}
-                  >
-                    <button
-                      onClick={(e) => handleUpdateQuantity(e, -1)}
-                      disabled={cartData.isProductLoading}
-                      className={cn(
-                        "p-1 rounded-lg transition-colors disabled:opacity-50",
-                        membershipData.effectivelyFree
-                          ? "text-amber-600 hover:bg-amber-100"
-                          : "text-green-600 hover:bg-green-100"
+                    {product.compareAtPrice &&
+                      product.compareAtPrice > product.price && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm text-gray-500 line-through">
+                            ${product.compareAtPrice.toFixed(2)}
+                          </span>
+                          <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
+                            {discountPercentage}% OFF
+                          </span>
+                        </div>
                       )}
-                      title="Decrease quantity"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <span
-                      className={cn(
-                        "px-2 font-semibold min-w-[2rem] text-center",
-                        membershipData.effectivelyFree
-                          ? "text-amber-600"
-                          : "text-green-600"
-                      )}
-                    >
-                      {cartData.quantity}
+                    <span className="text-2xl font-bold text-green-600">
+                      ${product.price.toFixed(2)}
                     </span>
-                    <button
-                      onClick={(e) => handleUpdateQuantity(e, 1)}
-                      disabled={
-                        cartData.isProductLoading ||
-                        (membershipData.effectivelyFree &&
-                          membershipData.remainingAllocation <= 0)
-                      }
-                      className={cn(
-                        "p-1 rounded-lg transition-colors disabled:opacity-50",
-                        membershipData.effectivelyFree
-                          ? "text-amber-600 hover:bg-amber-100"
-                          : "text-green-600 hover:bg-green-100"
-                      )}
-                      title="Increase quantity"
-                    >
-                      <Plus size={16} />
-                    </button>
                   </div>
+                )}
+
+                {/* Enhanced Quantity Controls */}
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl p-2 border-2",
+                    membershipData.effectivelyFree
+                      ? "bg-amber-50 border-amber-200"
+                      : "bg-green-50 border-green-200"
+                  )}
+                >
+                  <button
+                    onClick={(e) => handleUpdateQuantity(e, -1)}
+                    className={cn(
+                      "p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm",
+                      membershipData.effectivelyFree
+                        ? "text-amber-600 hover:bg-amber-100 bg-white"
+                        : "text-green-600 hover:bg-green-100 bg-white"
+                    )}
+                    title="Decrease quantity"
+                  >
+                    <Minus size={18} />
+                  </button>
+
+                  {/* Editable Quantity Input */}
+                  <input
+                    type="number"
+                    min="1"
+                    max={
+                      membershipData.effectivelyFree
+                        ? membershipData.remainingAllocation + cartData.quantity
+                        : 999
+                    }
+                    value={tempQuantity}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      handleQuantityInput(e.target.value);
+                    }}
+                    onBlur={() => {
+                      // Ensure the displayed value matches the actual cart quantity on blur
+                      if (tempQuantity !== cartData.quantity.toString()) {
+                        const numValue = parseInt(tempQuantity, 10);
+                        if (!isNaN(numValue) && numValue > 0) {
+                          handleDirectQuantityChange(numValue);
+                        } else {
+                          setTempQuantity(cartData.quantity.toString());
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "w-16 text-center font-bold text-lg bg-white border-0 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-offset-1",
+                      membershipData.effectivelyFree
+                        ? "text-amber-600 focus:ring-amber-400"
+                        : "text-green-600 focus:ring-green-400"
+                    )}
+                    onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
+                      e.target.select()
+                    }
+                  />
+
+                  <button
+                    onClick={(e) => handleUpdateQuantity(e, 1)}
+                    disabled={
+                      membershipData.effectivelyFree &&
+                      membershipData.remainingAllocation <= 0
+                    }
+                    className={cn(
+                      "p-2 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm disabled:opacity-50 disabled:hover:scale-100",
+                      membershipData.effectivelyFree
+                        ? "text-amber-600 hover:bg-amber-100 bg-white"
+                        : "text-green-600 hover:bg-green-100 bg-white"
+                    )}
+                    title="Increase quantity"
+                  >
+                    <Plus size={18} />
+                  </button>
                 </div>
 
-                {/* Full Width View Cart Button */}
+                {/* Enhanced View Cart Button */}
                 <button
                   onClick={handleViewCart}
-                  disabled={cartData.isProductLoading}
-                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold disabled:opacity-50"
+                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold"
                 >
                   <Eye className="w-4 h-4" />
-                  View Cart
+                  View Cart ({cartData.quantity})
                 </button>
               </>
             ) : (
               <>
-                {/* Price Row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    {membershipData.effectivelyFree ? (
-                      <div></div>
-                    ) : (
-                      <div>
-                        {product.compareAtPrice &&
-                          product.compareAtPrice > product.price && (
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm text-gray-500 line-through">
-                                ${product.compareAtPrice.toFixed(2)}
-                              </span>
-                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
-                                {discountPercentage}% OFF
-                              </span>
-                            </div>
-                          )}
-                        <span className="text-2xl font-bold text-green-600">
-                          ${product.price.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
+                {/* Price Row - Only for non-membership items */}
+                {!membershipData.effectivelyFree && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      {product.compareAtPrice &&
+                        product.compareAtPrice > product.price && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm text-gray-500 line-through">
+                              ${product.compareAtPrice.toFixed(2)}
+                            </span>
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold">
+                              {discountPercentage}% OFF
+                            </span>
+                          </div>
+                        )}
+                      <span className="text-2xl font-bold text-green-600">
+                        ${product.price.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Add to Cart or Sign In Button */}
                 <button
                   onClick={handleAddToCart}
                   disabled={
-                    cartData.isProductLoading ||
-                    (membershipData.effectivelyFree &&
-                      membershipData.remainingAllocation === 0)
+                    membershipData.effectivelyFree &&
+                    membershipData.remainingAllocation === 0
                   }
                   className={cn(
-                    "w-full py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed",
+                    "w-full py-3 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
                     isSignedIn
                       ? membershipData.effectivelyFree
                         ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
@@ -1995,12 +2060,7 @@ export function EnhancedProductCard({
                       : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
                   )}
                 >
-                  {cartData.isProductLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Adding...
-                    </>
-                  ) : isSignedIn ? (
+                  {isSignedIn ? (
                     membershipData.effectivelyFree ? (
                       membershipData.remainingAllocation > 0 ? (
                         <>

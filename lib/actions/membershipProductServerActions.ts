@@ -324,3 +324,111 @@ export async function getFeaturedProductsWithMembership(
     return [];
   }
 }
+
+// Get related products with membership context for product detail pages
+export async function getRelatedProductsForCard(
+  categoryId?: string,
+  currentProductId?: string,
+  limit: number = 4
+): Promise<ProductWithMembership[]> {
+  try {
+    await connectToDatabase();
+
+    // Build query for related products
+    const query: any = { isActive: true };
+    
+    // If we have a category, find products in the same category
+    if (categoryId) {
+      query.category = categoryId;
+    }
+    
+    // Exclude the current product
+    if (currentProductId) {
+      query._id = { $ne: currentProductId };
+    }
+
+    // Get related products
+    const relatedProducts = await Product.find(query)
+      .populate("category", "name slug _id")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // If we don't have enough products from the same category, get some general ones
+    if (relatedProducts.length < limit) {
+      const additionalQuery: any = { 
+        isActive: true,
+        _id: { 
+          $nin: [
+            ...relatedProducts.map(p => p._id),
+            ...(currentProductId ? [currentProductId] : [])
+          ]
+        }
+      };
+
+      const additionalProducts = await Product.find(additionalQuery)
+        .populate("category", "name slug _id")
+        .sort({ isFeatured: -1, createdAt: -1 })
+        .limit(limit - relatedProducts.length)
+        .lean();
+
+      relatedProducts.push(...additionalProducts);
+    }
+
+    // Get user membership for enhanced product data
+    const { userId } = await auth();
+    let membership: any = null;
+
+    if (userId) {
+      membership = await getUserActiveMembership(userId);
+    }
+
+    // Enhance products with membership info
+    const enhancedProducts: ProductWithMembership[] = relatedProducts.map(
+      (product) => {
+        const enhancedProduct: ProductWithMembership = {
+          ...product,
+          _id: product._id.toString(),
+          category: product.category
+            ? {
+                ...(product.category as any),
+                _id: (product.category as any)._id.toString(),
+              }
+            : null,
+        };
+
+        // Add membership info if user has membership and product is eligible
+        if (membership && product.category) {
+          const categoryUsage = membership.productUsage.find(
+            (usage: any) =>
+              usage.categoryId.toString() === (product.category as any)._id.toString()
+          );
+
+          if (categoryUsage && categoryUsage.availableQuantity > 0) {
+            enhancedProduct.membershipInfo = {
+              isEligibleForFree: true,
+              remainingAllocation: categoryUsage.availableQuantity,
+              categoryName: categoryUsage.categoryName,
+              categoryId: categoryUsage.categoryId.toString(),
+              membershipTier: (membership.membership as any).tier,
+              totalAllocation: categoryUsage.allocatedQuantity,
+              usedAllocation: categoryUsage.usedQuantity,
+              savings: product.price,
+            };
+          }
+        }
+
+        return enhancedProduct;
+      }
+    );
+
+    console.log(
+      `✅ Fetched ${enhancedProducts.length} related products with membership context`
+    );
+
+    return enhancedProducts;
+  } catch (error) {
+    console.error("❌ Error fetching related products with membership:", error);
+    return [];
+  }
+}
