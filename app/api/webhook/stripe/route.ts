@@ -383,15 +383,41 @@ async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
         // Get subscription details for period info
         const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as StripeSubscriptionWithPeriod;
         
-        incompleteMembership.nextBillingDate = new Date(subscription.current_period_end * 1000);
-        incompleteMembership.currentPeriodStart = new Date(subscription.current_period_start * 1000);
-        incompleteMembership.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        console.log("Subscription details:", {
+          id: subscription.id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end
+        });
+        
+        if (subscription.current_period_end && subscription.current_period_start) {
+          incompleteMembership.nextBillingDate = new Date(subscription.current_period_end * 1000);
+          incompleteMembership.currentPeriodStart = new Date(subscription.current_period_start * 1000);
+          incompleteMembership.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+          incompleteMembership.usageResetDate = new Date(subscription.current_period_end * 1000); // Set usage reset to end of period
+        } else {
+          console.warn("Subscription period data missing, using fallback dates");
+          const now = new Date();
+          const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+          
+          incompleteMembership.nextBillingDate = nextMonth;
+          incompleteMembership.currentPeriodStart = now;
+          incompleteMembership.currentPeriodEnd = nextMonth;
+          incompleteMembership.usageResetDate = nextMonth;
+        }
 
         await incompleteMembership.save();
         console.log(`✅ Activated incomplete membership ${incompleteMembership._id} for user ${user._id}`);
       } else {
         // Get subscription details for period info
         const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as StripeSubscriptionWithPeriod;
+
+        console.log("Subscription details for new membership:", {
+          id: subscription.id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end
+        });
 
         // Initialize product usage tracking
         const productUsage = membership.productAllocations.map((allocation: any) => ({
@@ -402,16 +428,36 @@ async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
           availableQuantity: allocation.quantity,
         }));
 
+        // Calculate dates with fallback
+        const now = new Date();
+        let nextBillingDate, currentPeriodStart, currentPeriodEnd, usageResetDate;
+
+        if (subscription.current_period_end && subscription.current_period_start) {
+          nextBillingDate = new Date(subscription.current_period_end * 1000);
+          currentPeriodStart = new Date(subscription.current_period_start * 1000);
+          currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+          usageResetDate = new Date(subscription.current_period_end * 1000);
+        } else {
+          console.warn("Subscription period data missing, using fallback dates");
+          const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+          
+          nextBillingDate = nextMonth;
+          currentPeriodStart = now;
+          currentPeriodEnd = nextMonth;
+          usageResetDate = nextMonth;
+        }
+
         userMembership = new UserMembership({
           user: user._id,
           membership: membershipId,
           subscriptionId: subscriptionId,
           status: "active",
-          startDate: new Date(),
-          nextBillingDate: new Date(subscription.current_period_end * 1000),
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          lastPaymentDate: new Date(),
+          startDate: now,
+          nextBillingDate,
+          currentPeriodStart,
+          currentPeriodEnd,
+          usageResetDate,
+          lastPaymentDate: now,
           lastPaymentAmount: charge.amount / 100, // Convert from cents
           productUsage,
         });
