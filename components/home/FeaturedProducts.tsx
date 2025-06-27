@@ -15,6 +15,7 @@ import {
 import { getProducts } from "@/lib/actions/productServerActions";
 import { EnhancedProductCard } from "../shop/ProductCard";
 import { Product } from "@/types";
+import { getFeaturedProductsWithMembership } from "@/lib/actions/membershipProductServerActions";
 
 export function FeaturedProducts() {
   const ref = useRef<HTMLDivElement>(null);
@@ -30,16 +31,10 @@ export function FeaturedProducts() {
     const fetchFeaturedProducts = async () => {
       try {
         setLoading(true);
-        const result = await getProducts({
-          isFeatured: true,
-          isActive: true,
-          sortBy: "createdAt",
-          sortOrder: "desc",
-          limit: 4, // Only show 4 featured products
-        });
+        const result = await getFeaturedProductsWithMembership(4); // Only show 4 featured products
 
         // Map API products to Product interface
-        const mappedProducts = result.products.map((p: any) => ({
+        const mappedProducts = result.map((p: any) => ({
           _id: p._id,
           name: p.name,
           slug: p.slug,
@@ -63,9 +58,62 @@ export function FeaturedProducts() {
           features: p.features || [],
           isActive: p.isActive ?? true,
           isFeatured: p.isFeatured ?? false,
+          tags: p.tags || [],
+          ingredients: p.ingredients || [],
+          inventory: p.inventory ?? 0,
+          trackQuantity: p.trackQuantity ?? false,
+          sku: p.sku ?? "",
+          barcode: p.barcode ?? "",
+          weight: p.weight ?? 0,
+          unit: p.unit ?? "",
+          brand: p.brand ?? "",
+          vendor: p.vendor ?? "",
+          options: p.options || [],
+          variants: p.variants || [],
+          seo: p.seo || { title: "", description: "" },
+          createdAt: p.createdAt ?? "",
+          updatedAt: p.updatedAt ?? "",
+          publishedAt: p.publishedAt ?? "",
+          deletedAt: p.deletedAt ?? null,
+
+          // Add all missing required IProduct fields with defaults
+          allowBackorder: p.allowBackorder ?? false,
+          isDiscounted: p.isDiscounted ?? false,
+          promotionEligible: p.promotionEligible ?? false,
+          promotionTags: p.promotionTags || [],
+          crossSellProducts: p.crossSellProducts || [],
+          upSellProducts: p.upSellProducts || [],
+          meta: p.meta || {},
+          shippingClass: p.shippingClass ?? "",
+          shippingRequired: p.shippingRequired ?? false,
+          shippingWeight: p.shippingWeight ?? 0,
+          shippingDimensions: p.shippingDimensions || {
+            length: 0,
+            width: 0,
+            height: 0,
+          },
+          taxClass: p.taxClass ?? "",
+          taxStatus: p.taxStatus ?? "",
+          minPurchaseQty: p.minPurchaseQty ?? 1,
+          maxPurchaseQty: p.maxPurchaseQty ?? 100,
+          discontinued: p.discontinued ?? false,
+          externalUrl: p.externalUrl ?? "",
+          externalButtonText: p.externalButtonText ?? "",
+          downloadable: p.downloadable ?? false,
+          downloadUrl: p.downloadUrl ?? "",
+          digital: p.digital ?? false,
+          fileSize: p.fileSize ?? "",
+          fileType: p.fileType ?? "",
+          recurring: p.recurring ?? false,
+          subscriptionInterval: p.subscriptionInterval ?? "",
+          subscriptionTrialDays: p.subscriptionTrialDays ?? 0,
+          membershipRequired: p.membershipRequired ?? false,
+          membershipPlans: p.membershipPlans || [],
+          customFields: p.customFields || [],
+          // Add any other required fields from IProduct here as needed
         }));
 
-        setFeaturedProducts(mappedProducts);
+        setFeaturedProducts(mappedProducts as unknown as Product[]);
         setError(null);
       } catch (err) {
         console.error("Error fetching featured products:", err);
