@@ -918,21 +918,15 @@ trackingEventSchema.index({ order: 1 });
 trackingEventSchema.index({ status: 1 });
 trackingEventSchema.index({ timestamp: -1 });
 trackingEventSchema.index({ isPublic: 1 });
-// User indexes
-userSchema.index({ clerkId: 1 });
-userSchema.index({ email: 1 });
-userSchema.index({ stripeCustomerId: 1 });
+// User indexes - clerkId, email, stripeCustomerId already have unique indexes
 
-// User Profile indexes
-userProfileSchema.index({ user: 1 });
+// User Profile indexes - user already has unique index
 userProfileSchema.index({ "savedAddresses.isDefault": 1 });
 userProfileSchema.index({ preferredDeliveryMethod: 1 });
 
-// Category indexes
-categorySchema.index({ slug: 1 });
+// Category indexes - slug already has unique index
 
-// Product indexes
-productSchema.index({ slug: 1 });
+// Product indexes - slug already has unique index
 productSchema.index({ category: 1 });
 productSchema.index({ isActive: 1 });
 productSchema.index({ isFeatured: 1 });
@@ -949,8 +943,7 @@ cartSchema.index({ clerkUserId: 1 });
 cartSchema.index({ sessionId: 1 });
 cartSchema.index({ promotionCode: 1 });
 
-// Order indexes
-orderSchema.index({ orderNumber: 1 });
+// Order indexes - orderNumber already has unique index
 orderSchema.index({ user: 1 });
 orderSchema.index({ "appliedPromotion.promotionId": 1 });
 
@@ -1533,7 +1526,7 @@ membershipOrderSchema.index({ user: 1 });
 membershipOrderSchema.index({ status: 1 });
 membershipOrderSchema.index({ deliveryDate: 1 });
 membershipOrderSchema.index({ orderNumber: 1 });
-membershipSchema.index({ stripePriceId: 1 });
+// Membership indexes - stripePriceId already has unique index
 
 membershipAnalyticsSchema.index({ membership: 1 });
 membershipAnalyticsSchema.index({ period: 1, periodStart: 1 });
