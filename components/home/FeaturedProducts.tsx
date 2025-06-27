@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 
 import { getProducts } from "@/lib/actions/productServerActions";
-import { Product, ProductCard } from "../shop/ProductCard";
+import { EnhancedProductCard } from "../shop/ProductCard";
+import { Product } from "@/types";
 
 export function FeaturedProducts() {
   const ref = useRef<HTMLDivElement>(null);
@@ -170,7 +171,7 @@ export function FeaturedProducts() {
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <ProductCard
+                  <EnhancedProductCard
                     product={product}
                     showCategory={true}
                     showFeatures={true}
@@ -200,7 +201,7 @@ export function FeaturedProducts() {
                         key={product._id}
                         className="w-full flex-shrink-0 px-4"
                       >
-                        <ProductCard
+                        <EnhancedProductCard
                           product={product}
                           showCategory={true}
                           showFeatures={true}

@@ -250,7 +250,8 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Product, ProductCard } from "../shop/ProductCard";
+import { EnhancedProductCard } from "../shop/ProductCard";
+import { Product } from "@/types";
 
 interface RelatedProductsProps {
   products: Product[];
@@ -293,7 +294,7 @@ export default function RelatedProducts({ products }: RelatedProductsProps) {
             whileHover={{ y: -5 }}
             className="group"
           >
-            <ProductCard
+            <EnhancedProductCard
               product={product}
               showCategory={true}
               showFeatures={true}

@@ -7,7 +7,7 @@ import {
   SearchAndFiltersSkeleton,
 } from "@/components/shop/skeletons/Skeletons";
 
-import { ProductsGrid } from "@/components/shop/ProductsGrid";
+import { EnhancedProductsGrid } from "@/components/shop/ProductsGrid";
 import { SearchAndFilters } from "@/components/shop/SearchAndFilters";
 import { getCategories } from "@/lib/actions/productServerActions";
 
@@ -95,7 +95,7 @@ export default async function ShopPage({
 
           {/* Products Grid with Suspense */}
           <Suspense fallback={<ProductsGridSkeleton count={6} />}>
-            <ProductsGrid
+            <EnhancedProductsGrid
               search={search}
               category={category}
               sortBy={sortBy}

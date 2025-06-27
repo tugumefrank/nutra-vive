@@ -72,6 +72,7 @@
     "@react-email/tailwind": "^1.0.5",
     "@tailwindcss/postcss": "^4",
     "@types/date-fns": "^2.5.3",
+    "@types/lodash": "^4.17.19",
     "@types/mongodb": "^4.0.6",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
