@@ -587,6 +587,7 @@ import {
   createCheckoutSession,
   confirmPayment,
 } from "@/lib/actions/orderServerActions";
+import { useUnifiedCartStore } from "@/store/unifiedCartStore";
 
 // Import validation utilities
 import { validateStep, getStepErrors } from "./utils/validation";
@@ -631,6 +632,9 @@ export default function CheckoutPage() {
   });
 
   const router = useRouter();
+
+  // Get cart clearing function from unified cart store
+  const { clearCartOptimistic } = useUnifiedCartStore();
 
   // Calculate totals using unified cart (after membership + promotions)
   const cartSubtotal = cart?.subtotal || 0;
@@ -1052,6 +1056,10 @@ export default function CheckoutPage() {
           
           // For free orders, no need to confirm payment - order is already complete
           setOrderComplete(true);
+          
+          // Clear the cart immediately after successful free order completion
+          await clearCartOptimistic();
+          
           toast.success("Free order placed successfully!");
         } else {
           setPaymentError(result.error || "Failed to create free order");
@@ -1115,6 +1123,10 @@ export default function CheckoutPage() {
 
       if (result.success && result.order) {
         setOrderComplete(true);
+        
+        // Clear the cart immediately after successful order completion
+        await clearCartOptimistic();
+        
         toast.success(
           "Order placed successfully! You will receive a confirmation email shortly."
         );

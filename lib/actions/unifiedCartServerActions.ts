@@ -9,7 +9,6 @@ import {
   getUserCartContext,
   getOrCreateCart,
   checkProductEligibility,
-  updateMembershipAllocations,
   serializeUnifiedCart,
   validatePromotionForUnifiedCart,
 } from "@/lib/helpers/unifiedCartHelpers";
@@ -129,18 +128,9 @@ export async function addToCart(
         newTotalQuantity - newFreeFromMembership;
       (existingItem as any).usesAllocation = newFreeFromMembership > 0;
 
-      // Update membership allocation if needed
-      if (context.hasMembership && allocationChange !== 0 && product.category) {
-        await updateMembershipAllocations(
-          context.membership!,
-          typeof product.category === "object" &&
-            product.category !== null &&
-            "_id" in product.category
-            ? (product.category as { _id: any })._id.toString()
-            : product.category?.toString(),
-          allocationChange
-        );
-      }
+      // NOTE: Membership allocations are NOT updated here - they're only deducted
+      // after successful order completion and payment confirmation to prevent
+      // premature allocation loss if users abandon cart or payment fails
     } else {
       // Add new item
       const newItem = {
@@ -168,18 +158,9 @@ export async function addToCart(
 
       cart.items.push(newItem as any);
 
-      // Update membership allocation
-      if (context.hasMembership && freeFromMembership > 0 && product.category) {
-        await updateMembershipAllocations(
-          context.membership!,
-          typeof product.category === "object" &&
-            product.category !== null &&
-            "_id" in product.category
-            ? (product.category as { _id: any })._id.toString()
-            : product.category?.toString(),
-          freeFromMembership
-        );
-      }
+      // NOTE: Membership allocations are NOT updated here - they're only deducted
+      // after successful order completion and payment confirmation to prevent
+      // premature allocation loss if users abandon cart or payment fails
     }
 
     // Revalidate promotion if one is applied
@@ -297,18 +278,10 @@ export async function updateCartItem(
     (existingItem as any).membershipSavings = newFreeQuantity * product.price;
     (existingItem as any).usesAllocation = newFreeQuantity > 0;
 
-    // Update membership allocation if needed
-    if (context.hasMembership && allocationChange !== 0 && product.category) {
-      await updateMembershipAllocations(
-        context.membership!,
-        typeof product.category === "object" &&
-          product.category !== null &&
-          "_id" in product.category
-          ? (product.category as { _id: any })._id.toString()
-          : product.category?.toString(),
-        allocationChange
-      );
-    }
+    // NOTE: Membership allocations are NOT updated here - they're only deducted
+    // after successful order completion and payment confirmation to prevent
+    // premature allocation loss if users abandon cart or payment fails
+    // The calculation above is for display/preview purposes only
 
     // Revalidate promotion
     if ((cart as any).promotionCode) {
@@ -365,17 +338,9 @@ export async function removeFromCart(
       return { success: false, error: "Item not found in cart" };
     }
 
-    // Restore membership allocation if item used it
-    if (context.hasMembership && (itemToRemove as any).usesAllocation) {
-      const freeQuantity = (itemToRemove as any).freeFromMembership || 0;
-      if (freeQuantity > 0 && (itemToRemove as any).categoryId) {
-        await updateMembershipAllocations(
-          context.membership!,
-          (itemToRemove as any).categoryId,
-          -freeQuantity // Negative to restore allocation
-        );
-      }
-    }
+    // NOTE: Membership allocations are NOT restored here since they were never
+    // actually deducted during cart operations. Allocations are only deducted
+    // after successful order completion and payment confirmation
 
     // Remove item from cart
     cart.items = cart.items.filter(
@@ -441,20 +406,9 @@ export async function getCart(): Promise<CartOperationResult> {
     cart.items = cart.items.filter((item: any) => item.product?.isActive);
 
     // Restore allocations for removed items
-    if (removedItems.length > 0 && context.hasMembership) {
-      for (const item of removedItems) {
-        if ((item as any).usesAllocation && (item as any).categoryId) {
-          const freeQuantity = (item as any).freeFromMembership || 0;
-          if (freeQuantity > 0) {
-            await updateMembershipAllocations(
-              context.membership!,
-              (item as any).categoryId,
-              -freeQuantity
-            );
-          }
-        }
-      }
-    }
+    // NOTE: Membership allocations are NOT restored here since they were never
+    // actually deducted during cart operations. Allocations are only deducted
+    // after successful order completion and payment confirmation
 
     // Revalidate promotion if items were removed
     if (
@@ -504,21 +458,9 @@ export async function clearCart(): Promise<{
     const context = await getUserCartContext();
     const cart = await getOrCreateCart(context.userId);
 
-    // Restore all allocations before clearing
-    if (context.hasMembership) {
-      for (const item of cart.items) {
-        if ((item as any).usesAllocation && (item as any).categoryId) {
-          const freeQuantity = (item as any).freeFromMembership || 0;
-          if (freeQuantity > 0) {
-            await updateMembershipAllocations(
-              context.membership!,
-              (item as any).categoryId,
-              -freeQuantity
-            );
-          }
-        }
-      }
-    }
+    // NOTE: Membership allocations are NOT restored here since they were never
+    // actually deducted during cart operations. Allocations are only deducted
+    // after successful order completion and payment confirmation
 
     // Clear cart
     cart.items = [];
