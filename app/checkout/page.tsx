@@ -579,8 +579,8 @@ import ReviewStep from "./components/ReviewStep";
 import PaymentStep from "./components/PaymentStep";
 import SuccessPage from "./components/SuccessPage";
 
-// Import membership actions and types
-import { getMembershipCart } from "@/lib/actions/membershipCartServerActions";
+// Import unified cart actions and types
+import { getCart } from "@/lib/actions/unifiedCartServerActions";
 import {
   createCheckoutSession,
   confirmPayment,
@@ -590,60 +590,15 @@ import {
 import { validateStep, getStepErrors } from "./utils/validation";
 import { checkoutSteps } from "./utils/constants";
 import type { FormData, StepErrors } from "./types";
+import { UnifiedCart } from "@/types/unifiedCart";
 import EnhancedOrderSummary from "./components/OrderSummary";
-
-// Enhanced Cart interface with membership support
-interface MembershipCartWithPromotion {
-  _id: string;
-  items: Array<{
-    _id: string;
-    product: {
-      _id: string;
-      name: string;
-      slug: string;
-      price: number;
-      images: string[];
-      category?: {
-        name: string;
-        slug: string;
-      };
-    };
-    quantity: number;
-    price: number;
-    originalPrice?: number;
-    membershipPrice: number;
-    isFreeFromMembership: boolean;
-    membershipSavings: number;
-    categoryId?: string;
-    categoryName?: string;
-  }>;
-  subtotal: number;
-  membershipDiscount: number;
-  promotionDiscount: number;
-  promotionCode?: string;
-  promotionName?: string;
-  finalTotal: number;
-  hasPromotionApplied: boolean;
-  hasMembershipApplied: boolean;
-  membershipInfo?: {
-    tier: string;
-    totalSavings: number;
-    allocationsUsed: Array<{
-      categoryId: string;
-      categoryName: string;
-      used: number;
-      allocated: number;
-      remaining: number;
-    }>;
-  };
-}
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
-export default function MembershipCheckoutPage() {
+export default function CheckoutPage() {
   // State management
-  const [cart, setCart] = useState<MembershipCartWithPromotion | null>(null);
+  const [cart, setCart] = useState<UnifiedCart | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -672,11 +627,11 @@ export default function MembershipCheckoutPage() {
 
   const router = useRouter();
 
-  // Calculate totals using membership cart finalTotal (after membership + promotions)
+  // Calculate totals using unified cart (after membership + promotions)
   const cartSubtotal = cart?.subtotal || 0;
   const membershipDiscount = cart?.membershipDiscount || 0;
   const promotionDiscount = cart?.promotionDiscount || 0;
-  const afterDiscountsTotal = cart?.finalTotal || 0; // This is subtotal - membershipDiscount - promotionDiscount
+  const afterDiscountsTotal = cart?.afterDiscountsTotal || 0; // This is subtotal - membershipDiscount - promotionDiscount
 
   // Calculate shipping based on after-discounts total
   const shipping = calculateShipping(
@@ -731,7 +686,7 @@ export default function MembershipCheckoutPage() {
   const loadCart = async () => {
     try {
       setLoading(true);
-      const result = await getMembershipCart();
+      const result = await getCart();
 
       if (result.success && result.cart) {
         setCart(result.cart);
@@ -750,6 +705,30 @@ export default function MembershipCheckoutPage() {
       router.push("/cart");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle cart updates from promotion applications/removals
+  const handleCartUpdate = (updatedCart: UnifiedCart) => {
+    setCart(updatedCart);
+
+    // Show updated totals message
+    const oldTotal = total;
+    const newAfterDiscountsTotal = updatedCart.afterDiscountsTotal || 0;
+    const newShipping = calculateShipping(
+      newAfterDiscountsTotal,
+      formData.deliveryMethod
+    );
+    const newTax = calculateTax(newAfterDiscountsTotal + newShipping);
+    const newTotal = newAfterDiscountsTotal + newShipping + newTax;
+
+    if (Math.abs(newTotal - oldTotal) > 0.01) {
+      const totalSavings = (updatedCart.membershipDiscount || 0) + (updatedCart.promotionDiscount || 0);
+      toast.info(`Order total updated: $${newTotal.toFixed(2)}`, {
+        description: totalSavings > 0 
+          ? `Total savings: $${totalSavings.toFixed(2)}`
+          : "Discounts removed",
+      });
     }
   };
 
@@ -957,7 +936,7 @@ export default function MembershipCheckoutPage() {
       case 1:
         return <ContactStep {...stepProps} />;
       case 2:
-        return <DeliveryMethodStep {...stepProps} />;
+        return <DeliveryMethodStep {...stepProps} afterDiscountsTotal={afterDiscountsTotal} />;
       case 3:
         return <AddressStep {...stepProps} />;
       case 4:
@@ -1086,7 +1065,7 @@ export default function MembershipCheckoutPage() {
             </motion.div>
           </div>
 
-          {/* Enhanced Order Summary Sidebar with Membership Support */}
+          {/* Enhanced Order Summary Sidebar with Unified Cart Support */}
           <div className="lg:col-span-1">
             <EnhancedOrderSummary
               cart={cart}
@@ -1098,6 +1077,7 @@ export default function MembershipCheckoutPage() {
               tax={tax}
               total={total}
               afterPromotionTotal={afterDiscountsTotal}
+              onCartUpdate={handleCartUpdate}
             />
           </div>
         </div>

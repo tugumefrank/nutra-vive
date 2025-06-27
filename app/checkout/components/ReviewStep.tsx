@@ -1,15 +1,16 @@
 // app/checkout/components/ReviewStep.tsx
 
-import { Gift, User, Truck, MapPin, Edit } from "lucide-react";
+import { Gift, User, Truck, MapPin, Edit, Crown } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import type { StepProps, CartData } from "../types";
+import type { StepProps } from "../types";
+import { UnifiedCart } from "@/types/unifiedCart";
 
 interface ReviewStepProps extends StepProps {
-  cart: CartData | null;
+  cart: UnifiedCart | null;
   total: number;
   tax: number;
 }
@@ -126,22 +127,44 @@ export default function ReviewStep({
                       fill
                       className="object-cover"
                     />
+                    {item.freeFromMembership > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        <Crown className="w-2 h-2" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1">
                     <h5 className="font-medium text-purple-900 text-sm">
                       {item.product.name}
                     </h5>
-                    <p className="text-xs text-purple-600">
-                      ${item.price.toFixed(2)} each
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-purple-600">
+                        ${item.finalPrice.toFixed(2)} each
+                      </p>
+                      {item.membershipSavings > 0 && (
+                        <Badge className="bg-amber-100 text-amber-700 text-xs">
+                          Save ${item.membershipSavings.toFixed(2)}
+                        </Badge>
+                      )}
+                      {item.freeFromMembership > 0 && (
+                        <Badge className="bg-green-100 text-green-700 text-xs">
+                          {item.freeFromMembership} FREE
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-purple-600">
                       Qty: {item.quantity}
                     </p>
                     <p className="font-semibold text-purple-900">
-                      ${(item.quantity * item.price).toFixed(2)}
+                      ${(item.quantity * item.finalPrice).toFixed(2)}
                     </p>
+                    {item.totalSavings > 0 && (
+                      <p className="text-xs text-green-600">
+                        Total saved: ${item.totalSavings.toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -154,8 +177,33 @@ export default function ReviewStep({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">${cart?.subtotal?.toFixed(2) || subtotal.toFixed(2)}</span>
               </div>
+              
+              {cart?.membershipDiscount && cart.membershipDiscount > 0 && (
+                <div className="flex justify-between bg-amber-50 -mx-2 px-2 py-1 rounded">
+                  <span className="text-amber-700 flex items-center">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Membership Savings
+                  </span>
+                  <span className="font-medium text-amber-600">
+                    -${cart.membershipDiscount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              
+              {cart?.promotionDiscount && cart.promotionDiscount > 0 && (
+                <div className="flex justify-between bg-green-50 -mx-2 px-2 py-1 rounded">
+                  <span className="text-green-700 flex items-center">
+                    <Gift className="w-3 h-3 mr-1" />
+                    Promotion ({cart.promotionCode})
+                  </span>
+                  <span className="font-medium text-green-600">
+                    -${cart.promotionDiscount.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium text-green-600">
@@ -171,6 +219,15 @@ export default function ReviewStep({
                 <span>Total</span>
                 <span className="text-orange-600">${total.toFixed(2)}</span>
               </div>
+              
+              {cart && (cart.membershipDiscount > 0 || cart.promotionDiscount > 0) && (
+                <div className="flex justify-between text-sm bg-green-100 -mx-2 px-2 py-1 rounded">
+                  <span className="text-green-700">Total Savings</span>
+                  <span className="font-bold text-green-600">
+                    ${((cart.membershipDiscount || 0) + (cart.promotionDiscount || 0)).toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

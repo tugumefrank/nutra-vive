@@ -7,12 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import type { StepProps } from "../types";
 
+interface DeliveryMethodStepProps extends StepProps {
+  afterDiscountsTotal: number; // Use discounted total for shipping calculation
+}
+
+// Helper function to calculate shipping
+function calculateShipping(amount: number, method: string): number {
+  if (method === "pickup") return 0; // Always free for pickup
+  if (amount >= 25) return 0; // Free shipping over $25 after all discounts
+  return method === "express" ? 9.99 : 5.99;
+}
+
 export default function DeliveryMethodStep({
   formData,
   onInputChange,
   errors,
   subtotal,
-}: StepProps) {
+  afterDiscountsTotal,
+}: DeliveryMethodStepProps) {
   return (
     <Card className="glass border-white/20">
       <CardHeader>
@@ -30,9 +42,14 @@ export default function DeliveryMethodStep({
           onValueChange={(value) => onInputChange("deliveryMethod", value)}
           className="space-y-3"
         >
+          {/* Standard Delivery */}
           <Label
             htmlFor="standard"
-            className="flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group"
+            className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
+              formData.deliveryMethod === "standard" 
+                ? "border-orange-500 bg-orange-50" 
+                : "border-gray-200"
+            }`}
           >
             <div className="flex items-center space-x-3">
               <RadioGroupItem value="standard" id="standard" />
@@ -46,15 +63,26 @@ export default function DeliveryMethodStep({
             </div>
             <Badge
               variant="secondary"
-              className="bg-green-100 text-green-700 font-medium"
+              className={
+                calculateShipping(afterDiscountsTotal, "standard") === 0
+                  ? "bg-green-100 text-green-700 font-medium"
+                  : "bg-gray-100 text-gray-700 font-medium"
+              }
             >
-              {subtotal >= 25 ? "FREE" : "$0.00"}
+              {calculateShipping(afterDiscountsTotal, "standard") === 0 
+                ? "FREE" 
+                : `$${calculateShipping(afterDiscountsTotal, "standard").toFixed(2)}`}
             </Badge>
           </Label>
 
+          {/* Express Delivery */}
           <Label
             htmlFor="express"
-            className="flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group"
+            className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
+              formData.deliveryMethod === "express" 
+                ? "border-orange-500 bg-orange-50" 
+                : "border-gray-200"
+            }`}
           >
             <div className="flex items-center space-x-3">
               <RadioGroupItem value="express" id="express" />
@@ -66,14 +94,28 @@ export default function DeliveryMethodStep({
                 </div>
               </div>
             </div>
-            <Badge variant="outline" className="font-medium">
-              $0.00
+            <Badge
+              variant="outline" 
+              className={
+                calculateShipping(afterDiscountsTotal, "express") === 0
+                  ? "bg-green-100 text-green-700 border-green-200 font-medium"
+                  : "font-medium"
+              }
+            >
+              {calculateShipping(afterDiscountsTotal, "express") === 0 
+                ? "FREE" 
+                : `$${calculateShipping(afterDiscountsTotal, "express").toFixed(2)}`}
             </Badge>
           </Label>
 
+          {/* Store Pickup */}
           <Label
             htmlFor="pickup"
-            className="flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group"
+            className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
+              formData.deliveryMethod === "pickup" 
+                ? "border-orange-500 bg-orange-50" 
+                : "border-gray-200"
+            }`}
           >
             <div className="flex items-center space-x-3">
               <RadioGroupItem value="pickup" id="pickup" />
@@ -100,15 +142,24 @@ export default function DeliveryMethodStep({
           <p className="text-red-500 text-sm mt-3">{errors.deliveryMethod}</p>
         )}
 
-        {/* Free shipping notice
-        {subtotal < 25 && (
+        {/* Free shipping notice */}
+        {afterDiscountsTotal < 25 && (
           <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-sm text-orange-700">
               💡 <strong>Free shipping</strong> on orders over $25! Add{" "}
-              <strong>${(25 - subtotal).toFixed(2)} more</strong> to qualify.
+              <strong>${(25 - afterDiscountsTotal).toFixed(2)} more</strong> to qualify for free shipping.
             </p>
           </div>
-        )} */}
+        )}
+
+        {/* Free shipping achieved notice */}
+        {afterDiscountsTotal >= 25 && formData.deliveryMethod !== "pickup" && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-700">
+              🎉 <strong>Congratulations!</strong> You qualify for free shipping!
+            </p>
+          </div>
+        )}
 
         {/* Store pickup details */}
         {formData.deliveryMethod === "pickup" && (

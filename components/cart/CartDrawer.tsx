@@ -537,11 +537,11 @@ export function CartDrawer() {
             </Button>
           </div>
         ) : (
-          // Cart with items
+          // Cart with items - Fixed layout
           <div className="flex-1 flex flex-col min-h-0">
-            {/* Cart Items */}
-            <ScrollArea className="flex-1 px-6">
-              <div className="space-y-4 py-4">
+            {/* Cart Items - Scrollable area */}
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="space-y-3 py-4">
                 <AnimatePresence>
                   {items.map((item: any) => (
                     <motion.div
@@ -550,10 +550,10 @@ export function CartDrawer() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       layout
-                      className="flex gap-4 p-4 rounded-xl glass border border-white/10 bg-white/50 backdrop-blur-sm"
+                      className="flex gap-3 p-3 rounded-lg glass border border-white/10 bg-white/50 backdrop-blur-sm"
                     >
-                      {/* Product Image */}
-                      <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      {/* Product Image - Smaller */}
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         {item.product.images?.[0] ? (
                           <Image
                             src={item.product.images[0]}
@@ -563,87 +563,72 @@ export function CartDrawer() {
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full">
-                            <ShoppingBag className="w-6 h-6 text-gray-400" />
+                            <ShoppingBag className="w-4 h-4 text-gray-400" />
                           </div>
                         )}
 
-                        {/* Free Badge */}
+                        {/* Free Badge - Smaller */}
                         {item.freeFromMembership > 0 && (
-                          <div className="absolute -top-1 -right-1">
-                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs scale-75">
-                              <Gift className="w-2 h-2 mr-1" />
-                              FREE
-                            </Badge>
+                          <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                            <Crown className="w-2 h-2" />
                           </div>
                         )}
                       </div>
 
-                      {/* Product Details */}
+                      {/* Product Details - More Compact */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="min-w-0">
-                            <h4 className="font-medium text-sm text-gray-900 truncate">
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-xs text-gray-900 truncate leading-tight">
                               {item.product.name}
                             </h4>
-                            {item.product.category && (
-                              <p className="text-xs text-green-600 font-medium">
-                                {item.product.category.name}
-                              </p>
-                            )}
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="font-bold">
+                                  ${(item.finalPrice * item.quantity).toFixed(2)}
+                                </span>
+                                {item.totalSavings > 0 && (
+                                  <span className="text-green-600">
+                                    (Save ${item.totalSavings.toFixed(2)})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Remove Button */}
+                          {/* Remove Button - Smaller */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveItem(item.product._id)}
                             disabled={isRemovingItem[item.product._id]}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0 flex-shrink-0"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0 ml-2"
                           >
                             {isRemovingItem[item.product._id] ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-2 h-2 animate-spin" />
                             ) : (
-                              <Trash2 className="w-3 h-3" />
+                              <X className="w-2 h-2" />
                             )}
                           </Button>
                         </div>
 
-                        {/* Pricing */}
-                        <div className="space-y-1 mb-3">
-                          {item.membershipSavings > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-purple-600 flex items-center gap-1">
-                                <Crown className="w-3 h-3" />
-                                Membership
-                              </span>
-                              <span className="text-purple-600 font-medium">
-                                -${item.membershipSavings.toFixed(2)}
-                              </span>
-                            </div>
+                        {/* Membership/Promotion badges - Compact */}
+                        <div className="flex items-center gap-1 mb-2">
+                          {item.freeFromMembership > 0 && (
+                            <Badge className="bg-amber-100 text-amber-700 text-xs px-1 py-0">
+                              <Crown className="w-2 h-2 mr-1" />
+                              {item.freeFromMembership} FREE
+                            </Badge>
                           )}
-
-                          {item.promotionSavings > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-green-600 flex items-center gap-1">
-                                <Tag className="w-3 h-3" />
-                                Promotion
-                              </span>
-                              <span className="text-green-600 font-medium">
-                                -${item.promotionSavings.toFixed(2)}
-                              </span>
-                            </div>
+                          {item.product.category && (
+                            <Badge variant="outline" className="text-xs px-1 py-0">
+                              {item.product.category.name}
+                            </Badge>
                           )}
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Total:</span>
-                            <span className="text-sm font-bold">
-                              ${(item.finalPrice * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
                         </div>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
+                        {/* Quantity Controls - Smaller */}
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="outline"
                             size="sm"
@@ -657,14 +642,14 @@ export function CartDrawer() {
                               isUpdatingItem[item.product._id] ||
                               item.quantity <= 1
                             }
-                            className="h-8 w-8 p-0"
+                            className="h-6 w-6 p-0"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-2 h-2" />
                           </Button>
 
-                          <span className="w-8 text-center text-sm font-medium">
+                          <span className="w-6 text-center text-xs font-medium">
                             {isUpdatingItem[item.product._id] ? (
-                              <Loader2 className="w-3 h-3 animate-spin mx-auto" />
+                              <Loader2 className="w-2 h-2 animate-spin mx-auto" />
                             ) : (
                               item.quantity
                             )}
@@ -680,9 +665,9 @@ export function CartDrawer() {
                               )
                             }
                             disabled={isUpdatingItem[item.product._id]}
-                            className="h-8 w-8 p-0"
+                            className="h-6 w-6 p-0"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-2 h-2" />
                           </Button>
                         </div>
                       </div>
@@ -690,19 +675,20 @@ export function CartDrawer() {
                   ))}
                 </AnimatePresence>
               </div>
-            </ScrollArea>
+            </div>
 
-            {/* Promotion Section */}
-            <div className="px-6 py-4 border-t border-white/10">
-              {hasPromotionApplied ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+            {/* Fixed Bottom Section - Promotion, Summary & Actions */}
+            <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-t border-white/10">
+              {/* Promotion Section - Compact */}
+              <div className="px-4 py-3 border-b border-white/5">
+                {hasPromotionApplied ? (
+                  <div className="flex items-center justify-between p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
                     <div className="min-w-0">
-                      <p className="font-medium text-green-900 text-sm">
+                      <p className="font-medium text-green-900 text-xs">
                         {promotionCode}
                       </p>
                       <p className="text-xs text-green-700 truncate">
-                        {promotionName}
+                        Saving ${promotionDiscount.toFixed(2)}
                       </p>
                     </div>
                     <Button
@@ -710,152 +696,136 @@ export function CartDrawer() {
                       size="sm"
                       onClick={handleRemovePromotion}
                       disabled={isRemovingPromotion}
-                      className="text-green-700 hover:text-green-800 flex-shrink-0"
+                      className="text-green-700 hover:text-green-800 flex-shrink-0 h-6 w-6 p-0"
                     >
                       {isRemovingPromotion ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3" />
                       )}
                     </Button>
                   </div>
-                  <p className="text-sm text-green-600 font-medium text-center">
-                    🎉 You're saving ${promotionDiscount.toFixed(2)}!
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-medium">Promotion Code</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <div className="flex-1">
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
                       <Input
-                        placeholder="Enter promo code"
+                        placeholder="Promo code"
                         value={promotionCodeInput}
                         onChange={(e) => setPromotionCodeInput(e.target.value)}
                         disabled={isApplyingPromotion || !canApplyPromotion()}
-                        className="text-sm rounded-xl"
+                        className="text-sm h-8 rounded-lg flex-1"
                       />
-                      {promotionValidationError && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {promotionValidationError}
-                        </p>
-                      )}
+                      <Button
+                        onClick={handleApplyPromotion}
+                        disabled={
+                          isApplyingPromotion ||
+                          !promotionCodeInput.trim() ||
+                          !canApplyPromotion()
+                        }
+                        size="sm"
+                        className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg h-8 px-3"
+                      >
+                        {isApplyingPromotion ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          "Apply"
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={handleApplyPromotion}
-                      disabled={
-                        isApplyingPromotion ||
-                        !promotionCodeInput.trim() ||
-                        !canApplyPromotion()
-                      }
-                      size="sm"
-                      className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl"
-                    >
-                      {isApplyingPromotion ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        "Apply"
-                      )}
-                    </Button>
-                  </div>
-
-                  {!canApplyPromotion() && stats.paidItems === 0 && (
-                    <p className="text-xs text-amber-600 text-center">
-                      Promotions apply to paid items only
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Order Summary - Simplified (No shipping/tax) */}
-            <div className="px-6 py-4 border-t border-white/10 bg-gradient-to-r from-gray-50/50 to-white/50 backdrop-blur-sm">
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span>${stats.subtotal.toFixed(2)}</span>
-                </div>
-
-                {stats.membershipDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-purple-600">
-                    <span className="flex items-center gap-1">
-                      <Crown className="w-3 h-3" />
-                      Membership Savings
-                    </span>
-                    <span>-${stats.membershipDiscount.toFixed(2)}</span>
-                  </div>
-                )}
-
-                {stats.promotionDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span className="flex items-center gap-1">
-                      <Tag className="w-3 h-3" />
-                      Promotion Savings
-                    </span>
-                    <span>-${stats.promotionDiscount.toFixed(2)}</span>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>
-                    $
-                    {(
-                      stats.subtotal -
-                      stats.membershipDiscount -
-                      stats.promotionDiscount
-                    ).toFixed(2)}
-                  </span>
-                </div>
-
-                {stats.totalSavings > 0 && (
-                  <div className="text-center">
-                    <Badge className="bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs animate-pulse">
-                      🎉 You saved ${stats.totalSavings.toFixed(2)}!
-                    </Badge>
+                    {promotionValidationError && (
+                      <p className="text-xs text-red-500">
+                        {promotionValidationError}
+                      </p>
+                    )}
+                    {!canApplyPromotion() && stats.paidItems === 0 && (
+                      <p className="text-xs text-amber-600 text-center">
+                        Promotions apply to paid items only
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <Button
-                  asChild
-                  size="lg"
-                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300"
-                  onClick={() => closeCart()}
-                >
-                  <Link href="/checkout">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Proceed to Checkout
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </Button>
+              {/* Order Summary - Compact */}
+              <div className="px-4 py-3">
+                <div className="space-y-1 mb-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span>${stats.subtotal.toFixed(2)}</span>
+                  </div>
 
-                <div className="flex gap-2">
+                  {stats.membershipDiscount > 0 && (
+                    <div className="flex justify-between text-xs text-purple-600">
+                      <span className="flex items-center gap-1">
+                        <Crown className="w-2 h-2" />
+                        Membership
+                      </span>
+                      <span>-${stats.membershipDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {stats.promotionDiscount > 0 && (
+                    <div className="flex justify-between text-xs text-green-600">
+                      <span className="flex items-center gap-1">
+                        <Tag className="w-2 h-2" />
+                        Promotion
+                      </span>
+                      <span>-${stats.promotionDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span className="text-green-600">
+                      ${stats.finalTotal.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {stats.totalSavings > 0 && (
+                    <div className="text-center">
+                      <Badge className="bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs">
+                        Saved ${stats.totalSavings.toFixed(2)}!
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons - Compact */}
+                <div className="space-y-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-xl"
                     asChild
+                    size="sm"
+                    className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 h-9"
                     onClick={() => closeCart()}
                   >
-                    <Link href="/cart">View Full Cart</Link>
+                    <Link href="/checkout">
+                      <CreditCard className="w-3 h-3 mr-2" />
+                      Checkout
+                      <ArrowRight className="w-3 h-3 ml-2" />
+                    </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearCart}
-                    className="text-red-600 border-red-200 hover:bg-red-50 rounded-xl"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 rounded-lg h-8 text-xs"
+                      asChild
+                      onClick={() => closeCart()}
+                    >
+                      <Link href="/cart">View Cart</Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearCart}
+                      className="text-red-600 border-red-200 hover:bg-red-50 rounded-lg h-8 px-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

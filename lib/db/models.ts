@@ -24,7 +24,7 @@ export { Document, Schema, Model } from "mongoose";
 
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-// User Interface (Missing from your models - needed for promotions)
+// User Interface with Profile Preferences
 export interface IUser extends Document {
   _id: string;
   clerkId: string;
@@ -34,6 +34,60 @@ export interface IUser extends Document {
   imageUrl?: string;
   stripeCustomerId?: string;
   role: "user" | "admin";
+  phone?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// User Profile/Preferences Interface for Checkout
+export interface IUserProfile extends Document {
+  _id: string;
+  user: mongoose.Types.ObjectId;
+  
+  // Saved Addresses
+  defaultShippingAddress?: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+  };
+  
+  savedAddresses: {
+    id: string;
+    label: string; // "Home", "Work", "Other"
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+    isDefault: boolean;
+    createdAt: Date;
+  }[];
+  
+  // Delivery Preferences
+  preferredDeliveryMethod: "standard" | "express" | "pickup";
+  deliveryInstructions?: string;
+  
+  // Communication Preferences
+  marketingOptIn: boolean;
+  smsNotifications: boolean;
+  emailNotifications: boolean;
+  
+  // Order History Stats (for quick reference)
+  totalOrders: number;
+  totalSpent: number;
+  averageOrderValue: number;
+  lastOrderDate?: Date;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -405,9 +459,67 @@ const userSchema = new Schema<IUser>(
     firstName: String,
     lastName: String,
     imageUrl: String,
+    phone: String,
     role: { type: String, enum: ["user", "admin"], default: "user" },
     // Stripe integration
     stripeCustomerId: { type: String, unique: true, sparse: true },
+  },
+  { timestamps: true }
+);
+
+// User Profile Schema
+const userProfileSchema = new Schema<IUserProfile>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    
+    // Default shipping address
+    defaultShippingAddress: {
+      firstName: String,
+      lastName: String,
+      address1: String,
+      address2: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      country: { type: String, default: "US" },
+      phone: String,
+    },
+    
+    // Multiple saved addresses
+    savedAddresses: [{
+      id: { type: String, required: true },
+      label: { type: String, default: "Home" },
+      firstName: String,
+      lastName: String,
+      address1: String,
+      address2: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      country: { type: String, default: "US" },
+      phone: String,
+      isDefault: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now },
+    }],
+    
+    // Delivery preferences
+    preferredDeliveryMethod: {
+      type: String,
+      enum: ["standard", "express", "pickup"],
+      default: "standard"
+    },
+    deliveryInstructions: String,
+    
+    // Communication preferences
+    marketingOptIn: { type: Boolean, default: false },
+    smsNotifications: { type: Boolean, default: true },
+    emailNotifications: { type: Boolean, default: true },
+    
+    // Order stats
+    totalOrders: { type: Number, default: 0 },
+    totalSpent: { type: Number, default: 0 },
+    averageOrderValue: { type: Number, default: 0 },
+    lastOrderDate: Date,
   },
   { timestamps: true }
 );
@@ -811,6 +923,11 @@ userSchema.index({ clerkId: 1 });
 userSchema.index({ email: 1 });
 userSchema.index({ stripeCustomerId: 1 });
 
+// User Profile indexes
+userProfileSchema.index({ user: 1 });
+userProfileSchema.index({ "savedAddresses.isDefault": 1 });
+userProfileSchema.index({ preferredDeliveryMethod: 1 });
+
 // Category indexes
 categorySchema.index({ slug: 1 });
 
@@ -881,6 +998,9 @@ orderSchema.pre("save", async function (next) {
 // MODELS
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema);
+
+export const UserProfile: Model<IUserProfile> =
+  mongoose.models.UserProfile || mongoose.model<IUserProfile>("UserProfile", userProfileSchema);
 
 export const Category: Model<ICategory> =
   mongoose.models.Category ||

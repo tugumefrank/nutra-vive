@@ -415,81 +415,21 @@ import {
   applyPromotionToCart,
   removePromotionFromCart,
   validatePromotionCode,
-} from "@/lib/actions/cartServerActions";
+} from "@/lib/actions/unifiedCartServerActions";
 
-// Enhanced interfaces for both regular and membership carts
-interface BaseCartItem {
-  _id: string;
-  product: {
-    _id: string;
-    name: string;
-    slug: string;
-    price: number;
-    images: string[];
-    category?: {
-      name: string;
-      slug: string;
-    };
-  };
-  quantity: number;
-  price: number;
-  originalPrice?: number;
-}
-
-interface MembershipCartItem extends BaseCartItem {
-  membershipPrice: number;
-  isFreeFromMembership: boolean;
-  membershipSavings: number;
-  categoryId?: string;
-  categoryName?: string;
-}
-
-interface BaseCart {
-  _id: string;
-  items: BaseCartItem[];
-  subtotal: number;
-  promotionDiscount: number;
-  promotionCode?: string;
-  promotionName?: string;
-  finalTotal: number;
-  hasPromotionApplied: boolean;
-}
-
-interface MembershipCart extends Omit<BaseCart, "items"> {
-  items: MembershipCartItem[];
-  membershipDiscount: number;
-  hasMembershipApplied: boolean;
-  membershipInfo?: {
-    tier: string;
-    totalSavings: number;
-    allocationsUsed: Array<{
-      categoryId: string;
-      categoryName: string;
-      used: number;
-      allocated: number;
-      remaining: number;
-    }>;
-  };
-}
-
-type Cart = BaseCart | MembershipCart;
+import { UnifiedCart } from "@/types/unifiedCart";
 
 interface OrderSummaryProps {
-  cart: Cart | null;
+  cart: UnifiedCart | null;
   cartSubtotal: number;
   promotionDiscount: number;
   afterPromotionTotal: number;
   shipping: number;
   tax: number;
   total: number;
-  onCartUpdate?: (cart: Cart) => void;
+  onCartUpdate?: (cart: UnifiedCart) => void;
   membershipDiscount?: number;
   afterDiscountsTotal?: number;
-}
-
-// Type guard to check if cart is a membership cart
-function isMembershipCart(cart: Cart): cart is MembershipCart {
-  return "membershipDiscount" in cart && "hasMembershipApplied" in cart;
 }
 
 export default function EnhancedOrderSummary({
@@ -509,7 +449,7 @@ export default function EnhancedOrderSummary({
 
   if (!cart) return null;
 
-  const isMembership = isMembershipCart(cart);
+  const hasMembership = cart.hasMembershipApplied;
   const totalSavings = (membershipDiscount || 0) + promotionDiscount;
   const finalSubtotal = afterDiscountsTotal || afterPromotionTotal;
 
@@ -602,7 +542,7 @@ export default function EnhancedOrderSummary({
       </div>
 
       {/* Membership Benefits Display */}
-      {isMembership && cart.hasMembershipApplied && cart.membershipInfo && (
+      {hasMembership && cart.membershipInfo && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -703,7 +643,7 @@ export default function EnhancedOrderSummary({
             </div>
             <div className="text-xs text-gray-500 flex items-center">
               <Info className="w-3 h-3 mr-1" />
-              {isMembership
+              {hasMembership
                 ? "Stack with membership benefits for maximum savings"
                 : "Enter a valid promotion code to save on your order"}
             </div>
@@ -718,9 +658,6 @@ export default function EnhancedOrderSummary({
         </h4>
         <div className="max-h-40 overflow-y-auto space-y-2">
           {cart.items.map((item) => {
-            const membershipItem = isMembership
-              ? (item as MembershipCartItem)
-              : null;
             return (
               <div
                 key={item._id}
@@ -734,7 +671,7 @@ export default function EnhancedOrderSummary({
                       fill
                       className="object-cover"
                     />
-                    {membershipItem?.isFreeFromMembership && (
+                    {item.freeFromMembership > 0 && (
                       <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                         <Crown className="w-2 h-2" />
                       </div>
@@ -748,38 +685,33 @@ export default function EnhancedOrderSummary({
                       <span className="text-xs text-gray-500">
                         Qty: {item.quantity}
                       </span>
-                      {membershipItem?.isFreeFromMembership && (
+                      {item.freeFromMembership > 0 && (
                         <Badge
                           variant="secondary"
                           className="text-xs bg-amber-100 text-amber-700"
                         >
                           <Crown className="w-2 h-2 mr-1" />
-                          FREE
+                          {item.freeFromMembership} FREE
                         </Badge>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  {membershipItem?.isFreeFromMembership ? (
+                  {item.paidQuantity === 0 ? (
                     <div className="text-sm font-medium text-amber-600">
                       FREE
                     </div>
                   ) : (
                     <div className="text-sm font-medium text-gray-900">
-                      $
-                      {(
-                        item.quantity *
-                        (membershipItem?.membershipPrice || item.price)
-                      ).toFixed(2)}
+                      ${(item.paidQuantity * item.finalPrice).toFixed(2)}
                     </div>
                   )}
-                  {membershipItem?.membershipSavings &&
-                    membershipItem.membershipSavings > 0 && (
-                      <div className="text-xs text-amber-600">
-                        Saved ${membershipItem.membershipSavings.toFixed(2)}
-                      </div>
-                    )}
+                  {item.membershipSavings > 0 && (
+                    <div className="text-xs text-amber-600">
+                      Saved ${item.membershipSavings.toFixed(2)}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -796,7 +728,7 @@ export default function EnhancedOrderSummary({
           <span className="font-medium">${cartSubtotal.toFixed(2)}</span>
         </div>
 
-        {isMembership && membershipDiscount > 0 && (
+        {hasMembership && membershipDiscount > 0 && (
           <div className="flex justify-between text-sm bg-amber-50 -mx-2 px-2 py-1 rounded">
             <span className="text-amber-700 flex items-center font-medium">
               <Crown className="w-3 h-3 mr-1" />
@@ -857,11 +789,9 @@ export default function EnhancedOrderSummary({
             <span>Total Saved: ${totalSavings.toFixed(2)}</span>
           </div>
           <div className="text-xs text-green-600 mt-1">
-            {isMembership &&
-            cart.hasMembershipApplied &&
-            cart.hasPromotionApplied
+            {hasMembership && cart.hasPromotionApplied
               ? "Membership + Promotion Benefits"
-              : isMembership && cart.hasMembershipApplied
+              : hasMembership
                 ? "Membership Benefits"
                 : "Promotion Benefits"}
           </div>
