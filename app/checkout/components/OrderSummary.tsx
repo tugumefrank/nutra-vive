@@ -651,72 +651,16 @@ export default function EnhancedOrderSummary({
         )}
       </div>
 
-      {/* Cart Items Summary */}
-      <div className="space-y-2">
-        <h4 className="font-medium text-gray-700 text-sm md:text-base">
-          Items in Order
-        </h4>
-        <div className="max-h-40 overflow-y-auto space-y-2">
-          {cart.items.map((item) => {
-            return (
-              <div
-                key={item._id}
-                className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={item.product.images[0] || "/api/placeholder/150/150"}
-                      alt={item.product.name}
-                      fill
-                      className="object-cover"
-                    />
-                    {item.freeFromMembership > 0 && (
-                      <div className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                        <Crown className="w-2 h-2" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {item.product.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">
-                        Qty: {item.quantity}
-                      </span>
-                      {item.freeFromMembership > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs bg-amber-100 text-amber-700"
-                        >
-                          <Crown className="w-2 h-2 mr-1" />
-                          {item.freeFromMembership} FREE
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  {item.paidQuantity === 0 ? (
-                    <div className="text-sm font-medium text-amber-600">
-                      FREE
-                    </div>
-                  ) : (
-                    <div className="text-sm font-medium text-gray-900">
-                      ${(item.paidQuantity * item.finalPrice).toFixed(2)}
-                    </div>
-                  )}
-                  {item.membershipSavings > 0 && (
-                    <div className="text-xs text-amber-600">
-                      Saved ${item.membershipSavings.toFixed(2)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      {/* Simplified Cart Summary - Just item count and total */}
+      <div className="text-center p-3 bg-gray-50 rounded-lg">
+        <div className="text-sm text-gray-600">
+          {cart.items.length} {cart.items.length === 1 ? "item" : "items"} in your order
         </div>
+        {totalSavings > 0 && (
+          <div className="text-xs text-green-600 mt-1">
+            You're saving ${totalSavings.toFixed(2)}!
+          </div>
+        )}
       </div>
 
       <Separator />

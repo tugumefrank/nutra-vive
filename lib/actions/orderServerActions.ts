@@ -1390,9 +1390,9 @@ function calculateTax(subtotal: number, shippingAmount: number): number {
   return 0; // Math.round((subtotal + shippingAmount) * 0.08 * 100) / 100;
 }
 
-// Create checkout session (updated to handle pickup orders)
+// Create checkout session (updated to handle pickup orders and free orders)
 export async function createCheckoutSession(
-  checkoutData: any // Use any for initial data, we'll validate it below
+  checkoutData: any & { skipPayment?: boolean } // Use any for initial data, we'll validate it below
 ): Promise<{
   success: boolean;
   clientSecret?: string;
@@ -1446,6 +1446,9 @@ export async function createCheckoutSession(
     const taxAmount = calculateTax(subtotal, shippingAmount);
     const totalAmount = subtotal + shippingAmount + taxAmount;
 
+    // Check if this is a free order (total is $0 or skipPayment is explicitly requested)
+    const isFreeOrder = totalAmount <= 0 || checkoutData.skipPayment === true;
+
     // Generate order number
     const orderNumber = await generateOrderNumber();
 
@@ -1453,8 +1456,8 @@ export async function createCheckoutSession(
     const order = new Order({
       orderNumber,
       email: validatedData.email,
-      status: "pending",
-      paymentStatus: "pending",
+      status: isFreeOrder ? "processing" : "pending", // Free orders skip to processing
+      paymentStatus: isFreeOrder ? "paid" : "pending", // Free orders are automatically "paid"
       subtotal: Math.round(subtotal * 100) / 100,
       taxAmount: Math.round(taxAmount * 100) / 100,
       shippingAmount: Math.round(shippingAmount * 100) / 100,
@@ -1525,31 +1528,109 @@ export async function createCheckoutSession(
 
     await order.save();
 
-    // Create Stripe payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100), // Stripe expects cents
-      currency: "usd",
-      metadata: {
+    // Handle free orders vs paid orders
+    if (isFreeOrder) {
+      // For free orders, skip Stripe payment processing
+      console.log("✅ Free order created:", orderNumber);
+
+      // Update product inventory for free orders
+      for (const item of order.items) {
+        const product = await Product.findById(item.product);
+        if (product && product.trackQuantity) {
+          await Product.findByIdAndUpdate(product._id, {
+            $inc: { inventory: -item.quantity },
+          });
+        }
+      }
+
+      // Clear user's cart (including promotion data)
+      await Cart.findOneAndUpdate(
+        { clerkUserId: userId },
+        {
+          $set: {
+            items: [],
+            promotionCode: undefined,
+            promotionDiscount: 0,
+            promotionName: undefined,
+            promotionId: undefined,
+          },
+        }
+      );
+
+      // Send order confirmation email for free orders
+      try {
+        await sendOrderConfirmation(order.email, {
+          orderNumber: order.orderNumber,
+          customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+          items: order.items.map((item: any) => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price,
+            totalPrice: item.totalPrice,
+            productImage: item.productImage,
+          })),
+          subtotal: order.subtotal,
+          shipping: order.shippingAmount,
+          tax: order.taxAmount,
+          total: order.totalAmount,
+        });
+
+        console.log("✅ Free order confirmation email sent successfully");
+      } catch (emailError) {
+        console.error("📧 Free order confirmation email failed:", emailError);
+        // Don't fail the order if email fails
+      }
+
+      // Send admin notification for free orders
+      try {
+        await sendAdminNewOrder(
+          process.env.ADMIN_EMAIL || "admin@nutraviveholistic.com",
+          {
+            orderNumber: order.orderNumber,
+            customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+            total: order.totalAmount,
+            itemCount: order.items.length,
+          }
+        );
+
+        console.log("✅ Free order admin notification sent successfully");
+      } catch (emailError) {
+        console.error("📧 Free order admin notification failed:", emailError);
+        // Don't fail the order if email fails
+      }
+
+      return {
+        success: true,
         orderId: order._id.toString(),
-        orderNumber,
-        userId: userId || "",
-        deliveryMethod: validatedData.deliveryMethod,
-        promotionCode: cart.promotionCode || "",
-      },
-      description: `Nutra-Vive Order ${orderNumber}`,
-    });
+        // No clientSecret for free orders
+      };
+    } else {
+      // For paid orders, create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(totalAmount * 100), // Stripe expects cents
+        currency: "usd",
+        metadata: {
+          orderId: order._id.toString(),
+          orderNumber,
+          userId: userId || "",
+          deliveryMethod: validatedData.deliveryMethod,
+          promotionCode: cart.promotionCode || "",
+        },
+        description: `Nutra-Vive Order ${orderNumber}`,
+      });
 
-    // Update order with payment intent ID
-    order.paymentIntentId = paymentIntent.id;
-    await order.save();
+      // Update order with payment intent ID
+      order.paymentIntentId = paymentIntent.id;
+      await order.save();
 
-    console.log("✅ Checkout session created:", orderNumber);
+      console.log("✅ Paid order checkout session created:", orderNumber);
 
-    return {
-      success: true,
-      clientSecret: paymentIntent.client_secret!,
-      orderId: order._id.toString(),
-    };
+      return {
+        success: true,
+        clientSecret: paymentIntent.client_secret!,
+        orderId: order._id.toString(),
+      };
+    }
   } catch (error) {
     console.error("❌ Error creating checkout session:", error);
 

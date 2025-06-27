@@ -592,6 +592,7 @@ import { checkoutSteps } from "./utils/constants";
 import type { FormData, StepErrors } from "./types";
 import { UnifiedCart } from "@/types/unifiedCart";
 import EnhancedOrderSummary from "./components/OrderSummary";
+import { getUserProfile, saveCheckoutPreferences } from "@/lib/actions/userProfileServerActions";
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
@@ -607,6 +608,8 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [stepErrors, setStepErrors] = useState<StepErrors>({});
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -656,10 +659,48 @@ export default function CheckoutPage() {
     return Math.round(amount * 0.08 * 100) / 100; // 8% tax
   }
 
-  // Load cart data
+  // Load cart data and user profile
   useEffect(() => {
     loadCart();
+    loadUserProfile();
   }, []);
+
+  // Load user profile and pre-fill form data
+  const loadUserProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const result = await getUserProfile();
+      
+      if (result.success && result.profile && result.user) {
+        setUserProfile(result.profile);
+        
+        // Pre-fill form with user data and default address
+        const defaultAddress = result.profile.defaultShippingAddress;
+        setFormData(prev => ({
+          ...prev,
+          firstName: result.user.firstName || "",
+          lastName: result.user.lastName || "",
+          email: result.user.email || "",
+          phone: result.user.phone || "",
+          deliveryMethod: result.profile.preferredDeliveryMethod || "standard",
+          marketingOptIn: result.profile.marketingOptIn || false,
+          // Pre-fill address if available
+          ...(defaultAddress && {
+            address: defaultAddress.address1 || "",
+            apartment: defaultAddress.address2 || "",
+            city: defaultAddress.city || "",
+            state: defaultAddress.state || "",
+            zipCode: defaultAddress.zipCode || "",
+            country: defaultAddress.country || "US",
+          }),
+        }));
+      }
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   // Validate form and create order when on payment step
   useEffect(() => {
@@ -817,6 +858,9 @@ export default function CheckoutPage() {
       setCreatingOrder(true);
       setPaymentError(null);
 
+      // Save user preferences first
+      await saveUserPreferences();
+
       const baseCheckoutData = {
         email: formData.email,
         phone: formData.phone,
@@ -861,15 +905,41 @@ export default function CheckoutPage() {
               billingAddress: undefined,
             };
 
-      const result = await createCheckoutSession(checkoutData);
+      // Check if order is free (total is $0 or very close to 0)
+      if (total <= 0.01) {
+        // For free orders, skip Stripe and directly create the order
+        const result = await createCheckoutSession({
+          ...checkoutData,
+          skipPayment: true, // Add this flag to indicate free order
+        });
 
-      if (result.success && result.clientSecret && result.orderId) {
-        setOrderId(result.orderId);
-        setClientSecret(result.clientSecret);
-        toast.success("Order created! Complete payment to confirm.");
+        if (result.success && result.orderId) {
+          setOrderId(result.orderId);
+          // For free orders, immediately confirm without payment
+          const confirmResult = await confirmPayment("free_order");
+          if (confirmResult.success) {
+            setOrderComplete(true);
+            toast.success("Free order placed successfully!");
+          } else {
+            setPaymentError("Order created but confirmation failed");
+            toast.error("Order created but confirmation failed");
+          }
+        } else {
+          setPaymentError(result.error || "Failed to create free order");
+          toast.error(result.error || "Failed to create free order");
+        }
       } else {
-        setPaymentError(result.error || "Failed to create order");
-        toast.error(result.error || "Failed to create order");
+        // Regular paid orders - use Stripe
+        const result = await createCheckoutSession(checkoutData);
+
+        if (result.success && result.clientSecret && result.orderId) {
+          setOrderId(result.orderId);
+          setClientSecret(result.clientSecret);
+          toast.success("Order created! Complete payment to confirm.");
+        } else {
+          setPaymentError(result.error || "Failed to create order");
+          toast.error(result.error || "Failed to create order");
+        }
       }
     } catch (error) {
       const errorMessage =
@@ -878,6 +948,34 @@ export default function CheckoutPage() {
       toast.error(errorMessage);
     } finally {
       setCreatingOrder(false);
+    }
+  };
+
+  // Save user preferences and address
+  const saveUserPreferences = async () => {
+    try {
+      const addressData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        address1: formData.address,
+        address2: formData.apartment,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: formData.country,
+        phone: formData.phone,
+      };
+
+      await saveCheckoutPreferences({
+        address: addressData,
+        deliveryMethod: formData.deliveryMethod as "standard" | "express" | "pickup",
+        marketingOptIn: formData.marketingOptIn,
+        setAsDefault: true, // Always save as default for first-time users
+        addressLabel: "Home",
+      });
+    } catch (error) {
+      console.error("Error saving user preferences:", error);
+      // Don't fail the order if preference saving fails
     }
   };
 
@@ -944,6 +1042,24 @@ export default function CheckoutPage() {
           <ReviewStep {...stepProps} cart={cart} total={total} tax={tax} />
         );
       case 5:
+        // For free orders, show different payment step
+        if (total <= 0.01) {
+          return (
+            <PaymentStep
+              {...stepProps}
+              total={total}
+              clientSecret={null}
+              orderId={orderId}
+              creatingOrder={creatingOrder}
+              paymentError={paymentError}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              onRetryOrder={createOrder}
+              isFreeOrder={true}
+            />
+          );
+        }
+        
         return (
           <Elements
             stripe={stripePromise}
@@ -972,6 +1088,7 @@ export default function CheckoutPage() {
               onPaymentSuccess={handlePaymentSuccess}
               onPaymentError={handlePaymentError}
               onRetryOrder={createOrder}
+              isFreeOrder={false}
             />
           </Elements>
         );

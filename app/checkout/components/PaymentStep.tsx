@@ -1,6 +1,6 @@
 // app/checkout/components/PaymentStep.tsx
 
-import { CreditCard, AlertCircle, Loader2 } from "lucide-react";
+import { CreditCard, AlertCircle, Loader2, Gift, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import StripeShopCheckout from "@/components/shop/StripeShopCheckout";
@@ -15,6 +15,7 @@ interface PaymentStepProps extends StepProps {
   onPaymentSuccess: (paymentIntentId: string) => void;
   onPaymentError: (error: string) => void;
   onRetryOrder: () => void;
+  isFreeOrder?: boolean;
 }
 
 export default function PaymentStep({
@@ -26,19 +27,80 @@ export default function PaymentStep({
   onPaymentSuccess,
   onPaymentError,
   onRetryOrder,
+  isFreeOrder = false,
 }: PaymentStepProps) {
   return (
     <Card className="glass border-white/20">
       <CardHeader>
         <CardTitle className="flex items-center text-xl">
-          <CreditCard className="w-5 h-5 mr-2 text-orange-600" />
-          Complete Your Payment
+          {isFreeOrder ? (
+            <>
+              <Gift className="w-5 h-5 mr-2 text-green-600" />
+              Complete Your Free Order
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-5 h-5 mr-2 text-orange-600" />
+              Complete Your Payment
+            </>
+          )}
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Your payment information is encrypted and secure.
+          {isFreeOrder 
+            ? "Your order total is $0.00 - no payment required!"
+            : "Your payment information is encrypted and secure."
+          }
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Free Order Success Display */}
+        {isFreeOrder && !creatingOrder && !paymentError && (
+          <div className="space-y-4">
+            <div className="p-6 bg-green-50 border border-green-200 rounded-xl text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-green-900 mb-2">
+                🎉 Congratulations! Your order is FREE!
+              </h3>
+              <p className="text-green-700 mb-4">
+                Thanks to your membership benefits and promotions, there's no payment required.
+              </p>
+              <div className="text-2xl font-bold text-green-600 mb-4">
+                Total: $0.00
+              </div>
+              <Button
+                onClick={() => onPaymentSuccess("free_order")}
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 text-white px-8"
+                disabled={creatingOrder}
+              >
+                {creatingOrder ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Place Free Order
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* Order Benefits Summary */}
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="text-center text-amber-800">
+                <p className="font-medium text-sm">✨ Your Benefits Applied</p>
+                <p className="text-xs mt-1">
+                  Membership discounts and promotions have covered your entire order!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Payment Error */}
         {paymentError && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -74,15 +136,17 @@ export default function PaymentStep({
             <div className="flex items-center justify-center text-orange-700">
               <Loader2 className="w-6 h-6 animate-spin mr-3" />
               <div className="text-center">
-                <p className="font-medium">Preparing your order...</p>
+                <p className="font-medium">
+                  {isFreeOrder ? "Processing your free order..." : "Preparing your order..."}
+                </p>
                 <p className="text-sm mt-1">This will only take a moment</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Payment Success - Order Created */}
-        {clientSecret && orderId && !creatingOrder && (
+        {/* Payment Success - Order Created (Only for paid orders) */}
+        {!isFreeOrder && clientSecret && orderId && !creatingOrder && (
           <div className="space-y-4">
             <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="text-green-700">
@@ -134,8 +198,8 @@ export default function PaymentStep({
           </div>
         )}
 
-        {/* No Payment Ready State */}
-        {!clientSecret && !creatingOrder && !paymentError && (
+        {/* No Payment Ready State (Only for paid orders) */}
+        {!isFreeOrder && !clientSecret && !creatingOrder && !paymentError && (
           <div className="p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
             <div className="text-gray-500">
               <CreditCard className="w-8 h-8 mx-auto mb-3 opacity-50" />
