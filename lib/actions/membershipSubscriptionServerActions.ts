@@ -60,6 +60,22 @@ export async function createMembershipSubscription(
 
     // Create or get Stripe customer
     let stripeCustomerId = user.stripeCustomerId;
+    
+    // Check if existing customer ID is valid in Stripe
+    if (stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+      } catch (error) {
+        console.warn(`Stripe customer ${stripeCustomerId} not found, creating new customer`);
+        stripeCustomerId = null; // Reset to create new customer
+        
+        // Clear invalid customer ID from database
+        await User.findByIdAndUpdate(user._id, {
+          $unset: { stripeCustomerId: "" }
+        });
+      }
+    }
+    
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -79,6 +95,11 @@ export async function createMembershipSubscription(
 
     // Create or get Stripe price for this membership
     const priceId = await getOrCreateStripePrice(membership);
+
+    // Final validation before subscription creation
+    if (!stripeCustomerId) {
+      throw new Error("No valid Stripe customer ID available");
+    }
 
     try {
       // Method 1: Try the standard approach first
