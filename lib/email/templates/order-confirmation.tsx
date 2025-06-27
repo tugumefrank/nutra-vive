@@ -146,6 +146,7 @@ import BaseEmail, { sharedStyles } from "./_base";
 interface OrderConfirmationProps {
   orderNumber: string;
   customerName: string;
+  customerEmail: string;
   items: Array<{
     productName: string;
     quantity: number;
@@ -159,11 +160,18 @@ interface OrderConfirmationProps {
   total: number;
   companyName?: string;
   companyUrl?: string;
+  // Membership-specific props
+  isMembershipOrder?: boolean;
+  membershipTier?: string;
+  membershipDiscount?: number;
+  promotionDiscount?: number;
+  totalSavings?: number;
 }
 
 export default function OrderConfirmationEmail({
   orderNumber,
   customerName,
+  customerEmail,
   items,
   subtotal,
   shipping,
@@ -171,6 +179,11 @@ export default function OrderConfirmationEmail({
   total,
   companyName = "Nutra-Vive",
   companyUrl = "https://nutraviveholistic.com",
+  isMembershipOrder = false,
+  membershipTier,
+  membershipDiscount = 0,
+  promotionDiscount = 0,
+  totalSavings = 0,
 }: OrderConfirmationProps) {
   return (
     <BaseEmail
@@ -179,10 +192,20 @@ export default function OrderConfirmationEmail({
       companyUrl={companyUrl}
     >
       <Section style={sharedStyles.hero}>
-        <Text style={sharedStyles.heroTitle}>Order Confirmed! 🎉</Text>
+        <Text style={sharedStyles.heroTitle}>
+          {isMembershipOrder && total === 0 
+            ? "FREE Order Confirmed! 🎁" 
+            : "Order Confirmed! 🎉"
+          }
+        </Text>
         <Text style={sharedStyles.heroText}>
-          Hi {customerName}, thank you for your order! We've received your
-          payment and will start preparing your wellness products right away.
+          Hi {customerName}, {isMembershipOrder 
+            ? `thank you for your ${membershipTier} membership order! ${total === 0 
+              ? "Your membership benefits have made this order completely FREE!" 
+              : "Your membership benefits have saved you money on this order!"
+            }` 
+            : "thank you for your order! We've received your payment and"
+          } will start preparing your wellness products right away.
         </Text>
       </Section>
 
@@ -259,6 +282,74 @@ export default function OrderConfirmationEmail({
             </Row>
           ))}
         </Section>
+
+        {/* Membership Benefits Section */}
+        {isMembershipOrder && totalSavings > 0 && (
+          <Section
+            style={{
+              backgroundColor: "#fef3c7",
+              border: "2px solid #f59e0b",
+              padding: "20px",
+              borderRadius: "8px",
+              margin: "20px 0",
+              textAlign: "center" as const,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: "18px",
+                fontWeight: "700",
+                color: "#92400e",
+                margin: "0 0 10px 0",
+              }}
+            >
+              🏆 {membershipTier} Member Benefits Applied!
+            </Text>
+            <Text
+              style={{
+                fontSize: "16px",
+                color: "#92400e",
+                margin: "0 0 15px 0",
+              }}
+            >
+              You saved ${totalSavings.toFixed(2)} on this order!
+            </Text>
+            {membershipDiscount > 0 && (
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#78350f",
+                  margin: "5px 0",
+                }}
+              >
+                • Membership Discount: ${membershipDiscount.toFixed(2)}
+              </Text>
+            )}
+            {promotionDiscount > 0 && (
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#78350f",
+                  margin: "5px 0",
+                }}
+              >
+                • Promotion Discount: ${promotionDiscount.toFixed(2)}
+              </Text>
+            )}
+            {total === 0 && (
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#059669",
+                  fontWeight: "600",
+                  margin: "10px 0 0 0",
+                }}
+              >
+                ✨ This order is completely FREE thanks to your membership!
+              </Text>
+            )}
+          </Section>
+        )}
 
         {/* Order Summary */}
         <Section
@@ -348,7 +439,7 @@ export default function OrderConfirmationEmail({
 
       <Section style={sharedStyles.ctaSection}>
         <Button
-          href={`${companyUrl}/track?order=${orderNumber}`}
+          href={`${companyUrl}/track?order=${orderNumber}&email=${encodeURIComponent(customerEmail)}`}
           style={sharedStyles.button}
         >
           Track Your Order

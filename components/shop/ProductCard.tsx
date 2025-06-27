@@ -1739,7 +1739,7 @@ export function EnhancedProductCard({
             !membershipData.effectivelyFree && (
               <div className="absolute top-3 left-3">
                 <span className="px-3 py-1 bg-white/90 text-green-600 text-xs font-semibold rounded-full">
-                  {product.category}
+                  {typeof product.category === 'object' ? product.category.name : product.category}
                 </span>
               </div>
             )}
@@ -1805,7 +1805,7 @@ export function EnhancedProductCard({
             <div className="flex items-center justify-between mb-2">
               {showCategory && product.category && (
                 <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
-                  {product.category}
+                  {typeof product.category === 'object' ? product.category.name : product.category}
                 </span>
               )}
               <div className="flex items-center space-x-1">

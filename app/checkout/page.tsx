@@ -563,6 +563,8 @@ import {
   TrendingUp,
   Sparkles,
   Info,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -636,28 +638,33 @@ export default function CheckoutPage() {
   const promotionDiscount = cart?.promotionDiscount || 0;
   const afterDiscountsTotal = cart?.afterDiscountsTotal || 0; // This is subtotal - membershipDiscount - promotionDiscount
 
-  // Calculate shipping based on after-discounts total
-  const shipping = calculateShipping(
-    afterDiscountsTotal,
-    formData.deliveryMethod
-  );
-
-  // Calculate tax on (after-discounts total + shipping)
-  const tax = calculateTax(afterDiscountsTotal + shipping);
-
-  // Final order total
-  const total = afterDiscountsTotal + shipping + tax;
-
   // Helper functions for calculations
-  function calculateShipping(amount: number, method: string): number {
+  function calculateShipping(amount: number, method: string, isFreeOrder: boolean = false): number {
+    if (isFreeOrder) return 0; // No shipping for free membership orders
     if (method === "pickup") return 0; // Always free for pickup
     if (amount >= 25) return 0; // Free shipping over $25 after all discounts
     return method === "express" ? 9.99 : 5.99;
   }
 
-  function calculateTax(amount: number): number {
+  function calculateTax(amount: number, isFreeOrder: boolean = false): number {
+    if (isFreeOrder) return 0; // No tax for free membership orders
     return Math.round(amount * 0.08 * 100) / 100; // 8% tax
   }
+
+  // Check if this is a free membership order (afterDiscountsTotal is exactly $0)
+  const isFreeOrder = afterDiscountsTotal <= 0;
+
+  // Calculate shipping and tax based on whether it's a free order
+  const shipping = calculateShipping(
+    afterDiscountsTotal,
+    formData.deliveryMethod,
+    isFreeOrder
+  );
+
+  const tax = calculateTax(afterDiscountsTotal + shipping, isFreeOrder);
+
+  // Final order total
+  const total = afterDiscountsTotal + shipping + tax;
 
   // Load cart data and user profile
   useEffect(() => {
@@ -665,40 +672,154 @@ export default function CheckoutPage() {
     loadUserProfile();
   }, []);
 
+  // Additional useEffect to auto-navigate after profile loads
+  useEffect(() => {
+    console.log("🔄 Profile effect triggered:", {
+      userProfile: !!userProfile,
+      currentStep,
+      profileLoading,
+      loading
+    });
+    
+    // If we have a user profile and we're still on step 1, navigate to review
+    if (userProfile && currentStep === 1 && !profileLoading && !loading) {
+      console.log("🚀 Auto-navigating to Review step via useEffect");
+      setCurrentStep(4);
+      toast.success("Welcome back! Your information has been pre-filled.");
+    }
+  }, [userProfile, currentStep, profileLoading, loading]);
+
   // Load user profile and pre-fill form data
   const loadUserProfile = async () => {
     try {
       setProfileLoading(true);
+      console.log("🚀 Starting getUserProfile...");
+      
       const result = await getUserProfile();
       
+      console.log("🔍 getUserProfile result:", result);
+      console.log("🔍 Result details:", {
+        success: result.success,
+        hasProfile: !!result.profile,
+        hasUser: !!result.user,
+        error: result.error
+      });
+      
       if (result.success && result.profile && result.user) {
+        console.log("✅ Profile and user found");
+        console.log("📋 User data:", result.user);
+        console.log("📋 Profile data:", result.profile);
         setUserProfile(result.profile);
         
         // Pre-fill form with user data and default address
-        const defaultAddress = result.profile.defaultShippingAddress;
-        setFormData(prev => ({
-          ...prev,
+        // First try defaultShippingAddress, then look for a default saved address
+        let defaultAddress = result.profile.defaultShippingAddress;
+        
+        // If no default shipping address, try to find a default saved address
+        if (!defaultAddress || !defaultAddress.address1) {
+          const defaultSavedAddress = result.profile.savedAddresses?.find(addr => addr.isDefault);
+          if (defaultSavedAddress) {
+            defaultAddress = defaultSavedAddress;
+            console.log("📦 Using default saved address:", defaultSavedAddress.label);
+          }
+        }
+        
+        // If still no address, use the first saved address if available
+        if (!defaultAddress || !defaultAddress.address1) {
+          const firstSavedAddress = result.profile.savedAddresses?.[0];
+          if (firstSavedAddress && firstSavedAddress.address1) {
+            defaultAddress = firstSavedAddress;
+            console.log("📦 Using first saved address:", firstSavedAddress.label);
+          }
+        }
+        
+        console.log("📦 Selected address for form:", defaultAddress);
+        
+        const newFormData = {
           firstName: result.user.firstName || "",
           lastName: result.user.lastName || "",
           email: result.user.email || "",
-          phone: result.user.phone || "",
+          phone: result.user.phone || defaultAddress?.phone || "",
           deliveryMethod: result.profile.preferredDeliveryMethod || "standard",
           marketingOptIn: result.profile.marketingOptIn || false,
           // Pre-fill address if available
-          ...(defaultAddress && {
-            address: defaultAddress.address1 || "",
-            apartment: defaultAddress.address2 || "",
-            city: defaultAddress.city || "",
-            state: defaultAddress.state || "",
-            zipCode: defaultAddress.zipCode || "",
-            country: defaultAddress.country || "US",
-          }),
-        }));
+          address: defaultAddress?.address1 || "",
+          apartment: defaultAddress?.address2 || "",
+          city: defaultAddress?.city || "",
+          state: defaultAddress?.state || "",
+          zipCode: defaultAddress?.zipCode || "",
+          country: defaultAddress?.country || "US",
+          notes: "",
+        };
+        
+        setFormData(newFormData);
+        
+        // Check if user has a profile with basic information
+        // If they have a profile and have placed orders before (totalOrders > 0), 
+        // or have a saved address, they should go straight to review
+        const hasUsableProfile = 
+          result.user.firstName &&
+          result.user.lastName &&
+          result.user.email &&
+          (
+            // Has placed orders before
+            result.profile.totalOrders > 0 ||
+            // Has a default shipping address with minimal required fields
+            (defaultAddress && defaultAddress.address1 && defaultAddress.city) ||
+            // Has any saved addresses 
+            (result.profile.savedAddresses && result.profile.savedAddresses.length > 0)
+          );
+        
+        console.log("🔍 Profile analysis:", {
+          hasUser: !!result.user,
+          hasProfile: !!result.profile,
+          totalOrders: result.profile.totalOrders,
+          hasDefaultAddress: !!defaultAddress,
+          defaultAddressValid: !!(defaultAddress && defaultAddress.address1 && defaultAddress.city),
+          savedAddressesCount: result.profile.savedAddresses?.length || 0,
+          shouldAutoNavigate: hasUsableProfile
+        });
+        
+        // Auto-navigate to Review step if user has a usable profile
+        if (hasUsableProfile) {
+          console.log("✅ Usable profile detected, navigating to Review step");
+          setCurrentStep(4); // Go directly to Review step (step 4)
+          
+          // Clear any previous step errors since we're auto-filling
+          setStepErrors({});
+          
+          // Show a helpful toast
+          toast.success("Welcome back! Your information has been pre-filled.");
+        } else {
+          console.log("⚠️ New user or incomplete profile, staying on Contact step");
+          
+          // TEMPORARY: Force navigation for testing if user has basic info
+          if (result.user.firstName && result.user.lastName && result.user.email) {
+            console.log("🚀 FORCING navigation to Review step for testing");
+            setCurrentStep(4);
+            setStepErrors({});
+            toast.success("Welcome back! Your information has been pre-filled.");
+          } else {
+            toast.info("Please complete your profile information.");
+          }
+        }
+      } else {
+        console.log("❌ No profile or user found:", {
+          success: result.success,
+          hasProfile: !!result.profile,
+          hasUser: !!result.user,
+          error: result.error
+        });
       }
     } catch (error) {
-      console.error("Error loading user profile:", error);
+      console.error("❌ Error loading user profile:", error);
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
     } finally {
       setProfileLoading(false);
+      console.log("✅ Profile loading completed, setProfileLoading(false)");
     }
   };
 
@@ -823,6 +944,8 @@ export default function CheckoutPage() {
       (stepNumber === currentStep + 1 && validateCurrentStep())
     ) {
       setCurrentStep(stepNumber);
+      // Smooth scroll to top when navigating to any step
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (stepNumber > currentStep) {
       let canNavigate = true;
       for (let i = currentStep; i < stepNumber; i++) {
@@ -835,6 +958,8 @@ export default function CheckoutPage() {
       }
       if (canNavigate) {
         setCurrentStep(stepNumber);
+        // Smooth scroll to top when navigating to any step
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         toast.error("Please complete all required fields in previous steps");
       }
@@ -844,12 +969,16 @@ export default function CheckoutPage() {
   const nextStep = () => {
     if (validateCurrentStep() && currentStep < checkoutSteps.length) {
       setCurrentStep(currentStep + 1);
+      // Smooth scroll to top when moving to next step
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      // Smooth scroll to top when moving to previous step
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -905,25 +1034,25 @@ export default function CheckoutPage() {
               billingAddress: undefined,
             };
 
-      // Check if order is free (total is $0 or very close to 0)
-      if (total <= 0.01) {
+      // Check if order is free (total is exactly $0.00 for membership)
+      if (total <= 0) {
+        console.log("🆓 Creating free order with total:", total);
+        
         // For free orders, skip Stripe and directly create the order
         const result = await createCheckoutSession({
           ...checkoutData,
           skipPayment: true, // Add this flag to indicate free order
         });
 
+        console.log("📝 Free order creation result:", result);
+
         if (result.success && result.orderId) {
           setOrderId(result.orderId);
-          // For free orders, immediately confirm without payment
-          const confirmResult = await confirmPayment("free_order");
-          if (confirmResult.success) {
-            setOrderComplete(true);
-            toast.success("Free order placed successfully!");
-          } else {
-            setPaymentError("Order created but confirmation failed");
-            toast.error("Order created but confirmation failed");
-          }
+          console.log("✅ Free order created with ID:", result.orderId);
+          
+          // For free orders, no need to confirm payment - order is already complete
+          setOrderComplete(true);
+          toast.success("Free order placed successfully!");
         } else {
           setPaymentError(result.error || "Failed to create free order");
           toast.error(result.error || "Failed to create free order");
@@ -981,6 +1110,7 @@ export default function CheckoutPage() {
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
+      // For paid orders, confirm payment
       const result = await confirmPayment(paymentIntentId);
 
       if (result.success && result.order) {
@@ -1030,33 +1160,77 @@ export default function CheckoutPage() {
       shipping,
     };
 
+    // Check if user is a returning user (has profile)
+    const isReturningUser = !!userProfile;
+
     switch (currentStep) {
       case 1:
-        return <ContactStep {...stepProps} />;
+        return <ContactStep {...stepProps} isReturningUser={isReturningUser} />;
       case 2:
         return <DeliveryMethodStep {...stepProps} afterDiscountsTotal={afterDiscountsTotal} />;
       case 3:
         return <AddressStep {...stepProps} />;
       case 4:
         return (
-          <ReviewStep {...stepProps} cart={cart} total={total} tax={tax} />
+          <ReviewStep {...stepProps} cart={cart} total={total} tax={tax} onEditStep={goToStep} />
         );
       case 5:
-        // For free orders, show different payment step
-        if (total <= 0.01) {
+        // For free orders, show a special free order confirmation
+        if (total <= 0) {
           return (
-            <PaymentStep
-              {...stepProps}
-              total={total}
-              clientSecret={null}
-              orderId={orderId}
-              creatingOrder={creatingOrder}
-              paymentError={paymentError}
-              onPaymentSuccess={handlePaymentSuccess}
-              onPaymentError={handlePaymentError}
-              onRetryOrder={createOrder}
-              isFreeOrder={true}
-            />
+            <div className="text-center py-8 space-y-6">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-green-600 mb-2">
+                Congratulations! Your Order is FREE!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Your membership benefits have made this order completely free!
+              </p>
+              
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6 max-w-md mx-auto">
+                <div className="text-2xl font-bold text-green-600 mb-4">
+                  Total: $0.00
+                </div>
+                <p className="text-green-700 text-sm mb-4">
+                  No payment required - your order will be processed immediately.
+                </p>
+                <Button
+                  onClick={createOrder}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 w-full"
+                  disabled={creatingOrder}
+                >
+                  {creatingOrder ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Placing Free Order...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4 mr-2" />
+                      Place Free Order
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {paymentError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-w-md mx-auto">
+                  <div className="flex items-center text-red-700">
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    <span className="text-sm">{paymentError}</span>
+                  </div>
+                  <Button
+                    onClick={createOrder}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+            </div>
           );
         }
         

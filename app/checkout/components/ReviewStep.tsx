@@ -13,6 +13,7 @@ interface ReviewStepProps extends StepProps {
   cart: UnifiedCart | null;
   total: number;
   tax: number;
+  onEditStep?: (step: number) => void;
 }
 
 export default function ReviewStep({
@@ -22,6 +23,7 @@ export default function ReviewStep({
   shipping,
   tax,
   total,
+  onEditStep,
 }: ReviewStepProps) {
   return (
     <div className="space-y-6">
@@ -47,6 +49,8 @@ export default function ReviewStep({
                 variant="ghost"
                 size="sm"
                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 h-auto p-1"
+                onClick={() => onEditStep?.(1)}
+                title="Edit contact information"
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -71,6 +75,8 @@ export default function ReviewStep({
                 variant="ghost"
                 size="sm"
                 className="text-green-600 hover:text-green-700 hover:bg-green-100 h-auto p-1"
+                onClick={() => onEditStep?.(formData.deliveryMethod === "pickup" ? 2 : 3)}
+                title="Edit delivery information"
               >
                 <Edit className="w-3 h-3" />
               </Button>

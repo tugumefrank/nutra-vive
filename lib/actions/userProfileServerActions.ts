@@ -40,21 +40,48 @@ export async function getUserProfile() {
       await userProfile.save();
     }
 
+    // Safely serialize the profile data to avoid circular references
+    const profileData = userProfile.toObject();
+    
     return {
       success: true,
       profile: {
-        _id: userProfile._id.toString(),
-        defaultShippingAddress: userProfile.defaultShippingAddress,
-        savedAddresses: userProfile.savedAddresses,
-        preferredDeliveryMethod: userProfile.preferredDeliveryMethod,
-        deliveryInstructions: userProfile.deliveryInstructions,
-        marketingOptIn: userProfile.marketingOptIn,
-        smsNotifications: userProfile.smsNotifications,
-        emailNotifications: userProfile.emailNotifications,
-        totalOrders: userProfile.totalOrders,
-        totalSpent: userProfile.totalSpent,
-        averageOrderValue: userProfile.averageOrderValue,
-        lastOrderDate: userProfile.lastOrderDate,
+        _id: profileData._id.toString(),
+        defaultShippingAddress: profileData.defaultShippingAddress ? {
+          firstName: profileData.defaultShippingAddress.firstName,
+          lastName: profileData.defaultShippingAddress.lastName,
+          address1: profileData.defaultShippingAddress.address1,
+          address2: profileData.defaultShippingAddress.address2,
+          city: profileData.defaultShippingAddress.city,
+          state: profileData.defaultShippingAddress.state,
+          zipCode: profileData.defaultShippingAddress.zipCode,
+          country: profileData.defaultShippingAddress.country,
+          phone: profileData.defaultShippingAddress.phone,
+        } : null,
+        savedAddresses: profileData.savedAddresses?.map((addr: any) => ({
+          id: addr.id,
+          label: addr.label,
+          firstName: addr.firstName,
+          lastName: addr.lastName,
+          address1: addr.address1,
+          address2: addr.address2,
+          city: addr.city,
+          state: addr.state,
+          zipCode: addr.zipCode,
+          country: addr.country,
+          phone: addr.phone,
+          isDefault: addr.isDefault,
+          createdAt: addr.createdAt,
+        })) || [],
+        preferredDeliveryMethod: profileData.preferredDeliveryMethod,
+        deliveryInstructions: profileData.deliveryInstructions,
+        marketingOptIn: profileData.marketingOptIn,
+        smsNotifications: profileData.smsNotifications,
+        emailNotifications: profileData.emailNotifications,
+        totalOrders: profileData.totalOrders,
+        totalSpent: profileData.totalSpent,
+        averageOrderValue: profileData.averageOrderValue,
+        lastOrderDate: profileData.lastOrderDate,
       },
       user: {
         _id: user._id.toString(),

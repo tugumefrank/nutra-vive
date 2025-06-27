@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 
 interface SuccessPageProps {
   orderId: string;
+  customerEmail?: string;
 }
 
-export default function SuccessPage({ orderId }: SuccessPageProps) {
+export default function SuccessPage({ orderId, customerEmail }: SuccessPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 flex items-center justify-center p-4">
       <motion.div
@@ -133,7 +134,7 @@ export default function SuccessPage({ orderId }: SuccessPageProps) {
             size="lg"
             asChild
           >
-            <Link href={`/track/${orderId}`}>
+            <Link href={`/track?order=${orderId}${customerEmail ? `&email=${encodeURIComponent(customerEmail)}` : ''}`}>
               Track Your Order
               <ArrowRight className="w-4 h-4 ml-2" />
             </Link>

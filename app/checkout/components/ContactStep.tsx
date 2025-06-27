@@ -6,11 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { StepProps } from "../types";
 
+interface ContactStepProps extends StepProps {
+  isReturningUser?: boolean;
+}
+
 export default function ContactStep({
   formData,
   onInputChange,
   errors,
-}: StepProps) {
+  isReturningUser = false,
+}: ContactStepProps) {
   return (
     <Card className="glass border-white/20">
       <CardHeader>
@@ -67,6 +72,9 @@ export default function ContactStep({
         <div>
           <Label htmlFor="email" className="text-sm font-medium">
             Email Address *
+            {isReturningUser && (
+              <span className="ml-2 text-xs text-gray-500">(Cannot be changed)</span>
+            )}
           </Label>
           <Input
             id="email"
@@ -74,13 +82,21 @@ export default function ContactStep({
             value={formData.email}
             onChange={(e) => onInputChange("email", e.target.value)}
             className={`bg-white/60 border-white/40 ${
+              isReturningUser ? "bg-gray-100 text-gray-600 cursor-not-allowed" : ""
+            } ${
               errors.email ? "border-red-300 focus:border-red-500" : ""
             }`}
             placeholder="your.email@example.com"
+            disabled={isReturningUser}
             required
           />
           {errors.email && (
             <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+          )}
+          {isReturningUser && (
+            <p className="text-gray-500 text-xs mt-1">
+              This email is linked to your account and cannot be modified during checkout.
+            </p>
           )}
         </div>
 

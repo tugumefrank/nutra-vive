@@ -129,7 +129,7 @@ export async function getProductsWithMembership(filters?: {
       if (membership) {
         // Calculate membership summary
         membershipSummary = {
-          tier: membership.membership.tier,
+          tier: (membership.membership as any).tier,
           totalAllocations: membership.productUsage.map((usage: any) => ({
             categoryId: usage.categoryId.toString(),
             categoryName: usage.categoryName,
@@ -150,8 +150,8 @@ export async function getProductsWithMembership(filters?: {
           _id: product._id.toString(),
           category: product.category
             ? {
-                ...product.category,
-                _id: product.category._id.toString(),
+                ...(product.category as any),
+                _id: (product.category as any)._id.toString(),
               }
             : null,
         };
@@ -160,7 +160,7 @@ export async function getProductsWithMembership(filters?: {
         if (membership && product.category) {
           const categoryUsage = membership.productUsage.find(
             (usage: any) =>
-              usage.categoryId.toString() === product.category._id.toString()
+              usage.categoryId.toString() === (product.category as any)._id.toString()
           );
 
           if (categoryUsage && categoryUsage.availableQuantity > 0) {
@@ -169,7 +169,7 @@ export async function getProductsWithMembership(filters?: {
               remainingAllocation: categoryUsage.availableQuantity,
               categoryName: categoryUsage.categoryName,
               categoryId: categoryUsage.categoryId.toString(),
-              membershipTier: membership.membership.tier,
+              membershipTier: (membership.membership as any).tier,
               totalAllocation: categoryUsage.allocatedQuantity,
               usedAllocation: categoryUsage.usedQuantity,
               savings: product.price, // They save the full price
@@ -227,8 +227,8 @@ export async function getProductWithMembership(
       _id: product._id.toString(),
       category: product.category
         ? {
-            ...product.category,
-            _id: product.category._id.toString(),
+            ...(product.category as any),
+            _id: (product.category as any)._id.toString(),
           }
         : null,
     };
@@ -240,7 +240,7 @@ export async function getProductWithMembership(
       if (membership && product.category) {
         const categoryUsage = membership.productUsage.find(
           (usage: any) =>
-            usage.categoryId.toString() === product.category._id.toString()
+            usage.categoryId.toString() === (product.category as any)._id.toString()
         );
 
         if (categoryUsage && categoryUsage.availableQuantity > 0) {
@@ -249,7 +249,7 @@ export async function getProductWithMembership(
             remainingAllocation: categoryUsage.availableQuantity,
             categoryName: categoryUsage.categoryName,
             categoryId: categoryUsage.categoryId.toString(),
-            membershipTier: membership.membership.tier,
+            membershipTier: (membership.membership as any).tier,
             totalAllocation: categoryUsage.allocatedQuantity,
             usedAllocation: categoryUsage.usedQuantity,
             savings: product.price,
@@ -290,7 +290,7 @@ export async function getUserMembershipStatus(): Promise<{
 
     return {
       hasMembership: true,
-      tier: membership.membership.tier,
+      tier: (membership.membership as any).tier,
       allocations: membership.productUsage.map((usage: any) => ({
         categoryId: usage.categoryId.toString(),
         categoryName: usage.categoryName,
