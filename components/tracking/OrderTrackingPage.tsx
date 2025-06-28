@@ -18,8 +18,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import TrackingForm from "@/components/tracking/TrackingForm";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
+import EnhancedDesktopTimeline from "@/components/tracking/EnhancedDesktopTimeline";
 import OrderDetailsCard from "@/components/tracking/OrderDetailsCard";
 import MobileTrackingView from "@/components/tracking/MobileTrackingView";
+import EnhancedMobileTimeline from "@/components/tracking/EnhancedMobileTimeline";
 import { trackOrder } from "@/lib/actions/orderTrackingServerActions";
 import Link from "next/link";
 
@@ -375,18 +377,41 @@ export default function OrderTrackingPage({
 
               {/* Render Mobile or Desktop View */}
               {isMobile ? (
-                <MobileTrackingView
-                  order={order}
-                  trackingInfo={trackingInfo}
-                  onRefresh={handleRefresh}
-                  isLoading={isLoading}
-                />
+                /* Enhanced Mobile Timeline replaces original mobile view */
+                trackingInfo?.events ? (
+                  <EnhancedMobileTimeline
+                    events={trackingInfo.events}
+                    currentStatus={trackingInfo.status}
+                    estimatedDelivery={trackingInfo.estimatedDelivery}
+                    orderNumber={trackingInfo.orderNumber}
+                    order={order}
+                    trackingInfo={trackingInfo}
+                    onRefresh={handleRefresh}
+                  />
+                ) : (
+                  <MobileTrackingView
+                    order={order}
+                    trackingInfo={trackingInfo}
+                    onRefresh={handleRefresh}
+                    isLoading={isLoading}
+                  />
+                )
               ) : (
                 <>
-                  {/* Tracking Timeline */}
-                  {trackingInfo?.events && (
-                    <TrackingTimeline
+                  {/* Enhanced Desktop Tracking Timeline */}
+                  {trackingInfo?.events ? (
+                    <EnhancedDesktopTimeline
                       events={trackingInfo.events}
+                      currentStatus={trackingInfo.status}
+                      estimatedDelivery={trackingInfo.estimatedDelivery}
+                      orderNumber={trackingInfo.orderNumber}
+                      order={order}
+                      trackingInfo={trackingInfo}
+                      onRefresh={handleRefresh}
+                    />
+                  ) : (
+                    <TrackingTimeline
+                      events={trackingInfo.events || []}
                       currentStatus={trackingInfo.status}
                       estimatedDelivery={trackingInfo.estimatedDelivery}
                     />
