@@ -101,8 +101,8 @@ export default function WelcomeEmail({
           Special Welcome Offer! 🎉
         </Text>
         <Text style={sharedStyles.discountText}>
-          Use code <Text style={sharedStyles.discountCode}>WELCOMENV</Text> for
-          15% off your first order
+          Use code <Text style={sharedStyles.discountCode}>WELCOME5</Text> for
+          5% off your first order
         </Text>
       </Section>
     </BaseEmail>

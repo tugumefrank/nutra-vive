@@ -112,3 +112,11 @@ export const sendAdminNewOrder = (to: string, data: any) =>
     template: "admin-new-order",
     data,
   });
+
+export const sendWelcomeEmail = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: "Welcome to Nutra-Vive! 🌿",
+    template: "welcome",
+    data,
+  });

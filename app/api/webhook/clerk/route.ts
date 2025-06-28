@@ -6,6 +6,7 @@ import {
   updateUser,
   deleteUser,
 } from "@/lib/actions/userServerActions";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -73,6 +74,16 @@ export async function POST(req: Request) {
     };
 
     await createUser(user);
+
+    // Send welcome email with 5% discount code
+    try {
+      await sendWelcomeEmail(user.email, {
+        firstName: user.firstName || 'there',
+      });
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the webhook if email fails
+    }
   }
 
   if (eventType === "user.updated") {
