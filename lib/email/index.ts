@@ -82,10 +82,6 @@ function getEmailTemplate(template: string) {
     welcome: WelcomeEmail,
   };
 
-  console.log(`Looking for template: ${template}`);
-  console.log(`Available templates:`, Object.keys(templates));
-  console.log(`BulkEmail import:`, BulkEmail);
-
   return templates[template];
 }
 

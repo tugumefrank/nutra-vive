@@ -1,4 +1,3 @@
-// lib/email/templates/bulk-email.tsx
 import React from "react";
 import {
   Text,
@@ -13,7 +12,7 @@ interface BulkEmailProps {
   companyUrl?: string;
 }
 
-export default function BulkEmail({
+function BulkEmail({
   content,
   senderName = "Nutra-Vive Team",
   companyName = "Nutra-Vive",
@@ -65,3 +64,5 @@ const signatureStyle = {
   borderTop: "1px solid #e5e7eb",
   paddingTop: "16px",
 };
+
+export default BulkEmail;

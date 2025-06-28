@@ -12,6 +12,7 @@ import ConsultationConfirmationEmail from "./email/templates/consultation-confir
 import PaymentConfirmationEmail from "./email/templates/payment-confirmation";
 import WelcomeEmail from "./email/templates/welcome";
 import AdminNewOrderEmail from "./email/templates/admin-new-order";
+import BulkEmail from "./email/templates/bulk-email";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -125,6 +126,7 @@ function getEmailTemplate(template: string) {
     "admin-new-order": AdminNewOrderEmail,
     "consultation-confirmation": ConsultationConfirmationEmail,
     "payment-confirmation": PaymentConfirmationEmail,
+    "bulk-email": BulkEmail,
     welcome: WelcomeEmail,
   };
 

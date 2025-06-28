@@ -30,12 +30,12 @@ export interface CustomerData {
   lastName?: string;
   imageUrl?: string;
   role: string;
-  createdAt: Date;
+  createdAt: string;
   
   // Analytics data
   totalOrders: number;
   totalSpent: number;
-  lastOrderDate?: Date;
+  lastOrderDate?: string | null;
   averageOrderValue: number;
   
   // Membership data
@@ -43,9 +43,9 @@ export interface CustomerData {
     membershipName: string;
     tier: string;
     status: string;
-    startDate: Date;
-    nextBillingDate?: Date;
-  };
+    startDate: string;
+    nextBillingDate?: string | null;
+  } | null;
   
   // Engagement data
   hasConsultations: boolean;
@@ -57,7 +57,7 @@ export interface CustomerData {
     city: string;
     province: string;
     country: string;
-  };
+  } | null;
 }
 
 export interface BulkEmailData {
@@ -535,13 +535,39 @@ export async function getCustomersWithAnalytics(
   // Execute query
   const customers = await User.aggregate(pipeline);
 
+  // Serialize MongoDB objects to plain objects
+  const serializedCustomers = customers.map(customer => ({
+    _id: customer._id.toString(),
+    clerkId: customer.clerkId,
+    email: customer.email,
+    firstName: customer.firstName,
+    lastName: customer.lastName,
+    imageUrl: customer.imageUrl,
+    role: customer.role,
+    createdAt: customer.createdAt instanceof Date ? customer.createdAt.toISOString() : customer.createdAt,
+    totalOrders: customer.totalOrders || 0,
+    totalSpent: customer.totalSpent || 0,
+    lastOrderDate: customer.lastOrderDate ? (customer.lastOrderDate instanceof Date ? customer.lastOrderDate.toISOString() : customer.lastOrderDate) : null,
+    averageOrderValue: customer.averageOrderValue || 0,
+    activeMembership: customer.activeMembership ? {
+      membershipName: customer.activeMembership.membershipName,
+      tier: customer.activeMembership.tier,
+      status: customer.activeMembership.status,
+      startDate: customer.activeMembership.startDate instanceof Date ? customer.activeMembership.startDate.toISOString() : customer.activeMembership.startDate,
+      nextBillingDate: customer.activeMembership.nextBillingDate ? (customer.activeMembership.nextBillingDate instanceof Date ? customer.activeMembership.nextBillingDate.toISOString() : customer.activeMembership.nextBillingDate) : null
+    } : null,
+    lastShippingLocation: customer.lastShippingLocation ? {
+      city: customer.lastShippingLocation.city,
+      province: customer.lastShippingLocation.province,
+      country: customer.lastShippingLocation.country
+    } : null,
+    hasConsultations: false, // TODO: Add consultation lookup
+    reviewsCount: 0, // TODO: Add reviews lookup
+    isEmailSubscriber: true // TODO: Add newsletter subscription lookup
+  }));
+
   return {
-    customers: customers.map(customer => ({
-      ...customer,
-      hasConsultations: false, // TODO: Add consultation lookup
-      reviewsCount: 0, // TODO: Add reviews lookup
-      isEmailSubscriber: true // TODO: Add newsletter subscription lookup
-    })),
+    customers: serializedCustomers,
     totalCount,
     totalPages: Math.ceil(totalCount / limit)
   };

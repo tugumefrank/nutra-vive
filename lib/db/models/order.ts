@@ -231,8 +231,7 @@ const trackingEventSchema = new Schema<ITrackingEvent>(
   { timestamps: true }
 );
 
-// Add indexes
-orderSchema.index({ orderNumber: 1 });
+// Add indexes (orderNumber already has unique index from field definition)
 orderSchema.index({ user: 1 });
 trackingEventSchema.index({ order: 1 });
 trackingEventSchema.index({ status: 1 });

@@ -357,8 +357,7 @@ const mealPlanSchema = new Schema<IMealPlan>(
   { timestamps: true }
 );
 
-// Add indexes
-consultationSchema.index({ consultationNumber: 1 });
+// Add indexes (consultationNumber already has unique index from field definition)
 consultationSchema.index({ user: 1 });
 consultationSchema.index({ status: 1 });
 consultationSchema.index({ paymentStatus: 1 });
