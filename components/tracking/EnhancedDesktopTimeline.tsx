@@ -84,7 +84,8 @@ const statusConfig = {
     icon: ShoppingBag,
     label: "Order Placed",
     gradient: "from-blue-500 to-blue-600",
-    bgGradient: "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20",
+    bgGradient:
+      "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20",
     textColor: "text-blue-700 dark:text-blue-300",
     ringColor: "ring-blue-300 dark:ring-blue-700",
     description: "Your premium organic order has been received and confirmed!",
@@ -96,7 +97,8 @@ const statusConfig = {
     icon: CreditCard,
     label: "Payment Secured",
     gradient: "from-emerald-500 to-green-600",
-    bgGradient: "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
+    bgGradient:
+      "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
     textColor: "text-green-700 dark:text-green-300",
     ringColor: "ring-green-300 dark:ring-green-700",
     description: "Payment verified & processing initiated",
@@ -108,7 +110,8 @@ const statusConfig = {
     icon: Factory,
     label: "Preparing Your Order",
     gradient: "from-amber-500 to-orange-600",
-    bgGradient: "from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20",
+    bgGradient:
+      "from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20",
     textColor: "text-amber-700 dark:text-amber-300",
     ringColor: "ring-amber-300 dark:ring-amber-700",
     description: "Your order is being carefully prepared and packaged",
@@ -120,7 +123,8 @@ const statusConfig = {
     icon: Truck,
     label: "On The Way",
     gradient: "from-purple-500 to-indigo-600",
-    bgGradient: "from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20",
+    bgGradient:
+      "from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20",
     textColor: "text-purple-700 dark:text-purple-300",
     ringColor: "ring-purple-300 dark:ring-purple-700",
     description: "Your order is in transit and heading your way",
@@ -132,7 +136,8 @@ const statusConfig = {
     icon: Navigation,
     label: "En Route to You",
     gradient: "from-cyan-500 to-blue-600",
-    bgGradient: "from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20",
+    bgGradient:
+      "from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20",
     textColor: "text-cyan-700 dark:text-cyan-300",
     ringColor: "ring-cyan-300 dark:ring-cyan-700",
     description: "Traveling through our premium network",
@@ -144,7 +149,8 @@ const statusConfig = {
     icon: TruckIcon,
     label: "Almost There",
     gradient: "from-orange-500 to-red-600",
-    bgGradient: "from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20",
+    bgGradient:
+      "from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20",
     textColor: "text-orange-700 dark:text-orange-300",
     ringColor: "ring-orange-300 dark:ring-orange-700",
     description: "Final mile - your wellness awaits!",
@@ -156,7 +162,8 @@ const statusConfig = {
     icon: CheckCircle,
     label: "Delivered",
     gradient: "from-green-500 to-emerald-600",
-    bgGradient: "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
+    bgGradient:
+      "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
     textColor: "text-green-700 dark:text-green-300",
     ringColor: "ring-green-300 dark:ring-green-700",
     description: "Your order has been successfully delivered",
@@ -168,7 +175,8 @@ const statusConfig = {
     icon: AlertTriangle,
     label: "Attention Needed",
     gradient: "from-red-500 to-pink-600",
-    bgGradient: "from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20",
+    bgGradient:
+      "from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20",
     textColor: "text-red-700 dark:text-red-300",
     ringColor: "ring-red-300 dark:ring-red-700",
     description: "We're resolving this quickly for you",
@@ -178,28 +186,28 @@ const statusConfig = {
   },
 };
 
-const FloatingIcon = ({ 
-  Icon, 
-  delay = 0, 
-  className = "" 
-}: { 
-  Icon: any; 
-  delay?: number; 
-  className?: string; 
+const FloatingIcon = ({
+  Icon,
+  delay = 0,
+  className = "",
+}: {
+  Icon: any;
+  delay?: number;
+  className?: string;
 }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0, y: 20 }}
-    animate={{ 
-      opacity: [0, 1, 1, 0], 
-      scale: [0, 1.2, 1, 0], 
-      y: [20, -30, -50, -80] 
+    animate={{
+      opacity: [0, 1, 1, 0],
+      scale: [0, 1.2, 1, 0],
+      y: [20, -30, -50, -80],
     }}
-    transition={{ 
-      duration: 3, 
+    transition={{
+      duration: 3,
       delay,
       ease: "easeOut",
       repeat: Infinity,
-      repeatDelay: 5 
+      repeatDelay: 5,
     }}
     className={`absolute ${className}`}
   >
@@ -207,33 +215,33 @@ const FloatingIcon = ({
   </motion.div>
 );
 
-const PulsingDot = ({ 
-  color, 
-  size = "w-3 h-3" 
-}: { 
-  color: string; 
-  size?: string; 
+const PulsingDot = ({
+  color,
+  size = "w-3 h-3",
+}: {
+  color: string;
+  size?: string;
 }) => (
   <motion.div
-    animate={{ 
-      scale: [1, 1.5, 1], 
-      opacity: [0.5, 1, 0.5] 
+    animate={{
+      scale: [1, 1.5, 1],
+      opacity: [0.5, 1, 0.5],
     }}
-    transition={{ 
-      duration: 2, 
+    transition={{
+      duration: 2,
       repeat: Infinity,
-      ease: "easeInOut" 
+      ease: "easeInOut",
     }}
     className={`${size} ${color} rounded-full`}
   />
 );
 
-const ConnectingLine = ({ 
-  isActive, 
-  isCompleted, 
+const ConnectingLine = ({
+  isActive,
+  isCompleted,
   height = "h-20",
-  color = "emerald"
-}: { 
+  color = "emerald",
+}: {
   isActive?: boolean;
   isCompleted?: boolean;
   height?: string;
@@ -241,7 +249,7 @@ const ConnectingLine = ({
 }) => (
   <div className={`w-1 ${height} relative mx-auto`}>
     <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded-full" />
-    
+
     {(isActive || isCompleted) && (
       <motion.div
         initial={{ height: 0 }}
@@ -250,7 +258,7 @@ const ConnectingLine = ({
         className={`absolute inset-0 bg-gradient-to-b from-${color}-400 to-${color}-600 rounded-full`}
       />
     )}
-    
+
     {isActive && (
       <motion.div
         animate={{ y: [-10, 60, -10] }}
@@ -262,14 +270,14 @@ const ConnectingLine = ({
   </div>
 );
 
-const StatusCard = ({ 
-  event, 
-  config, 
-  index, 
+const StatusCard = ({
+  event,
+  config,
+  index,
   isLatest,
   isNext = false,
   isActive = true,
-  isCurrent = false 
+  isCurrent = false,
 }: {
   event?: TrackingEvent;
   config: any;
@@ -280,7 +288,7 @@ const StatusCard = ({
   isCurrent?: boolean;
 }) => {
   const [showCelebration, setShowCelebration] = useState(false);
-  
+
   useEffect(() => {
     if (isLatest) {
       setShowCelebration(true);
@@ -290,20 +298,22 @@ const StatusCard = ({
   }, [isLatest]);
 
   const Icon = config.icon;
-  const timeInfo = event ? {
-    date: format(new Date(event.timestamp), "MMM dd, yyyy"),
-    time: format(new Date(event.timestamp), "h:mm a"),
-  } : null;
+  const timeInfo = event
+    ? {
+        date: format(new Date(event.timestamp), "MMM dd, yyyy"),
+        time: format(new Date(event.timestamp), "h:mm a"),
+      }
+    : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 30, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ 
+      transition={{
         delay: index * 0.2,
         type: "spring",
         stiffness: 200,
-        damping: 25
+        damping: 25,
       }}
       className="relative"
     >
@@ -316,52 +326,61 @@ const StatusCard = ({
             delay: index * 0.2 + 0.3,
             type: "spring",
             stiffness: 300,
-            damping: 20
+            damping: 20,
           }}
           className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${
-            !isActive 
-              ? "from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700" 
+            !isActive
+              ? "from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700"
               : config.gradient
-          } shadow-lg ${ 
-            isLatest 
-              ? `ring-3 ring-white dark:ring-gray-900 shadow-xl` 
+          } shadow-lg ${
+            isLatest
+              ? `ring-3 ring-white dark:ring-gray-900 shadow-xl`
               : !isActive
-              ? "opacity-50"
-              : ""
+                ? "opacity-50"
+                : ""
           }`}
         >
           <Icon className="w-5 h-5 text-white" />
-          
+
           {/* Celebration animation */}
-          {isLatest && showCelebration && config.celebrationIcons.map((CelebIcon, i) => (
-            <FloatingIcon
-              key={i}
-              Icon={CelebIcon}
-              delay={i * 0.7}
-              className={`${
-                i === 0 ? "-top-3 -left-3" :
-                i === 1 ? "-top-4 -right-2" :
-                "-bottom-3 left-1"
-              }`}
-            />
-          ))}
-          
+          {isLatest &&
+            showCelebration &&
+            config.celebrationIcons.map(
+              (
+                CelebIcon: React.ComponentType<{ className?: string }>,
+                i: number
+              ) => (
+                <FloatingIcon
+                  key={i}
+                  Icon={CelebIcon}
+                  delay={i * 0.7}
+                  className={`${
+                    i === 0
+                      ? "-top-3 -left-3"
+                      : i === 1
+                        ? "-top-4 -right-2"
+                        : "-bottom-3 left-1"
+                  }`}
+                />
+              )
+            )}
+
           {/* Pulsing effect for active status */}
           {isLatest && (
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.4, 1],
-                opacity: [0.3, 0.7, 0.3]
+                opacity: [0.3, 0.7, 0.3],
               }}
-              transition={{ 
-                duration: 2.5, 
+              transition={{
+                duration: 2.5,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${config.gradient} opacity-40`}
             />
           )}
-          
+
           {/* Emoji overlay */}
           {isActive && (
             <motion.div
@@ -382,36 +401,42 @@ const StatusCard = ({
           transition={{ delay: index * 0.2 + 0.5 }}
           className="flex-1 min-w-0"
         >
-          <Card className={`backdrop-blur-lg ${
-            !isActive 
-              ? "bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-60" 
-              : `bg-gradient-to-r ${config.bgGradient} border-transparent shadow-lg`
-          } border ${
-            isLatest 
-              ? `${config.ringColor} ring-2 shadow-xl` 
-              : ""
-          } transition-all duration-300`}>
+          <Card
+            className={`backdrop-blur-lg ${
+              !isActive
+                ? "bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-60"
+                : `bg-gradient-to-r ${config.bgGradient} border-transparent shadow-lg`
+            } border ${
+              isLatest ? `${config.ringColor} ring-2 shadow-xl` : ""
+            } transition-all duration-300`}
+          >
             <CardContent className="p-4">
               {/* Header */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <h3 className={`font-semibold text-base ${
-                    !isActive 
-                      ? "text-gray-500 dark:text-gray-400" 
-                      : config.textColor
-                  }`}>
+                  <h3
+                    className={`font-semibold text-base ${
+                      !isActive
+                        ? "text-gray-500 dark:text-gray-400"
+                        : config.textColor
+                    }`}
+                  >
                     {config.label}
                   </h3>
                   {isLatest && (
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                     >
                       <Sparkles className="w-4 h-4 text-yellow-500" />
                     </motion.div>
                   )}
                 </div>
-                
+
                 {event && timeInfo && (
                   <div className="text-right">
                     <p className="text-xs font-medium text-gray-900 dark:text-white">
@@ -425,45 +450,49 @@ const StatusCard = ({
               </div>
 
               {/* Description */}
-              <p className={`text-xs font-medium mb-2 leading-relaxed ${
-                !isActive 
-                  ? "text-gray-500 dark:text-gray-500" 
-                  : "text-gray-700 dark:text-gray-300"
-              }`}>
+              <p
+                className={`text-xs font-medium mb-2 leading-relaxed ${
+                  !isActive
+                    ? "text-gray-500 dark:text-gray-500"
+                    : "text-gray-700 dark:text-gray-300"
+                }`}
+              >
                 {event?.description || config.description}
               </p>
 
               {/* Metadata badges */}
-              {event && (event.location || event.carrier || event.metadata) && isActive && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {event.location && (
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-                    >
-                      <MapPin className="w-2 h-2 mr-1" />
-                      {event.location}
-                    </Badge>
-                  )}
-                  {event.carrier && (
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-                    >
-                      <Truck className="w-2 h-2 mr-1" />
-                      {event.carrier}
-                    </Badge>
-                  )}
-                  {event.metadata?.temperature && (
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    >
-                      🌡️ {event.metadata.temperature}
-                    </Badge>
-                  )}
-                </div>
-              )}
+              {event &&
+                (event.location || event.carrier || event.metadata) &&
+                isActive && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {event.location && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                      >
+                        <MapPin className="w-2 h-2 mr-1" />
+                        {event.location}
+                      </Badge>
+                    )}
+                    {event.carrier && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                      >
+                        <Truck className="w-2 h-2 mr-1" />
+                        {event.carrier}
+                      </Badge>
+                    )}
+                    {event.metadata?.temperature && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                      >
+                        🌡️ {event.metadata.temperature}
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
               {/* Special indicators */}
               {isLatest && (
@@ -479,7 +508,7 @@ const StatusCard = ({
                   </span>
                 </motion.div>
               )}
-              
+
               {!isActive && (
                 <div className="flex items-center space-x-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                   <Clock className="w-3 h-3" />
@@ -505,13 +534,16 @@ export default function EnhancedDesktopTimeline({
   className = "",
 }: EnhancedDesktopTimelineProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   const sortedEvents = [...events].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
   const getStatusConfig = (status: string) => {
-    return statusConfig[status as keyof typeof statusConfig] || statusConfig.order_placed;
+    return (
+      statusConfig[status as keyof typeof statusConfig] ||
+      statusConfig.order_placed
+    );
   };
 
   const handleRefresh = async () => {
@@ -542,19 +574,16 @@ export default function EnhancedDesktopTimeline({
   };
 
   // Essential customer-facing timeline steps
-  const allSteps = [
-    'order_placed', 
-    'processing', 
-    'shipped', 
-    'delivered'
-  ];
-  
+  const allSteps = ["order_placed", "processing", "shipped", "delivered"];
+
   // Create timeline with all steps, marking which ones are active
   const timelineSteps = allSteps.map((stepStatus) => {
-    const actualEvent = sortedEvents.find(event => event.status === stepStatus);
+    const actualEvent = sortedEvents.find(
+      (event) => event.status === stepStatus
+    );
     const stepIndex = allSteps.indexOf(stepStatus);
     const currentStepIndex = allSteps.indexOf(currentStatus);
-    
+
     return {
       status: stepStatus,
       config: getStatusConfig(stepStatus),
@@ -583,7 +612,7 @@ export default function EnhancedDesktopTimeline({
                 Order {orderNumber}
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               {estimatedDelivery && (
                 <motion.div
@@ -602,7 +631,7 @@ export default function EnhancedDesktopTimeline({
                   </div>
                 </motion.div>
               )}
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -612,13 +641,16 @@ export default function EnhancedDesktopTimeline({
               >
                 <motion.div
                   animate={isRefreshing ? { rotate: 360 } : {}}
-                  transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0 }}
+                  transition={{
+                    duration: 1,
+                    repeat: isRefreshing ? Infinity : 0,
+                  }}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                 </motion.div>
                 Refresh
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -631,16 +663,18 @@ export default function EnhancedDesktopTimeline({
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="pt-0">
           <div className="relative">
             {/* Main timeline line */}
             <div className="absolute left-8 top-0 bottom-0 w-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
-            
+
             {/* Completed progress line */}
             <motion.div
               initial={{ height: 0 }}
-              animate={{ height: `${(timelineSteps.filter(step => step.isActive).length / allSteps.length) * 100}%` }}
+              animate={{
+                height: `${(timelineSteps.filter((step) => step.isActive).length / allSteps.length) * 100}%`,
+              }}
               transition={{ duration: 2.5, ease: "easeOut" }}
               className="absolute left-8 top-0 w-1 bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 rounded-full z-10"
             />
@@ -653,19 +687,19 @@ export default function EnhancedDesktopTimeline({
                     event={step.event}
                     config={step.config}
                     index={index}
-                    isLatest={step.isLatest}
+                    isLatest={!!step.isLatest}
                     isNext={!step.isActive}
                     isActive={step.isActive}
                     isCurrent={step.isCurrent}
                   />
-                  
+
                   {/* Connecting line to next step */}
                   {index < timelineSteps.length - 1 && (
                     <div className="absolute left-8 top-12 transform -translate-x-1/2">
-                      <ConnectingLine 
-                        isCompleted={step.isActive} 
+                      <ConnectingLine
+                        isCompleted={step.isActive}
                         isActive={step.isCurrent}
-                        height="h-4" 
+                        height="h-4"
                       />
                     </div>
                   )}
@@ -690,27 +724,27 @@ export default function EnhancedDesktopTimeline({
                   Our wellness support team is here to help
                 </p>
               </div>
-              
+
               <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700"
                 >
                   <Phone className="w-4 h-4 mr-2" />
                   Call Support
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700"
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Live Chat
                 </Button>
                 {trackingInfo?.trackingNumber && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700"
                   >

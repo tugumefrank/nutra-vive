@@ -171,28 +171,28 @@ const statusConfig = {
   },
 };
 
-const FloatingIcon = ({ 
-  Icon, 
-  delay = 0, 
-  className = "" 
-}: { 
-  Icon: any; 
-  delay?: number; 
-  className?: string; 
+const FloatingIcon = ({
+  Icon,
+  delay = 0,
+  className = "",
+}: {
+  Icon: any;
+  delay?: number;
+  className?: string;
 }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0, y: 20 }}
-    animate={{ 
-      opacity: [0, 1, 1, 0], 
-      scale: [0, 1.2, 1, 0], 
-      y: [20, -30, -50, -80] 
+    animate={{
+      opacity: [0, 1, 1, 0],
+      scale: [0, 1.2, 1, 0],
+      y: [20, -30, -50, -80],
     }}
-    transition={{ 
-      duration: 3, 
+    transition={{
+      duration: 3,
       delay,
       ease: "easeOut",
       repeat: Infinity,
-      repeatDelay: 5 
+      repeatDelay: 5,
     }}
     className={`absolute ${className}`}
   >
@@ -200,39 +200,39 @@ const FloatingIcon = ({
   </motion.div>
 );
 
-const PulsingDot = ({ 
-  color, 
-  size = "w-3 h-3" 
-}: { 
-  color: string; 
-  size?: string; 
+const PulsingDot = ({
+  color,
+  size = "w-3 h-3",
+}: {
+  color: string;
+  size?: string;
 }) => (
   <motion.div
-    animate={{ 
-      scale: [1, 1.5, 1], 
-      opacity: [0.5, 1, 0.5] 
+    animate={{
+      scale: [1, 1.5, 1],
+      opacity: [0.5, 1, 0.5],
     }}
-    transition={{ 
-      duration: 2, 
+    transition={{
+      duration: 2,
       repeat: Infinity,
-      ease: "easeInOut" 
+      ease: "easeInOut",
     }}
     className={`${size} ${color} rounded-full`}
   />
 );
 
-const ConnectingLine = ({ 
-  isActive, 
-  isCompleted, 
-  height = "h-16" 
-}: { 
+const ConnectingLine = ({
+  isActive,
+  isCompleted,
+  height = "h-16",
+}: {
   isActive?: boolean;
   isCompleted?: boolean;
   height?: string;
 }) => (
   <div className={`w-0.5 ${height} relative`}>
     <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded-full" />
-    
+
     {(isActive || isCompleted) && (
       <motion.div
         initial={{ height: 0 }}
@@ -241,7 +241,7 @@ const ConnectingLine = ({
         className="absolute inset-0 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full"
       />
     )}
-    
+
     {isActive && (
       <motion.div
         animate={{ y: [-10, 50, -10] }}
@@ -252,14 +252,14 @@ const ConnectingLine = ({
   </div>
 );
 
-const StatusCard = ({ 
-  event, 
-  config, 
-  index, 
+const StatusCard = ({
+  event,
+  config,
+  index,
   isLatest,
   isNext = false,
   isActive = true,
-  isCurrent = false 
+  isCurrent = false,
 }: {
   event?: TrackingEvent;
   config: any;
@@ -270,7 +270,7 @@ const StatusCard = ({
   isCurrent?: boolean;
 }) => {
   const [showCelebration, setShowCelebration] = useState(false);
-  
+
   useEffect(() => {
     if (isLatest) {
       setShowCelebration(true);
@@ -280,20 +280,22 @@ const StatusCard = ({
   }, [isLatest]);
 
   const Icon = config.icon;
-  const timeInfo = event ? {
-    date: format(new Date(event.timestamp), "MMM dd, yyyy"),
-    time: format(new Date(event.timestamp), "h:mm a"),
-  } : null;
+  const timeInfo = event
+    ? {
+        date: format(new Date(event.timestamp), "MMM dd, yyyy"),
+        time: format(new Date(event.timestamp), "h:mm a"),
+      }
+    : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ 
+      transition={{
         delay: index * 0.15,
         type: "spring",
         stiffness: 200,
-        damping: 20
+        damping: 20,
       }}
       className="relative"
     >
@@ -306,52 +308,61 @@ const StatusCard = ({
             delay: index * 0.15 + 0.3,
             type: "spring",
             stiffness: 300,
-            damping: 15
+            damping: 15,
           }}
           className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${
-            !isActive 
-              ? "from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700" 
+            !isActive
+              ? "from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700"
               : config.color
           } shadow-lg ${
-            isLatest 
-              ? `ring-3 ring-white dark:ring-gray-900 shadow-xl` 
+            isLatest
+              ? `ring-3 ring-white dark:ring-gray-900 shadow-xl`
               : !isActive
-              ? "opacity-50"
-              : ""
+                ? "opacity-50"
+                : ""
           }`}
         >
           <Icon className="w-5 h-5 text-white" />
-          
+
           {/* Celebration animation */}
-          {isLatest && showCelebration && config.celebrationIcons.map((CelebIcon, i) => (
-            <FloatingIcon
-              key={i}
-              Icon={CelebIcon}
-              delay={i * 0.5}
-              className={`${
-                i === 0 ? "-top-2 -left-2" :
-                i === 1 ? "-top-3 -right-1" :
-                "-bottom-2 left-0"
-              }`}
-            />
-          ))}
-          
+          {isLatest &&
+            showCelebration &&
+            config.celebrationIcons.map(
+              (
+                CelebIcon: React.ComponentType<{ className?: string }>,
+                i: number
+              ) => (
+                <FloatingIcon
+                  key={i}
+                  Icon={CelebIcon}
+                  delay={i * 0.5}
+                  className={`${
+                    i === 0
+                      ? "-top-2 -left-2"
+                      : i === 1
+                        ? "-top-3 -right-1"
+                        : "-bottom-2 left-0"
+                  }`}
+                />
+              )
+            )}
+
           {/* Pulsing effect for active status */}
           {isLatest && (
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.3, 1],
-                opacity: [0.5, 0.8, 0.5]
+                opacity: [0.5, 0.8, 0.5],
               }}
-              transition={{ 
-                duration: 2, 
+              transition={{
+                duration: 2,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${config.color} opacity-30`}
             />
           )}
-          
+
           {/* Emoji overlay */}
           {isActive && (
             <motion.div
@@ -372,35 +383,39 @@ const StatusCard = ({
           transition={{ delay: index * 0.15 + 0.4 }}
           className="flex-1 min-w-0"
         >
-          <div className={`p-3 rounded-xl border ${
-            !isActive 
-              ? "bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-60" 
-              : `${config.bgColor} border-transparent`
-          } ${
-            isLatest 
-              ? `${config.ringColor} ring-2 shadow-lg` 
-              : ""
-          }`}>
+          <div
+            className={`p-3 rounded-xl border ${
+              !isActive
+                ? "bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-60"
+                : `${config.bgColor} border-transparent`
+            } ${isLatest ? `${config.ringColor} ring-2 shadow-lg` : ""}`}
+          >
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <h3 className={`font-semibold text-sm ${
-                  !isActive 
-                    ? "text-gray-500 dark:text-gray-400" 
-                    : config.textColor
-                }`}>
+                <h3
+                  className={`font-semibold text-sm ${
+                    !isActive
+                      ? "text-gray-500 dark:text-gray-400"
+                      : config.textColor
+                  }`}
+                >
                   {config.label}
                 </h3>
                 {isLatest && (
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
                   >
                     <Sparkles className="w-4 h-4 text-yellow-500" />
                   </motion.div>
                 )}
               </div>
-              
+
               {event && timeInfo && (
                 <div className="text-right">
                   <p className="text-xs font-medium text-gray-900 dark:text-white">
@@ -414,45 +429,49 @@ const StatusCard = ({
             </div>
 
             {/* Description */}
-            <p className={`text-xs font-medium mb-2 leading-relaxed ${
-              !isActive 
-                ? "text-gray-500 dark:text-gray-500" 
-                : "text-gray-700 dark:text-gray-300"
-            }`}>
+            <p
+              className={`text-xs font-medium mb-2 leading-relaxed ${
+                !isActive
+                  ? "text-gray-500 dark:text-gray-500"
+                  : "text-gray-700 dark:text-gray-300"
+              }`}
+            >
               {event?.description || config.description}
             </p>
 
             {/* Metadata badges */}
-            {event && (event.location || event.carrier || event.metadata) && isActive && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {event.location && (
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-                  >
-                    <MapPin className="w-2 h-2 mr-1" />
-                    {event.location}
-                  </Badge>
-                )}
-                {event.carrier && (
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-                  >
-                    <Truck className="w-2 h-2 mr-1" />
-                    {event.carrier}
-                  </Badge>
-                )}
-                {event.metadata?.temperature && (
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                  >
-                    🌡️ {event.metadata.temperature}
-                  </Badge>
-                )}
-              </div>
-            )}
+            {event &&
+              (event.location || event.carrier || event.metadata) &&
+              isActive && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {event.location && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                    >
+                      <MapPin className="w-2 h-2 mr-1" />
+                      {event.location}
+                    </Badge>
+                  )}
+                  {event.carrier && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                    >
+                      <Truck className="w-2 h-2 mr-1" />
+                      {event.carrier}
+                    </Badge>
+                  )}
+                  {event.metadata?.temperature && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                    >
+                      🌡️ {event.metadata.temperature}
+                    </Badge>
+                  )}
+                </div>
+              )}
 
             {/* Special indicators */}
             {isLatest && (
@@ -468,7 +487,7 @@ const StatusCard = ({
                 </span>
               </motion.div>
             )}
-            
+
             {!isActive && (
               <div className="flex items-center space-x-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                 <Clock className="w-3 h-3" />
@@ -490,13 +509,16 @@ export default function EnhancedMobileTimeline({
   onRefresh,
 }: EnhancedMobileTimelineProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   const sortedEvents = [...events].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
   const getStatusConfig = (status: string) => {
-    return statusConfig[status as keyof typeof statusConfig] || statusConfig.order_placed;
+    return (
+      statusConfig[status as keyof typeof statusConfig] ||
+      statusConfig.order_placed
+    );
   };
 
   const handleRefresh = async () => {
@@ -527,19 +549,16 @@ export default function EnhancedMobileTimeline({
   };
 
   // Essential customer-facing timeline steps
-  const allSteps = [
-    'order_placed', 
-    'processing', 
-    'shipped', 
-    'delivered'
-  ];
-  
+  const allSteps = ["order_placed", "processing", "shipped", "delivered"];
+
   // Create timeline with all steps, marking which ones are active
   const timelineSteps = allSteps.map((stepStatus) => {
-    const actualEvent = sortedEvents.find(event => event.status === stepStatus);
+    const actualEvent = sortedEvents.find(
+      (event) => event.status === stepStatus
+    );
     const stepIndex = allSteps.indexOf(stepStatus);
     const currentStepIndex = allSteps.indexOf(currentStatus);
-    
+
     return {
       status: stepStatus,
       config: getStatusConfig(stepStatus),
@@ -570,7 +589,7 @@ export default function EnhancedMobileTimeline({
             Order {orderNumber}
           </p>
         </div>
-        
+
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -586,7 +605,7 @@ export default function EnhancedMobileTimeline({
               <RefreshCw className="w-4 h-4" />
             </motion.div>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -629,11 +648,13 @@ export default function EnhancedMobileTimeline({
       <div className="relative">
         {/* Main timeline line */}
         <div className="absolute left-7 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700 rounded-full" />
-        
+
         {/* Completed progress line */}
         <motion.div
           initial={{ height: 0 }}
-          animate={{ height: `${(timelineSteps.filter(step => step.isActive).length / allSteps.length) * 100}%` }}
+          animate={{
+            height: `${(timelineSteps.filter((step) => step.isActive).length / allSteps.length) * 100}%`,
+          }}
           transition={{ duration: 2, ease: "easeOut" }}
           className="absolute left-7 top-0 w-0.5 bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 rounded-full z-10"
         />
@@ -646,19 +667,19 @@ export default function EnhancedMobileTimeline({
                 event={step.event}
                 config={step.config}
                 index={index}
-                isLatest={step.isLatest}
+                isLatest={!!step.isLatest}
                 isNext={!step.isActive}
                 isActive={step.isActive}
                 isCurrent={step.isCurrent}
               />
-              
+
               {/* Connecting line to next step */}
               {index < timelineSteps.length - 1 && (
                 <div className="absolute left-7 top-14 transform -translate-x-1/2">
-                  <ConnectingLine 
-                    isCompleted={step.isActive} 
+                  <ConnectingLine
+                    isCompleted={step.isActive}
                     isActive={step.isCurrent}
-                    height="h-6" 
+                    height="h-6"
                   />
                 </div>
               )}
@@ -676,17 +697,17 @@ export default function EnhancedMobileTimeline({
         <Card className="backdrop-blur-lg bg-white/80 dark:bg-gray-900/80 border-0 shadow-lg">
           <CardContent className="p-4">
             <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full backdrop-blur-sm bg-white/50 dark:bg-gray-800/50"
               >
                 <Phone className="w-4 h-4 mr-2" />
                 Support
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full backdrop-blur-sm bg-white/50 dark:bg-gray-800/50"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
