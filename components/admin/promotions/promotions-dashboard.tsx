@@ -16,6 +16,8 @@ import {
   Gift,
   Users,
   TrendingUp,
+  Package,
+  Tag,
 } from "lucide-react";
 import { useNotifications, usePromotions } from "@/hooks/usePromotions";
 import { Notification } from "@/components/admin/promotions/promotion-components";
@@ -27,15 +29,17 @@ import {
   CustomersTab,
   OverviewTab,
   PromotionsTab,
+  ProductDiscountsTab,
 } from "@/components/admin/promotions/promotion-tabs";
 import PromotionForm from "@/components/admin/promotions/promotion-form";
+import ProductDiscountModal from "@/components/admin/promotions/ProductDiscountModal";
 
 interface PromotionsDashboardProps {
   categories?: ICategory[];
   products?: IProduct[];
 }
 
-type TabId = "overview" | "promotions" | "customers" | "analytics";
+type TabId = "overview" | "promotions" | "product-discounts" | "customers" | "analytics";
 
 interface Tab {
   id: TabId;
@@ -66,6 +70,7 @@ export default function PromotionsDashboard({
 
   const [selectedTab, setSelectedTab] = useState<TabId>("promotions");
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [isProductDiscountModalOpen, setIsProductDiscountModalOpen] = useState<boolean>(false);
   const [editingPromotion, setEditingPromotion] = useState<IPromotion | null>(
     null
   );
@@ -171,9 +176,14 @@ export default function PromotionsDashboard({
     }
   };
 
+  const handleOpenProductDiscountModal = () => {
+    setIsProductDiscountModalOpen(true);
+  };
+
   const tabs: Tab[] = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "promotions", label: "Promotions", icon: Gift },
+    { id: "product-discounts", label: "Product Discounts", icon: Tag },
     { id: "customers", label: "Customers", icon: Users },
     { id: "analytics", label: "Analytics", icon: TrendingUp },
   ];
@@ -201,6 +211,13 @@ export default function PromotionsDashboard({
             >
               <Download className="h-4 w-4" />
               Export
+            </button>
+            <button
+              onClick={handleOpenProductDiscountModal}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-all"
+            >
+              <Package className="h-4 w-4" />
+              Product Discounts
             </button>
             <button
               onClick={handleCreatePromotion}
@@ -298,7 +315,13 @@ export default function PromotionsDashboard({
           />
         )}
 
-        {selectedTab === "customers" && <CustomersTab />}
+        {selectedTab === "product-discounts" && (
+          <ProductDiscountsTab
+            onCreateDiscount={handleOpenProductDiscountModal}
+          />
+        )}
+
+        {selectedTab === "customers" && <CustomersTab promotions={promotions} />}
 
         {selectedTab === "analytics" && (
           <AnalyticsTab onExport={handleExportPromotions} />
@@ -317,6 +340,12 @@ export default function PromotionsDashboard({
           onUpdatePromotion={updatePromotion}
           categories={categories}
           products={products}
+        />
+
+        {/* Product Discount Modal */}
+        <ProductDiscountModal
+          isOpen={isProductDiscountModalOpen}
+          onClose={() => setIsProductDiscountModalOpen(false)}
         />
       </div>
     </div>

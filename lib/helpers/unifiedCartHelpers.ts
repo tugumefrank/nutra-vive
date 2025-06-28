@@ -129,8 +129,12 @@ export function calculateItemPricing(
   promotionSavings: number;
   totalSavings: number;
 } {
-  const originalPrice = product.compareAtPrice || product.price;
-  const regularPrice = product.price;
+  // For auto-discounted products, compareAtPrice is the original price before discount
+  // For non-discounted products, use the current price as the original price
+  const originalPrice = product.isDiscounted && product.compareAtPrice 
+    ? product.compareAtPrice 
+    : product.price;
+  const regularPrice = product.price; // This is now the current (possibly discounted) price
 
   // Calculate membership allocation
   const freeFromMembership = eligibility.isMembershipEligible
@@ -147,7 +151,12 @@ export function calculateItemPricing(
   const promotionPrice = membershipPrice - promotionSavings;
   const finalPrice = promotionPrice;
 
-  const totalSavings = membershipSavings + promotionSavings;
+  // Calculate auto-discount savings (product-level discounts)
+  const autoDiscountSavings = product.isDiscounted && product.compareAtPrice 
+    ? (product.compareAtPrice - product.price) * quantity
+    : 0;
+
+  const totalSavings = membershipSavings + promotionSavings + autoDiscountSavings;
 
   return {
     freeFromMembership,
@@ -373,7 +382,7 @@ export async function serializeUnifiedCart(
   await cart.populate({
     path: "items.product",
     select:
-      "name slug price images category isActive compareAtPrice promotionEligible",
+      "name slug price images category isActive compareAtPrice promotionEligible isDiscounted",
     populate: { path: "category", select: "name slug" },
   });
 
@@ -437,7 +446,9 @@ export async function serializeUnifiedCart(
     };
 
     items.push(unifiedItem);
-    subtotal += cartItem.quantity * unifiedItem.originalPrice;
+    // For subtotal, use current product price (after auto-discounts) as the base
+    // This ensures that auto-discounted products contribute their discounted price to the subtotal
+    subtotal += cartItem.quantity * product.price;
     membershipDiscount += pricing.membershipSavings;
     freeItems += pricing.freeFromMembership;
     paidItems += pricing.paidQuantity;

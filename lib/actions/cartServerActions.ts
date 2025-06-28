@@ -1194,12 +1194,12 @@ function calculatePromotionDiscount(
           (a, b) => a.price - b.price
         );
 
-        let totalEligibleQty = eligibleItems.reduce(
+        const totalEligibleQty = eligibleItems.reduce(
           (sum, item) => sum + item.quantity,
           0
         );
-        let setsEligible = Math.floor(totalEligibleQty / buyQuantity);
-        let discountableQty = Math.min(
+        const setsEligible = Math.floor(totalEligibleQty / buyQuantity);
+        const discountableQty = Math.min(
           setsEligible * getQuantity,
           totalEligibleQty
         );

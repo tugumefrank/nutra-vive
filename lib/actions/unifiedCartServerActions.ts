@@ -119,8 +119,9 @@ export async function addToCart(
       // Update item properties
       existingItem.quantity = newTotalQuantity;
       existingItem.price = product.price;
-      (existingItem as any).originalPrice =
-        product.compareAtPrice || product.price;
+      (existingItem as any).originalPrice = product.isDiscounted && product.compareAtPrice 
+        ? product.compareAtPrice 
+        : product.price;
       (existingItem as any).membershipSavings =
         newFreeFromMembership * product.price;
       (existingItem as any).freeFromMembership = newFreeFromMembership;
@@ -137,7 +138,9 @@ export async function addToCart(
         product: new mongoose.Types.ObjectId(validatedData.productId),
         quantity: validatedData.quantity,
         price: product.price,
-        originalPrice: product.compareAtPrice || product.price,
+        originalPrice: product.isDiscounted && product.compareAtPrice 
+          ? product.compareAtPrice 
+          : product.price,
         membershipSavings: freeFromMembership * product.price,
         freeFromMembership: freeFromMembership,
         paidQuantity: quantity - freeFromMembership,
@@ -658,6 +661,99 @@ export async function getCartStats(): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
+
+/**
+ * Refresh cart prices to reflect updated product prices (e.g., after auto-discounts)
+ */
+export async function refreshCartPrices(): Promise<CartOperationResult> {
+  try {
+    console.log(`🔄 Refreshing cart prices`);
+
+    const context = await getUserCartContext();
+    const cart = await getOrCreateCart(context.userId);
+
+    if (!cart.items || cart.items.length === 0) {
+      console.log(`ℹ️ Cart is empty, no prices to refresh`);
+      const unifiedCart = await serializeUnifiedCart(cart, context);
+      return { success: true, cart: unifiedCart };
+    }
+
+    // Get current product prices from database
+    const productIds = cart.items.map((item: any) => item.product);
+    const products = await Product.find({ 
+      _id: { $in: productIds },
+      isActive: true 
+    }).select('_id price compareAtPrice isDiscounted');
+
+    let cartUpdated = false;
+
+    // Update cached prices in cart items
+    console.log(`🔍 Checking ${cart.items.length} cart items against ${products.length} products`);
+    
+    for (const cartItem of cart.items) {
+      const currentProduct = products.find(
+        (p: any) => p._id.toString() === cartItem.product.toString()
+      );
+
+      if (currentProduct) {
+        console.log(`🔍 Product ${currentProduct._id}: DB price=${currentProduct.price}, cart price=${(cartItem as any).price}, isDiscounted=${currentProduct.isDiscounted}, compareAtPrice=${currentProduct.compareAtPrice}`);
+        
+        if ((cartItem as any).price !== currentProduct.price) {
+          console.log(`💰 Updating price for item ${cartItem.product}: ${(cartItem as any).price} → ${currentProduct.price}`);
+          (cartItem as any).price = currentProduct.price;
+          cartUpdated = true;
+        } else {
+          console.log(`✅ Price already up to date for item ${cartItem.product}`);
+        }
+      } else {
+        console.log(`❌ Product not found in database for cart item ${cartItem.product}`);
+      }
+    }
+
+    // Remove items for products that are no longer active
+    const initialItemCount = cart.items.length;
+    cart.items = cart.items.filter((item: any) => 
+      products.some((p: any) => p._id.toString() === item.product.toString())
+    );
+
+    if (cart.items.length !== initialItemCount) {
+      console.log(`🗑️ Removed ${initialItemCount - cart.items.length} inactive products from cart`);
+      cartUpdated = true;
+    }
+
+    // Save cart if updated
+    if (cartUpdated) {
+      await cart.save();
+      console.log(`✅ Cart prices refreshed successfully`);
+    }
+
+    // Populate cart for serialization
+    await cart.populate({
+      path: "items.product",
+      select: "name slug price images category isActive compareAtPrice promotionEligible isDiscounted",
+      populate: {
+        path: "category",
+        select: "name slug",
+      },
+    });
+
+    const unifiedCart = await serializeUnifiedCart(cart, context);
+
+    revalidatePath("/cart");
+    revalidatePath("/checkout");
+
+    return {
+      success: true,
+      cart: unifiedCart,
+    };
+  } catch (error) {
+    console.error("❌ Error refreshing cart prices:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to refresh cart prices",
     };
   }
 }

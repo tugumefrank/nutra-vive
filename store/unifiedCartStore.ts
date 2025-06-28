@@ -16,6 +16,7 @@ import {
   applyPromotionToCart,
   removePromotionFromCart,
   validatePromotionCode,
+  refreshCartPrices,
 } from "@/lib/actions/unifiedCartServerActions";
 import { useCallback } from "react";
 
@@ -86,6 +87,7 @@ interface UnifiedCartState {
   getItemQuantity: (productId: string) => number;
   getItem: (productId: string) => UnifiedCartItem | null;
   refreshCart: () => Promise<void>;
+  refreshCartPrices: () => Promise<void>;
 
   // Membership Utilities
   getMembershipSavingsForProduct: (productId: string) => number;
@@ -654,6 +656,47 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
         }
       },
 
+      // Refresh cart prices to reflect updated product prices (e.g., after auto-discounts)
+      refreshCartPrices: async () => {
+        try {
+          set({ loading: true, error: null });
+          
+          // Try server action first
+          const result = await refreshCartPrices();
+
+          if (result.success && result.cart) {
+            const newStats = calculateStats(result.cart);
+            set({ cart: result.cart, stats: newStats, loading: false });
+            console.log("✅ Cart prices refreshed successfully");
+          } else {
+            throw new Error(result.error || "Failed to refresh cart prices");
+          }
+        } catch (error) {
+          console.error("Failed to refresh cart prices:", error);
+          
+          // Fallback: try API endpoint
+          try {
+            const response = await fetch('/api/cart/refresh-prices', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            const apiResult = await response.json();
+            
+            if (apiResult.success && apiResult.cart) {
+              const newStats = calculateStats(apiResult.cart);
+              set({ cart: apiResult.cart, stats: newStats, loading: false });
+              console.log("✅ Cart prices refreshed via API");
+            } else {
+              throw new Error(apiResult.error || "API refresh failed");
+            }
+          } catch (apiError) {
+            console.error("Failed to refresh cart prices via API:", apiError);
+            set({ loading: false, error: "Failed to refresh cart prices" });
+          }
+        }
+      },
+
       // Membership Utilities
       getMembershipSavingsForProduct: (productId: string) => {
         const item = get().getItem(productId);
@@ -749,3 +792,10 @@ export const useCartPromotion = () =>
       canApplyPromotion: state.canApplyPromotion,
     }))
   );
+
+// Hook for cart price refresh functionality
+export const useCartPriceRefresh = () =>
+  useUnifiedCartStore((state) => ({
+    refreshCartPrices: state.refreshCartPrices,
+    loading: state.loading,
+  }));

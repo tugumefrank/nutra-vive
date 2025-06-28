@@ -1,552 +1,3 @@
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import { motion } from "framer-motion";
-// import { useRouter } from "next/navigation";
-// import { loadStripe } from "@stripe/stripe-js";
-// import { Elements } from "@stripe/react-stripe-js";
-
-// import { ArrowLeft, Lock } from "lucide-react";
-// import { Button } from "@/components/ui/button";
-// import Link from "next/link";
-// import { toast } from "sonner";
-
-// // Import our components
-// import CheckoutProgress from "./components/CheckoutProgress";
-// import ContactStep from "./components/ContactStep";
-// import DeliveryMethodStep from "./components/DeliveryMethodStep";
-// import AddressStep from "./components/AddressStep";
-// import ReviewStep from "./components/ReviewStep";
-// import PaymentStep from "./components/PaymentStep";
-// import OrderSummary from "./components/OrderSummary"; // Updated component
-// import SuccessPage from "./components/SuccessPage";
-
-// // Import actions and types
-// import { getCart } from "@/lib/actions/cartServerActions";
-// import {
-//   createCheckoutSession,
-//   confirmPayment,
-// } from "@/lib/actions/orderServerActions";
-
-// // Import validation utilities
-// import { validateStep, getStepErrors } from "./utils/validation";
-// import { checkoutSteps } from "./utils/constants";
-// import type { FormData, StepErrors } from "./types";
-
-// // Enhanced Cart interface with promotions
-// interface CartWithPromotion {
-//   _id: string;
-//   items: Array<{
-//     _id: string;
-//     product: {
-//       _id: string;
-//       name: string;
-//       slug: string;
-//       price: number;
-//       images: string[];
-//       category?: {
-//         name: string;
-//         slug: string;
-//       };
-//     };
-//     quantity: number;
-//     price: number;
-//     originalPrice?: number;
-//   }>;
-//   subtotal: number;
-//   promotionDiscount: number;
-//   promotionCode?: string;
-//   promotionName?: string;
-//   finalTotal: number;
-//   hasPromotionApplied: boolean;
-// }
-
-// // Initialize Stripe
-// const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-
-// export default function CheckoutPage() {
-//   // State management
-//   const [cart, setCart] = useState<CartWithPromotion | null>(null);
-//   const [loading, setLoading] = useState(true);
-//   const [currentStep, setCurrentStep] = useState(1);
-//   const [orderComplete, setOrderComplete] = useState(false);
-//   const [clientSecret, setClientSecret] = useState<string | null>(null);
-//   const [orderId, setOrderId] = useState<string | null>(null);
-//   const [paymentError, setPaymentError] = useState<string | null>(null);
-//   const [creatingOrder, setCreatingOrder] = useState(false);
-//   const [stepErrors, setStepErrors] = useState<StepErrors>({});
-
-//   // Form state
-//   const [formData, setFormData] = useState<FormData>({
-//     firstName: "",
-//     lastName: "",
-//     email: "",
-//     phone: "",
-//     address: "",
-//     apartment: "",
-//     city: "",
-//     state: "",
-//     zipCode: "",
-//     country: "US",
-//     deliveryMethod: "standard",
-//     notes: "",
-//     marketingOptIn: false,
-//   });
-
-//   const router = useRouter();
-
-//   // Calculate totals using cart finalTotal (after promotions)
-//   const cartSubtotal = cart?.subtotal || 0;
-//   const promotionDiscount = cart?.promotionDiscount || 0;
-//   const afterPromotionTotal = cart?.finalTotal || 0; // This is subtotal - promotionDiscount
-
-//   // Calculate shipping based on after-promotion total
-//   const shipping = calculateShipping(
-//     afterPromotionTotal,
-//     formData.deliveryMethod
-//   );
-
-//   // Calculate tax on (after-promotion total + shipping)
-//   const tax = calculateTax(afterPromotionTotal + shipping);
-
-//   // Final order total
-//   const total = afterPromotionTotal + shipping + tax;
-
-//   // Helper functions for calculations
-//   function calculateShipping(amount: number, method: string): number {
-//     if (method === "pickup") return 0; // Always free for pickup
-//     if (amount >= 25) return 0; // Free shipping over $25 after promotions
-//     return method === "express" ? 9.99 : 5.99;
-//   }
-
-//   function calculateTax(amount: number): number {
-//     return Math.round(amount * 0.08 * 100) / 100; // 8% tax
-//   }
-
-//   // Load cart data
-//   useEffect(() => {
-//     loadCart();
-//   }, []);
-
-//   // Validate form and create order when on payment step
-//   useEffect(() => {
-//     if (currentStep === 5 && !clientSecret && !creatingOrder && !paymentError) {
-//       const allStepsValid = [1, 2, 3, 4].every((step) =>
-//         validateStep(step, formData)
-//       );
-//       if (allStepsValid && total > 0) {
-//         createOrder();
-//       }
-//     }
-//   }, [currentStep, formData, clientSecret, creatingOrder, paymentError, total]);
-
-//   // Reset payment-related state when cart changes (e.g., when promotion is applied/removed)
-//   useEffect(() => {
-//     if (currentStep === 5 && (clientSecret || orderId)) {
-//       // Cart changed while on payment step, need to recreate order
-//       setClientSecret(null);
-//       setOrderId(null);
-//       setPaymentError(null);
-//       setCreatingOrder(false);
-//     }
-//   }, [cart?.finalTotal, cart?.promotionDiscount]); // Watch for cart total changes
-
-//   const loadCart = async () => {
-//     try {
-//       setLoading(true);
-//       const result = await getCart();
-
-//       if (result.success && result.cart) {
-//         setCart(result.cart);
-
-//         if (!result.cart.items || result.cart.items.length === 0) {
-//           router.push("/cart");
-//           return;
-//         }
-//       } else {
-//         router.push("/cart");
-//         return;
-//       }
-//     } catch (error) {
-//       console.error("Error loading cart:", error);
-//       toast.error("Failed to load cart");
-//       router.push("/cart");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Handle cart updates from promotion applications/removals
-//   const handleCartUpdate = (updatedCart: CartWithPromotion) => {
-//     setCart(updatedCart);
-
-//     // Show updated totals message
-//     const oldTotal = total;
-//     const newAfterPromotionTotal = updatedCart.finalTotal;
-//     const newShipping = calculateShipping(
-//       newAfterPromotionTotal,
-//       formData.deliveryMethod
-//     );
-//     const newTax = calculateTax(newAfterPromotionTotal + newShipping);
-//     const newTotal = newAfterPromotionTotal + newShipping + newTax;
-
-//     if (newTotal !== oldTotal) {
-//       toast.info(`Order total updated: $${newTotal.toFixed(2)}`, {
-//         description: updatedCart.hasPromotionApplied
-//           ? `Saved $${updatedCart.promotionDiscount.toFixed(2)} with promotion`
-//           : "Promotion removed",
-//       });
-//     }
-//   };
-
-//   const handleInputChange = (
-//     field: keyof FormData,
-//     value: string | boolean
-//   ) => {
-//     setFormData((prev) => ({ ...prev, [field]: value }));
-
-//     // Clear errors for this field
-//     setStepErrors((prev) => {
-//       const newErrors = { ...prev };
-//       Object.keys(newErrors).forEach((step) => {
-//         if (newErrors[parseInt(step)]?.[field]) {
-//           delete newErrors[parseInt(step)][field];
-//           if (Object.keys(newErrors[parseInt(step)]).length === 0) {
-//             delete newErrors[parseInt(step)];
-//           }
-//         }
-//       });
-//       return newErrors;
-//     });
-
-//     // Reset payment state when form changes
-//     if (clientSecret) {
-//       setClientSecret(null);
-//       setOrderId(null);
-//       setPaymentError(null);
-//     }
-//   };
-
-//   const validateCurrentStep = (): boolean => {
-//     const errors = getStepErrors(currentStep, formData);
-
-//     if (Object.keys(errors).length > 0) {
-//       setStepErrors((prev) => ({ ...prev, [currentStep]: errors }));
-//       return false;
-//     } else {
-//       setStepErrors((prev) => {
-//         const newErrors = { ...prev };
-//         delete newErrors[currentStep];
-//         return newErrors;
-//       });
-//       return true;
-//     }
-//   };
-
-//   const goToStep = (stepNumber: number) => {
-//     // Only allow navigation to previous steps or next step if current is valid
-//     if (
-//       stepNumber < currentStep ||
-//       (stepNumber === currentStep + 1 && validateCurrentStep())
-//     ) {
-//       setCurrentStep(stepNumber);
-//     } else if (stepNumber > currentStep) {
-//       // Validate all steps up to the target step
-//       let canNavigate = true;
-//       for (let i = currentStep; i < stepNumber; i++) {
-//         const errors = getStepErrors(i, formData);
-//         if (Object.keys(errors).length > 0) {
-//           setStepErrors((prev) => ({ ...prev, [i]: errors }));
-//           canNavigate = false;
-//           break;
-//         }
-//       }
-//       if (canNavigate) {
-//         setCurrentStep(stepNumber);
-//       } else {
-//         toast.error("Please complete all required fields in previous steps");
-//       }
-//     }
-//   };
-
-//   const nextStep = () => {
-//     if (validateCurrentStep() && currentStep < checkoutSteps.length) {
-//       setCurrentStep(currentStep + 1);
-//     }
-//   };
-
-//   const prevStep = () => {
-//     if (currentStep > 1) {
-//       setCurrentStep(currentStep - 1);
-//     }
-//   };
-
-//   const createOrder = async () => {
-//     try {
-//       setCreatingOrder(true);
-//       setPaymentError(null);
-
-//       // Conditionally include shipping address based on delivery method
-//       const baseCheckoutData = {
-//         email: formData.email,
-//         phone: formData.phone,
-//         deliveryMethod: formData.deliveryMethod as
-//           | "standard"
-//           | "express"
-//           | "pickup",
-//         notes: formData.notes,
-//         marketingOptIn: formData.marketingOptIn,
-//       };
-
-//       // Only include shipping address for non-pickup orders
-//       const checkoutData =
-//         formData.deliveryMethod === "pickup"
-//           ? {
-//               ...baseCheckoutData,
-//               // For pickup orders, use minimal address with just name and contact info
-//               shippingAddress: {
-//                 firstName: formData.firstName,
-//                 lastName: formData.lastName,
-//                 address1: "Store Pickup", // Placeholder for pickup
-//                 address2: "",
-//                 city: "Store Location",
-//                 province: "N/A",
-//                 country: formData.country,
-//                 zip: "00000",
-//                 phone: formData.phone,
-//               },
-//               billingAddress: undefined,
-//             }
-//           : {
-//               ...baseCheckoutData,
-//               shippingAddress: {
-//                 firstName: formData.firstName,
-//                 lastName: formData.lastName,
-//                 address1: formData.address,
-//                 address2: formData.apartment,
-//                 city: formData.city,
-//                 province: formData.state,
-//                 country: formData.country,
-//                 zip: formData.zipCode,
-//                 phone: formData.phone,
-//               },
-//               billingAddress: undefined,
-//             };
-
-//       const result = await createCheckoutSession(checkoutData);
-
-//       if (result.success && result.clientSecret && result.orderId) {
-//         setOrderId(result.orderId);
-//         setClientSecret(result.clientSecret);
-//         toast.success("Order created! Complete payment to confirm.");
-//       } else {
-//         setPaymentError(result.error || "Failed to create order");
-//         toast.error(result.error || "Failed to create order");
-//       }
-//     } catch (error) {
-//       const errorMessage =
-//         error instanceof Error ? error.message : "Failed to create order";
-//       setPaymentError(errorMessage);
-//       toast.error(errorMessage);
-//     } finally {
-//       setCreatingOrder(false);
-//     }
-//   };
-
-//   const handlePaymentSuccess = async (paymentIntentId: string) => {
-//     try {
-//       const result = await confirmPayment(paymentIntentId);
-
-//       if (result.success && result.order) {
-//         setOrderComplete(true);
-//         toast.success(
-//           "Order placed successfully! You will receive a confirmation email shortly."
-//         );
-//       } else {
-//         toast.error(
-//           result.error ||
-//             "Payment processed but there was an issue confirming your order. Please contact support."
-//         );
-//       }
-//     } catch (error) {
-//       toast.error(
-//         "Payment processed but there was an issue confirming your order. Please contact support."
-//       );
-//     }
-//   };
-
-//   const handlePaymentError = (error: string) => {
-//     setPaymentError(error);
-//     toast.error("Payment failed: " + error);
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 flex items-center justify-center">
-//         <div className="text-center space-y-4">
-//           <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto" />
-//           <p className="text-gray-600">Loading checkout...</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   if (orderComplete && orderId) {
-//     return <SuccessPage orderId={orderId} />;
-//   }
-
-//   const renderStepContent = () => {
-//     const stepProps = {
-//       formData,
-//       onInputChange: handleInputChange,
-//       errors: stepErrors[currentStep] || {},
-//       subtotal: afterPromotionTotal, // Use after-promotion total for step calculations
-//       shipping,
-//     };
-
-//     switch (currentStep) {
-//       case 1:
-//         return <ContactStep {...stepProps} />;
-//       case 2:
-//         return <DeliveryMethodStep {...stepProps} />;
-//       case 3:
-//         return <AddressStep {...stepProps} />;
-//       case 4:
-//         return (
-//           <ReviewStep {...stepProps} cart={cart} total={total} tax={tax} />
-//         );
-//       case 5:
-//         return (
-//           <Elements
-//             stripe={stripePromise}
-//             options={{
-//               clientSecret: clientSecret || undefined,
-//               appearance: {
-//                 theme: "stripe",
-//                 variables: {
-//                   colorPrimary: "#ea580c",
-//                   colorBackground: "#ffffff",
-//                   colorText: "#374151",
-//                   colorDanger: "#ef4444",
-//                   borderRadius: "8px",
-//                 },
-//               },
-//             }}
-//             key={clientSecret}
-//           >
-//             <PaymentStep
-//               {...stepProps}
-//               total={total}
-//               clientSecret={clientSecret}
-//               orderId={orderId}
-//               creatingOrder={creatingOrder}
-//               paymentError={paymentError}
-//               onPaymentSuccess={handlePaymentSuccess}
-//               onPaymentError={handlePaymentError}
-//               onRetryOrder={createOrder}
-//             />
-//           </Elements>
-//         );
-//       default:
-//         return null;
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100">
-//       {/* Header */}
-//       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-orange-100">
-//         <div className="container mx-auto px-4 py-4">
-//           <div className="flex items-center justify-between">
-//             <Button variant="ghost" asChild>
-//               <Link href="/cart">
-//                 <ArrowLeft className="w-4 h-4 mr-2" />
-//                 <span className="hidden sm:inline">Back to Cart</span>
-//                 <span className="sm:hidden">Cart</span>
-//               </Link>
-//             </Button>
-//             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-//               <span className="hidden sm:inline">Secure Checkout</span>
-//               <span className="sm:hidden">Checkout</span>
-//             </h1>
-//             <div className="flex items-center text-sm text-gray-600">
-//               <Lock className="w-4 h-4 mr-1" />
-//               Secure
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Progress Indicator */}
-//       <CheckoutProgress
-//         currentStep={currentStep}
-//         onStepClick={goToStep}
-//         stepErrors={stepErrors}
-//         formData={formData}
-//       />
-
-//       <div className="container mx-auto px-4 pb-8">
-//         <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
-//           {/* Main Content */}
-//           <div className="lg:col-span-2">
-//             <motion.div
-//               key={currentStep}
-//               initial={{ opacity: 0, x: 20 }}
-//               animate={{ opacity: 1, x: 0 }}
-//               exit={{ opacity: 0, x: -20 }}
-//               transition={{ duration: 0.3 }}
-//             >
-//               {renderStepContent()}
-
-//               {/* Navigation Buttons */}
-//               <div className="flex justify-between mt-6">
-//                 <Button
-//                   variant="outline"
-//                   onClick={prevStep}
-//                   disabled={currentStep === 1}
-//                   className="flex items-center border-orange-200 text-orange-600 hover:bg-orange-50"
-//                 >
-//                   <ArrowLeft className="w-4 h-4 mr-2" />
-//                   Previous
-//                 </Button>
-
-//                 {currentStep < checkoutSteps.length && (
-//                   <Button
-//                     onClick={nextStep}
-//                     disabled={
-//                       Object.keys(stepErrors[currentStep] || {}).length > 0
-//                     }
-//                     className="flex items-center bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
-//                   >
-//                     Next
-//                     <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
-//                   </Button>
-//                 )}
-//               </div>
-//             </motion.div>
-//           </div>
-
-//           {/* Order Summary Sidebar */}
-//           <div className="lg:col-span-1">
-//             <OrderSummary
-//               cart={cart}
-//               cartSubtotal={cartSubtotal}
-//               promotionDiscount={promotionDiscount}
-//               afterPromotionTotal={afterPromotionTotal}
-//               shipping={shipping}
-//               tax={tax}
-//               total={total}
-//               onCartUpdate={handleCartUpdate} // Pass the cart update handler
-//             />
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Mobile Bottom Navigation Spacer */}
-//       <div className="h-20 md:hidden" />
-//     </div>
-//   );
-// }
 "use client";
 
 import { useState, useEffect } from "react";
@@ -582,7 +33,7 @@ import PaymentStep from "./components/PaymentStep";
 import SuccessPage from "./components/SuccessPage";
 
 // Import unified cart actions and types
-import { getCart } from "@/lib/actions/unifiedCartServerActions";
+import { getCart, refreshCartPrices } from "@/lib/actions/unifiedCartServerActions";
 import {
   createCheckoutSession,
   confirmPayment,
@@ -595,7 +46,10 @@ import { checkoutSteps } from "./utils/constants";
 import type { FormData, StepErrors } from "./types";
 import { UnifiedCart } from "@/types/unifiedCart";
 import EnhancedOrderSummary from "./components/OrderSummary";
-import { getUserProfile, saveCheckoutPreferences } from "@/lib/actions/userProfileServerActions";
+import {
+  getUserProfile,
+  saveCheckoutPreferences,
+} from "@/lib/actions/userProfileServerActions";
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
@@ -643,7 +97,11 @@ export default function CheckoutPage() {
   const afterDiscountsTotal = cart?.afterDiscountsTotal || 0; // This is subtotal - membershipDiscount - promotionDiscount
 
   // Helper functions for calculations
-  function calculateShipping(amount: number, method: string, isFreeOrder: boolean = false): number {
+  function calculateShipping(
+    amount: number,
+    method: string,
+    isFreeOrder: boolean = false
+  ): number {
     if (isFreeOrder) return 0; // No shipping for free membership orders
     if (method === "pickup") return 0; // Always free for pickup
     if (amount >= 25) return 0; // Free shipping over $25 after all discounts
@@ -682,9 +140,9 @@ export default function CheckoutPage() {
       userProfile: !!userProfile,
       currentStep,
       profileLoading,
-      loading
+      loading,
     });
-    
+
     // If we have a user profile and we're still on step 1, navigate to review
     if (userProfile && currentStep === 1 && !profileLoading && !loading) {
       console.log("🚀 Auto-navigating to Review step via useEffect");
@@ -698,47 +156,55 @@ export default function CheckoutPage() {
     try {
       setProfileLoading(true);
       console.log("🚀 Starting getUserProfile...");
-      
+
       const result = await getUserProfile();
-      
+
       console.log("🔍 getUserProfile result:", result);
       console.log("🔍 Result details:", {
         success: result.success,
         hasProfile: !!result.profile,
         hasUser: !!result.user,
-        error: result.error
+        error: result.error,
       });
-      
+
       if (result.success && result.profile && result.user) {
         console.log("✅ Profile and user found");
         console.log("📋 User data:", result.user);
         console.log("📋 Profile data:", result.profile);
         setUserProfile(result.profile);
-        
+
         // Pre-fill form with user data and default address
         // First try defaultShippingAddress, then look for a default saved address
         let defaultAddress = result.profile.defaultShippingAddress;
-        
+
         // If no default shipping address, try to find a default saved address
         if (!defaultAddress || !defaultAddress.address1) {
-          const defaultSavedAddress = result.profile.savedAddresses?.find(addr => addr.isDefault);
+          const defaultSavedAddress = result.profile.savedAddresses?.find(
+            (addr) => addr.isDefault
+          );
           if (defaultSavedAddress) {
             defaultAddress = defaultSavedAddress;
-            console.log("📦 Using default saved address:", defaultSavedAddress.label);
+            console.log(
+              "📦 Using default saved address:",
+              defaultSavedAddress.label
+            );
           }
         }
-        
+
         // If still no address, use the first saved address if available
         if (!defaultAddress || !defaultAddress.address1) {
           const firstSavedAddress = result.profile.savedAddresses?.[0];
           if (firstSavedAddress && firstSavedAddress.address1) {
             defaultAddress = firstSavedAddress;
-            console.log("📦 Using first saved address:", firstSavedAddress.label);
+            console.log(
+              "📦 Using first saved address:",
+              firstSavedAddress.label
+            );
           }
         }
-        
+
         console.log("📦 Selected address for form:", defaultAddress);
-        
+
         const newFormData = {
           firstName: result.user.firstName || "",
           lastName: result.user.lastName || "",
@@ -755,54 +221,67 @@ export default function CheckoutPage() {
           country: defaultAddress?.country || "US",
           notes: "",
         };
-        
+
         setFormData(newFormData);
-        
+
         // Check if user has a profile with basic information
-        // If they have a profile and have placed orders before (totalOrders > 0), 
+        // If they have a profile and have placed orders before (totalOrders > 0),
         // or have a saved address, they should go straight to review
-        const hasUsableProfile = 
+        const hasUsableProfile =
           result.user.firstName &&
           result.user.lastName &&
           result.user.email &&
-          (
-            // Has placed orders before
-            result.profile.totalOrders > 0 ||
+          // Has placed orders before
+          (result.profile.totalOrders > 0 ||
             // Has a default shipping address with minimal required fields
-            (defaultAddress && defaultAddress.address1 && defaultAddress.city) ||
-            // Has any saved addresses 
-            (result.profile.savedAddresses && result.profile.savedAddresses.length > 0)
-          );
-        
+            (defaultAddress &&
+              defaultAddress.address1 &&
+              defaultAddress.city) ||
+            // Has any saved addresses
+            (result.profile.savedAddresses &&
+              result.profile.savedAddresses.length > 0));
+
         console.log("🔍 Profile analysis:", {
           hasUser: !!result.user,
           hasProfile: !!result.profile,
           totalOrders: result.profile.totalOrders,
           hasDefaultAddress: !!defaultAddress,
-          defaultAddressValid: !!(defaultAddress && defaultAddress.address1 && defaultAddress.city),
+          defaultAddressValid: !!(
+            defaultAddress &&
+            defaultAddress.address1 &&
+            defaultAddress.city
+          ),
           savedAddressesCount: result.profile.savedAddresses?.length || 0,
-          shouldAutoNavigate: hasUsableProfile
+          shouldAutoNavigate: hasUsableProfile,
         });
-        
+
         // Auto-navigate to Review step if user has a usable profile
         if (hasUsableProfile) {
           console.log("✅ Usable profile detected, navigating to Review step");
           setCurrentStep(4); // Go directly to Review step (step 4)
-          
+
           // Clear any previous step errors since we're auto-filling
           setStepErrors({});
-          
+
           // Show a helpful toast
           toast.success("Welcome back! Your information has been pre-filled.");
         } else {
-          console.log("⚠️ New user or incomplete profile, staying on Contact step");
-          
+          console.log(
+            "⚠️ New user or incomplete profile, staying on Contact step"
+          );
+
           // TEMPORARY: Force navigation for testing if user has basic info
-          if (result.user.firstName && result.user.lastName && result.user.email) {
+          if (
+            result.user.firstName &&
+            result.user.lastName &&
+            result.user.email
+          ) {
             console.log("🚀 FORCING navigation to Review step for testing");
             setCurrentStep(4);
             setStepErrors({});
-            toast.success("Welcome back! Your information has been pre-filled.");
+            toast.success(
+              "Welcome back! Your information has been pre-filled."
+            );
           } else {
             toast.info("Please complete your profile information.");
           }
@@ -812,14 +291,14 @@ export default function CheckoutPage() {
           success: result.success,
           hasProfile: !!result.profile,
           hasUser: !!result.user,
-          error: result.error
+          error: result.error,
         });
       }
     } catch (error) {
       console.error("❌ Error loading user profile:", error);
       console.error("❌ Error details:", {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : "No stack trace",
       });
     } finally {
       setProfileLoading(false);
@@ -852,6 +331,11 @@ export default function CheckoutPage() {
   const loadCart = async () => {
     try {
       setLoading(true);
+      
+      // First, refresh cart prices to ensure they reflect any recent auto-discounts
+      await refreshCartPrices();
+      
+      // Then get the updated cart
       const result = await getCart();
 
       if (result.success && result.cart) {
@@ -889,11 +373,14 @@ export default function CheckoutPage() {
     const newTotal = newAfterDiscountsTotal + newShipping + newTax;
 
     if (Math.abs(newTotal - oldTotal) > 0.01) {
-      const totalSavings = (updatedCart.membershipDiscount || 0) + (updatedCart.promotionDiscount || 0);
+      const totalSavings =
+        (updatedCart.membershipDiscount || 0) +
+        (updatedCart.promotionDiscount || 0);
       toast.info(`Order total updated: $${newTotal.toFixed(2)}`, {
-        description: totalSavings > 0 
-          ? `Total savings: $${totalSavings.toFixed(2)}`
-          : "Discounts removed",
+        description:
+          totalSavings > 0
+            ? `Total savings: $${totalSavings.toFixed(2)}`
+            : "Discounts removed",
       });
     }
   };
@@ -949,7 +436,7 @@ export default function CheckoutPage() {
     ) {
       setCurrentStep(stepNumber);
       // Smooth scroll to top when navigating to any step
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (stepNumber > currentStep) {
       let canNavigate = true;
       for (let i = currentStep; i < stepNumber; i++) {
@@ -963,7 +450,7 @@ export default function CheckoutPage() {
       if (canNavigate) {
         setCurrentStep(stepNumber);
         // Smooth scroll to top when navigating to any step
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         toast.error("Please complete all required fields in previous steps");
       }
@@ -974,7 +461,7 @@ export default function CheckoutPage() {
     if (validateCurrentStep() && currentStep < checkoutSteps.length) {
       setCurrentStep(currentStep + 1);
       // Smooth scroll to top when moving to next step
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -982,7 +469,7 @@ export default function CheckoutPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       // Smooth scroll to top when moving to previous step
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -1041,7 +528,7 @@ export default function CheckoutPage() {
       // Check if order is free (total is exactly $0.00 for membership)
       if (total <= 0) {
         console.log("🆓 Creating free order with total:", total);
-        
+
         // For free orders, skip Stripe and directly create the order
         const result = await createCheckoutSession({
           ...checkoutData,
@@ -1053,13 +540,13 @@ export default function CheckoutPage() {
         if (result.success && result.orderId) {
           setOrderId(result.orderId);
           console.log("✅ Free order created with ID:", result.orderId);
-          
+
           // For free orders, no need to confirm payment - order is already complete
           setOrderComplete(true);
-          
+
           // Clear the cart immediately after successful free order completion
           await clearCartOptimistic();
-          
+
           toast.success("Free order placed successfully!");
         } else {
           setPaymentError(result.error || "Failed to create free order");
@@ -1105,7 +592,10 @@ export default function CheckoutPage() {
 
       await saveCheckoutPreferences({
         address: addressData,
-        deliveryMethod: formData.deliveryMethod as "standard" | "express" | "pickup",
+        deliveryMethod: formData.deliveryMethod as
+          | "standard"
+          | "express"
+          | "pickup",
         marketingOptIn: formData.marketingOptIn,
         setAsDefault: true, // Always save as default for first-time users
         addressLabel: "Home",
@@ -1123,10 +613,10 @@ export default function CheckoutPage() {
 
       if (result.success && result.order) {
         setOrderComplete(true);
-        
+
         // Clear the cart immediately after successful order completion
         await clearCartOptimistic();
-        
+
         toast.success(
           "Order placed successfully! You will receive a confirmation email shortly."
         );
@@ -1179,12 +669,23 @@ export default function CheckoutPage() {
       case 1:
         return <ContactStep {...stepProps} isReturningUser={isReturningUser} />;
       case 2:
-        return <DeliveryMethodStep {...stepProps} afterDiscountsTotal={afterDiscountsTotal} />;
+        return (
+          <DeliveryMethodStep
+            {...stepProps}
+            afterDiscountsTotal={afterDiscountsTotal}
+          />
+        );
       case 3:
         return <AddressStep {...stepProps} />;
       case 4:
         return (
-          <ReviewStep {...stepProps} cart={cart} total={total} tax={tax} onEditStep={goToStep} />
+          <ReviewStep
+            {...stepProps}
+            cart={cart}
+            total={total}
+            tax={tax}
+            onEditStep={goToStep}
+          />
         );
       case 5:
         // For free orders, show a special free order confirmation
@@ -1198,13 +699,14 @@ export default function CheckoutPage() {
               <p className="text-gray-600 mb-6">
                 Your membership benefits have made this order completely free!
               </p>
-              
+
               <div className="bg-green-50 border border-green-200 rounded-xl p-6 max-w-md mx-auto">
                 <div className="text-2xl font-bold text-green-600 mb-4">
                   Total: $0.00
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  No payment required - your order will be processed immediately.
+                  No payment required - your order will be processed
+                  immediately.
                 </p>
                 <Button
                   onClick={createOrder}
@@ -1225,7 +727,7 @@ export default function CheckoutPage() {
                   )}
                 </Button>
               </div>
-              
+
               {paymentError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 max-w-md mx-auto">
                   <div className="flex items-center text-red-700">
@@ -1245,7 +747,7 @@ export default function CheckoutPage() {
             </div>
           );
         }
-        
+
         return (
           <Elements
             stripe={stripePromise}

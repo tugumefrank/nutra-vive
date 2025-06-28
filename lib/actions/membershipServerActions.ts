@@ -1334,7 +1334,7 @@ export async function updateMembership(
     }
 
     // Clean and validate product allocations if being updated
-    let updateData = { ...validatedData };
+    const updateData = { ...validatedData };
 
     if (validatedData.productAllocations) {
       const cleanedAllocations = cleanProductAllocations(

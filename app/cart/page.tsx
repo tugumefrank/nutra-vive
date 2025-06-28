@@ -63,6 +63,7 @@ export default function CartPage() {
     updateQuantityOptimistic,
     removeFromCartOptimistic,
     clearCartOptimistic,
+    refreshCartPrices,
   } = useUnifiedCartStore();
   
   // Promotion state and actions
@@ -79,10 +80,16 @@ export default function CartPage() {
     removePromotionOptimistic,
   } = useCartPromotion();
 
-  // Initialize cart on component mount
+  // Initialize cart on component mount and refresh prices
   useEffect(() => {
-    initializeCart();
-  }, [initializeCart]);
+    const initializeAndRefresh = async () => {
+      await initializeCart();
+      // Refresh cart prices to ensure they reflect any recent auto-discounts
+      await refreshCartPrices();
+    };
+    
+    initializeAndRefresh();
+  }, [initializeCart, refreshCartPrices]);
 
   // Update quantity with optimistic updates
   const updateQuantity = async (productId: string, newQuantity: number) => {
@@ -183,6 +190,17 @@ export default function CartPage() {
                   Member
                 </Badge>
               )}
+              {/* Debug refresh button - remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <Button 
+                  variant="outline" 
+                  onClick={refreshCartPrices}
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                >
+                  🔄 Refresh
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -267,6 +285,12 @@ export default function CartPage() {
                               {item.originalPrice > item.finalPrice && (
                                 <span className="text-xs text-gray-400 line-through">
                                   ${item.originalPrice.toFixed(2)}
+                                </span>
+                              )}
+                              {/* Debug info - remove this later */}
+                              {process.env.NODE_ENV === 'development' && (
+                                <span className="text-xs text-blue-500 bg-blue-50 px-1 rounded">
+                                  DB: ${item.product.price} | Final: ${item.finalPrice} | Reg: ${item.regularPrice}
                                 </span>
                               )}
                               {item.product.category && (

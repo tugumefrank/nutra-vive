@@ -449,6 +449,48 @@ export interface ICustomerPromotionUsage extends Document {
   };
 }
 
+// Product Discount Campaign Interface
+export interface IProductDiscount extends Document {
+  _id: string;
+  name: string;
+  description?: string;
+  discountType: "percentage" | "fixed_amount";
+  discountValue: number;
+  scope: "all_products" | "categories" | "specific_products";
+  categoryIds: string[];
+  productIds: string[];
+  affectedProductCount: number;
+  isActive: boolean;
+  startsAt: Date;
+  endsAt?: Date;
+  autoDisable: boolean;
+  
+  // Enhanced scheduling options
+  scheduleType: "immediate" | "scheduled";
+  duration?: {
+    amount: number;
+    unit: "hours" | "days" | "weeks" | "months";
+  };
+  
+  // Bulk management features
+  canStackWithOtherDiscounts: boolean;
+  priority: number; // Higher priority discounts apply first
+  
+  // Analytics and tracking
+  totalSavings: number;
+  usageCount: number;
+  viewCount: number;
+  
+  // Admin metadata
+  createdBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
+  notes?: string;
+  tags: string[];
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // SCHEMAS
 
 // User Schema
@@ -913,6 +955,62 @@ const customerPromotionUsageSchema = new Schema<ICustomerPromotionUsage>(
   { timestamps: true }
 );
 
+// Product Discount Schema
+const productDiscountSchema = new Schema<IProductDiscount>(
+  {
+    name: { type: String, required: true },
+    description: String,
+    discountType: {
+      type: String,
+      enum: ["percentage", "fixed_amount"],
+      required: true,
+    },
+    discountValue: { type: Number, required: true, min: 0 },
+    scope: {
+      type: String,
+      enum: ["all_products", "categories", "specific_products"],
+      required: true,
+    },
+    categoryIds: [String],
+    productIds: [String],
+    affectedProductCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    startsAt: { type: Date, default: Date.now },
+    endsAt: Date,
+    autoDisable: { type: Boolean, default: false },
+    
+    // Enhanced scheduling
+    scheduleType: {
+      type: String,
+      enum: ["immediate", "scheduled"],
+      default: "immediate",
+    },
+    duration: {
+      amount: { type: Number, min: 1 },
+      unit: {
+        type: String,
+        enum: ["hours", "days", "weeks", "months"],
+      },
+    },
+    
+    // Bulk management
+    canStackWithOtherDiscounts: { type: Boolean, default: false },
+    priority: { type: Number, default: 0 },
+    
+    // Analytics
+    totalSavings: { type: Number, default: 0 },
+    usageCount: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
+    
+    // Admin metadata
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    notes: String,
+    tags: [String],
+  },
+  { timestamps: true }
+);
+
 // INDEXES
 trackingEventSchema.index({ order: 1 });
 trackingEventSchema.index({ status: 1 });
@@ -966,6 +1064,17 @@ customerPromotionUsageSchema.index({ user: 1 }); // Changed from customer
 customerPromotionUsageSchema.index({ customerEmail: 1 });
 customerPromotionUsageSchema.index({ usedAt: -1 });
 customerPromotionUsageSchema.index({ code: 1 });
+
+// Product Discount indexes
+productDiscountSchema.index({ name: 1 });
+productDiscountSchema.index({ isActive: 1 });
+productDiscountSchema.index({ startsAt: 1, endsAt: 1 });
+productDiscountSchema.index({ scope: 1 });
+productDiscountSchema.index({ discountType: 1 });
+productDiscountSchema.index({ createdBy: 1 });
+productDiscountSchema.index({ autoDisable: 1, endsAt: 1 });
+productDiscountSchema.index({ priority: -1 });
+productDiscountSchema.index({ tags: 1 });
 
 // VIRTUAL FIELDS AND METHODS
 
@@ -1025,6 +1134,10 @@ export const CustomerPromotionUsage: Model<ICustomerPromotionUsage> =
     "CustomerPromotionUsage",
     customerPromotionUsageSchema
   );
+
+export const ProductDiscount: Model<IProductDiscount> =
+  mongoose.models.ProductDiscount ||
+  mongoose.model<IProductDiscount>("ProductDiscount", productDiscountSchema);
 export const TrackingEvent: Model<ITrackingEvent> =
   mongoose.models.TrackingEvent ||
   mongoose.model<ITrackingEvent>("TrackingEvent", trackingEventSchema);

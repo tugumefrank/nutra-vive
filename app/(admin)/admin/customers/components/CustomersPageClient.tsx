@@ -153,7 +153,7 @@ export default function CustomersPageClient() {
     try {
       setEmailSending(true);
       
-      let finalEmailData = { ...emailData };
+      const finalEmailData = { ...emailData };
       
       if (emailData.recipientType === "custom") {
         finalEmailData.customEmails = Array.from(selectedCustomers).map(id => 

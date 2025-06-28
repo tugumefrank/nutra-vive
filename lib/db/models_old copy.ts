@@ -154,7 +154,7 @@ export interface ICart extends Document {
   _id: string;
   user?: string; // User ID
   sessionId?: string;
-  clerkUserId: { type: String };
+  clerkUserId: { type: string };
   items: {
     product: string; // Product ID
     quantity: number;

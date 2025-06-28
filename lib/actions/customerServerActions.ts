@@ -318,7 +318,7 @@ export async function getCustomersWithAnalytics(
   await checkAdminAuth();
   await connectToDatabase();
 
-  let matchStage: any = { role: "user" };
+  const matchStage: any = { role: "user" };
 
   // Add search filter
   if (search) {
@@ -330,7 +330,7 @@ export async function getCustomersWithAnalytics(
   }
 
   // Build aggregation pipeline
-  let pipeline: any[] = [
+  const pipeline: any[] = [
     { $match: matchStage },
     
     // Lookup orders

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import PromotionPricing from "@/components/products/promotion-pricing";
 
 interface ProductInfoProps {
   product: {
@@ -202,33 +203,13 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         transition={{ delay: 0.5 }}
         className="space-y-2"
       >
-        <div className="flex items-center space-x-4">
-          <motion.span
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
-            className="text-4xl font-bold text-gray-900 dark:text-white"
-          >
-            ${product.price.toFixed(2)}
-          </motion.span>
-
-          {product.compareAtPrice && product.compareAtPrice > product.price && (
-            <>
-              <span className="text-xl text-gray-500 line-through">
-                ${product.compareAtPrice.toFixed(2)}
-              </span>
-              <Badge className="bg-red-500 hover:bg-red-600 text-white">
-                Save {discountPercentage}%
-              </Badge>
-            </>
-          )}
-        </div>
-
-        {discountPercentage > 0 && (
-          <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-            You save ${(product.compareAtPrice! - product.price).toFixed(2)}!
-          </p>
-        )}
+        <PromotionPricing
+          productId={product._id}
+          originalPrice={product.price}
+          compareAtPrice={product.compareAtPrice}
+          size="lg"
+          showPromotionCode={true}
+        />
       </motion.div>
 
       {/* Stock Status */}
