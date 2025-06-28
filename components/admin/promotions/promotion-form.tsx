@@ -17,6 +17,7 @@ import {
   Check,
   AlertCircle,
   LucideIcon,
+  Clock,
 } from "lucide-react";
 import {
   IPromotion,
@@ -92,6 +93,11 @@ interface FormData {
   endsAt: string;
   isActive: boolean;
   isScheduled: boolean;
+  
+  // Duration Settings
+  useDuration: boolean;
+  durationValue: number;
+  durationUnit: "hours" | "days" | "weeks" | "months";
 
   // Codes
   generateCode: boolean;
@@ -163,6 +169,11 @@ export default function PromotionForm({
     endsAt: "",
     isActive: true,
     isScheduled: false,
+    
+    // Duration Settings
+    useDuration: false,
+    durationValue: 1,
+    durationUnit: "days",
 
     // Codes
     generateCode: true,
@@ -221,6 +232,11 @@ export default function PromotionForm({
           : "",
         isActive: editingPromotion.isActive ?? true,
         isScheduled: editingPromotion.isScheduled || false,
+        
+        // Duration Settings (default to false for existing promotions)
+        useDuration: false,
+        durationValue: 1,
+        durationUnit: "days",
         generateCode: false,
         customCodes:
           editingPromotion.codes?.map((code) =>
@@ -259,6 +275,12 @@ export default function PromotionForm({
         endsAt: "",
         isActive: true,
         isScheduled: false,
+        
+        // Duration Settings
+        useDuration: false,
+        durationValue: 1,
+        durationUnit: "days",
+        
         generateCode: true,
         customCodes: [],
         tags: [],
@@ -326,6 +348,50 @@ export default function PromotionForm({
       customCodes: prev.customCodes.filter((code) => code !== codeToRemove),
     }));
   };
+
+  // Calculate end date based on start date and duration
+  const calculateEndDate = (startDate: string, durationValue: number, durationUnit: string): string => {
+    if (!startDate || !durationValue) return "";
+    
+    const start = new Date(startDate);
+    const end = new Date(start);
+    
+    switch (durationUnit) {
+      case "hours":
+        end.setHours(start.getHours() + durationValue);
+        break;
+      case "days":
+        end.setDate(start.getDate() + durationValue);
+        break;
+      case "weeks":
+        end.setDate(start.getDate() + (durationValue * 7));
+        break;
+      case "months":
+        end.setMonth(start.getMonth() + durationValue);
+        break;
+      default:
+        return "";
+    }
+    
+    return end.toISOString().slice(0, 16);
+  };
+
+  // Auto-calculate end date when using duration mode
+  useEffect(() => {
+    if (formData.useDuration && formData.startsAt && formData.durationValue > 0) {
+      const calculatedEndDate = calculateEndDate(
+        formData.startsAt,
+        formData.durationValue,
+        formData.durationUnit
+      );
+      if (calculatedEndDate !== formData.endsAt) {
+        setFormData((prev) => ({
+          ...prev,
+          endsAt: calculatedEndDate,
+        }));
+      }
+    }
+  }, [formData.useDuration, formData.startsAt, formData.durationValue, formData.durationUnit]);
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
@@ -969,7 +1035,7 @@ export default function PromotionForm({
                 </div>
 
                 {formData.isScheduled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium mb-2">
                         Start Date & Time
@@ -983,18 +1049,112 @@ export default function PromotionForm({
                         className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        End Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={formData.endsAt}
-                        onChange={(e) =>
-                          handleInputChange("endsAt", e.target.value)
-                        }
-                        className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                      />
+
+                    {/* Duration vs End Date Toggle */}
+                    <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                      <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        End Date Configuration
+                      </h4>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-6">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              name="dateMode"
+                              checked={!formData.useDuration}
+                              onChange={() => handleInputChange("useDuration", false)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm">Set End Date</span>
+                          </label>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              name="dateMode"
+                              checked={formData.useDuration}
+                              onChange={() => handleInputChange("useDuration", true)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm">Set Duration</span>
+                          </label>
+                        </div>
+
+                        {!formData.useDuration ? (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              End Date & Time
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={formData.endsAt}
+                              onChange={(e) =>
+                                handleInputChange("endsAt", e.target.value)
+                              }
+                              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                            />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-2">
+                                Duration
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={formData.durationValue}
+                                onChange={(e) =>
+                                  handleInputChange("durationValue", parseInt(e.target.value) || 1)
+                                }
+                                placeholder="e.g., 7"
+                                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-2">
+                                Unit
+                              </label>
+                              <select
+                                value={formData.durationUnit}
+                                onChange={(e) =>
+                                  handleInputChange("durationUnit", e.target.value as FormData["durationUnit"])
+                                }
+                                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                              >
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show calculated end date when using duration */}
+                        {formData.useDuration && formData.startsAt && formData.durationValue > 0 && (
+                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                              <Calendar className="h-4 w-4" />
+                              <span className="text-sm font-medium">Calculated End Date:</span>
+                            </div>
+                            <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                              {formData.endsAt ? 
+                                new Date(formData.endsAt).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                }) 
+                                : "Please set a start date"
+                              }
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1051,6 +1211,33 @@ export default function PromotionForm({
                         <span>Usage limit:</span>
                         <span className="font-medium">
                           {formData.usageLimit}
+                        </span>
+                      </div>
+                    )}
+                    {formData.isScheduled && (
+                      <div className="flex justify-between">
+                        <span>Schedule:</span>
+                        <span className="font-medium">
+                          {formData.useDuration 
+                            ? `${formData.durationValue} ${formData.durationUnit}`
+                            : "Custom dates"
+                          }
+                        </span>
+                      </div>
+                    )}
+                    {formData.startsAt && (
+                      <div className="flex justify-between">
+                        <span>Starts:</span>
+                        <span className="font-medium text-xs">
+                          {new Date(formData.startsAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    {formData.endsAt && (
+                      <div className="flex justify-between">
+                        <span>Ends:</span>
+                        <span className="font-medium text-xs">
+                          {new Date(formData.endsAt).toLocaleDateString()}
                         </span>
                       </div>
                     )}
