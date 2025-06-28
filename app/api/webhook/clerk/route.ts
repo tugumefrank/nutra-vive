@@ -6,7 +6,8 @@ import {
   updateUser,
   deleteUser,
 } from "@/lib/actions/userServerActions";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendAdminNewOrder } from "@/lib/email";
+import { emailConfig } from "@/lib/email/resend";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -78,11 +79,32 @@ export async function POST(req: Request) {
     // Send welcome email with 5% discount code
     try {
       await sendWelcomeEmail(user.email, {
-        firstName: user.firstName || 'there',
+        firstName: user.firstName || "there",
       });
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
       // Don't fail the webhook if email fails
+    }
+
+    // Send admin notification about new user signup
+    try {
+      await sendAdminNewOrder(emailConfig.adminEmail, {
+        userName:
+          `${user.firstName} ${user.lastName}`.trim() ||
+          user.username ||
+          "New User",
+        userEmail: user.email,
+        signupDate: new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
+    } catch (emailError) {
+      console.error("Failed to send admin notification email:", emailError);
+      // Don't fail the webhook if admin email fails
     }
   }
 

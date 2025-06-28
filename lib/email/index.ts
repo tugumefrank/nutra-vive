@@ -10,6 +10,7 @@ import ConsultationConfirmationEmail from "./templates/consultation-confirmation
 import PaymentConfirmationEmail from "./templates/payment-confirmation";
 import WelcomeEmail from "./templates/welcome";
 import AdminNewOrderEmail from "./templates/admin-new-order";
+import AdminNewUserEmail from "./templates/admin-new-user";
 
 export interface EmailOptions {
   to: string | string[];
@@ -74,6 +75,7 @@ function getEmailTemplate(template: string) {
     "refund-processed": RefundProcessedEmail,
     "consultation-confirmation": ConsultationConfirmationEmail,
     "admin-new-order": AdminNewOrderEmail,
+    "admin-new-user": AdminNewUserEmail,
     "payment-confirmation": PaymentConfirmationEmail,
     welcome: WelcomeEmail,
   };
@@ -118,5 +120,13 @@ export const sendWelcomeEmail = (to: string, data: any) =>
     to,
     subject: "Welcome to Nutra-Vive! 🌿",
     template: "welcome",
+    data,
+  });
+
+export const sendAdminNewUser = (to: string, data: any) =>
+  sendEmail({
+    to,
+    subject: "New User Signup - Nutra-Vive",
+    template: "admin-new-user",
     data,
   });
