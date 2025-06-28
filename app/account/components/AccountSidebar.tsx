@@ -60,8 +60,8 @@ const navigation = [
   },
 
   {
-    name: "Membership",
-    href: "/account/membership",
+    name: "Memberships",
+    href: "/account/memberships",
     icon: User,
     badge: null,
   },

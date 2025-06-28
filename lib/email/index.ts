@@ -11,6 +11,7 @@ import PaymentConfirmationEmail from "./templates/payment-confirmation";
 import WelcomeEmail from "./templates/welcome";
 import AdminNewOrderEmail from "./templates/admin-new-order";
 import AdminNewUserEmail from "./templates/admin-new-user";
+import BulkEmail from "./templates/bulk-email";
 
 export interface EmailOptions {
   to: string | string[];
@@ -77,8 +78,13 @@ function getEmailTemplate(template: string) {
     "admin-new-order": AdminNewOrderEmail,
     "admin-new-user": AdminNewUserEmail,
     "payment-confirmation": PaymentConfirmationEmail,
+    "bulk-email": BulkEmail,
     welcome: WelcomeEmail,
   };
+
+  console.log(`Looking for template: ${template}`);
+  console.log(`Available templates:`, Object.keys(templates));
+  console.log(`BulkEmail import:`, BulkEmail);
 
   return templates[template];
 }

@@ -39,8 +39,8 @@ const mobileNavigation = [
     badge: null,
   },
   {
-    name: "membership",
-    href: "/account/membership",
+    name: "memberships",
+    href: "/account/memberships",
     icon: User,
     badge: null,
   },
