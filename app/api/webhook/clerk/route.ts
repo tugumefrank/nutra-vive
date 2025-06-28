@@ -6,8 +6,9 @@ import {
   updateUser,
   deleteUser,
 } from "@/lib/actions/userServerActions";
-import { sendWelcomeEmail, sendAdminNewOrder } from "@/lib/email";
+import { sendWelcomeEmail } from "@/lib/email";
 import { emailConfig } from "@/lib/email/resend";
+import { sendAdminNewUser } from "@/lib/email/index";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
 
     // Send admin notification about new user signup
     try {
-      await sendAdminNewOrder(emailConfig.adminEmail, {
+      await sendAdminNewUser(emailConfig.adminEmail, {
         userName:
           `${user.firstName} ${user.lastName}`.trim() ||
           user.username ||
