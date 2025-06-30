@@ -574,7 +574,6 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   Search,
-  Filter,
   X,
   Calendar as CalendarIcon,
   SlidersHorizontal,

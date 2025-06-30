@@ -8,7 +8,6 @@ import {
   Package,
   DollarSign,
   Clock,
-  Truck,
   CheckCircle,
   XCircle,
   RefreshCw,

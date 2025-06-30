@@ -39,8 +39,6 @@ import {
   FileText,
   Calendar as CalendarIcon,
   Filter,
-  CheckCircle,
-  AlertCircle,
   RefreshCw,
 } from "lucide-react";
 
