@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+<!-- Test commit to verify Vercel auto-deployment -->
+
 ## Project Overview
 
 Nutra-Vive is a Next.js 15 e-commerce application for premium organic juices and herbal teas. It uses TypeScript, React 19, and follows the App Router pattern with server components.
