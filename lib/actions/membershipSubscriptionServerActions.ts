@@ -210,7 +210,7 @@ export async function createMembershipSubscription(
     }
 
     try {
-      // Method 1: Try the standard approach first
+      // Create the subscription with incomplete payment behavior
       const subscription = await stripe.subscriptions.create({
         customer: stripeCustomerId,
         items: [{ price: priceId }],
@@ -227,7 +227,6 @@ export async function createMembershipSubscription(
       console.log("Subscription created:", {
         id: subscription.id,
         status: subscription.status,
-        latest_invoice: subscription.latest_invoice ? "Present" : "Missing",
       });
 
       // Create UserMembership record with incomplete status to prevent duplicates
@@ -238,48 +237,37 @@ export async function createMembershipSubscription(
       );
 
       const invoice = subscription.latest_invoice as Stripe.Invoice;
-
+      
       if (!invoice) {
-        console.log("No invoice found, trying alternative method...");
-        // Method 2: Alternative approach - retrieve the subscription to get the invoice
+        // Retrieve subscription again to ensure we have the latest data
         const retrievedSub = await stripe.subscriptions.retrieve(
           subscription.id,
-          {
-            expand: ["latest_invoice.payment_intent"],
-          }
+          { expand: ["latest_invoice.payment_intent"] }
         );
-
-        const altInvoice = retrievedSub.latest_invoice as any;
-        if (altInvoice?.payment_intent) {
-          const altPaymentIntent =
-            altInvoice.payment_intent as Stripe.PaymentIntent;
-          if (altPaymentIntent.client_secret) {
-            console.log("✅ Alternative method succeeded");
-            return {
-              success: true,
-              clientSecret: altPaymentIntent.client_secret,
-              subscriptionId: subscription.id,
-            };
-          }
+        
+        const retrievedInvoice = retrievedSub.latest_invoice as Stripe.Invoice;
+        if (!retrievedInvoice) {
+          throw new Error("No invoice found for subscription after retrieval");
         }
-
-        throw new Error("No invoice found for subscription");
+        
+        const retrievedPaymentIntent = (retrievedInvoice as any).payment_intent as Stripe.PaymentIntent;
+        if (!retrievedPaymentIntent || !retrievedPaymentIntent.client_secret) {
+          throw new Error("No payment intent or client secret found after retrieval");
+        }
+        
+        return {
+          success: true,
+          clientSecret: retrievedPaymentIntent.client_secret,
+          subscriptionId: subscription.id,
+        };
       }
-
-      console.log("Invoice details:", {
-        id: invoice.id,
-        status: invoice.status,
-        payment_intent: (invoice as any).payment_intent ? "Present" : "Missing",
-      });
 
       const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent;
 
-      if (!paymentIntent) {
-        console.log(
-          "No payment intent found, trying to create one manually..."
-        );
-
-        // Method 3: Create payment intent manually for the invoice
+      if (!paymentIntent || !paymentIntent.client_secret) {
+        // Create a payment intent manually for the invoice if it doesn't exist
+        console.log("Creating manual payment intent for invoice", invoice.id);
+        
         const manualPaymentIntent = await stripe.paymentIntents.create({
           amount: invoice.amount_due,
           currency: invoice.currency,
@@ -288,28 +276,19 @@ export async function createMembershipSubscription(
             subscriptionId: subscription.id,
             membershipId: membership._id.toString(),
             userId: user._id.toString(),
+            invoiceId: invoice.id,
           },
           description: `${membership.name} subscription`,
+          automatic_payment_methods: { enabled: true },
         });
-
-        console.log("✅ Manual payment intent created");
+        
+        console.log("✅ Manual payment intent created:", manualPaymentIntent.id);
+        
         return {
           success: true,
           clientSecret: manualPaymentIntent.client_secret!,
           subscriptionId: subscription.id,
         };
-      }
-
-      console.log("Payment intent details:", {
-        id: paymentIntent.id,
-        status: paymentIntent.status,
-        client_secret: paymentIntent.client_secret ? "Present" : "Missing",
-      });
-
-      if (!paymentIntent.client_secret) {
-        throw new Error(
-          `Payment intent ${paymentIntent.id} has no client_secret. Status: ${paymentIntent.status}`
-        );
       }
 
       console.log("✅ Subscription created successfully:", subscription.id);
@@ -320,32 +299,7 @@ export async function createMembershipSubscription(
         subscriptionId: subscription.id,
       };
     } catch (subscriptionError) {
-      console.error(
-        "Subscription creation failed, trying simpler approach:",
-        subscriptionError
-      );
-
-      // Method 4: Fallback - create a simple payment intent for the membership amount
-      // This won't be a true subscription but will allow testing
-      const fallbackPaymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(membership.price * 100),
-        currency: membership.currency.toLowerCase() || "usd",
-        customer: stripeCustomerId,
-        metadata: {
-          membershipId: membership._id.toString(),
-          userId: user._id.toString(),
-          membershipTier: membership.tier,
-          fallback: "true",
-        },
-        description: `${membership.name} membership payment`,
-      });
-
-      console.log("✅ Fallback payment intent created");
-      return {
-        success: true,
-        clientSecret: fallbackPaymentIntent.client_secret!,
-        subscriptionId: `fallback_${fallbackPaymentIntent.id}`,
-      };
+      throw subscriptionError;
     }
   } catch (error) {
     console.error("❌ Error creating membership subscription:", error);

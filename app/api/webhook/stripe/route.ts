@@ -149,6 +149,11 @@ async function handleSubscriptionUpdated(subscription: StripeSubscriptionWithPer
       } else if (subscription.status === "past_due") {
         newStatus = "paused"; // Map past_due to paused
       } else if (subscription.status === "incomplete") {
+        // Don't overwrite active membership back to incomplete if payment already succeeded
+        if (userMembership.status === "active" && userMembership.lastPaymentDate) {
+          console.log(`Skipping status change from active to incomplete for membership ${userMembership._id} - payment already processed`);
+          return;
+        }
         newStatus = "incomplete";
       }
 
@@ -225,11 +230,16 @@ async function handleInvoicePaymentSucceeded(invoice: StripeInvoiceWithSubscript
         return;
       }
 
-      // Check for existing incomplete membership
+      // Check for existing incomplete membership (more robust query)
       const incompleteMembership: IUserMembership | null = await UserMembership.findOne({
         user: user._id,
         membership: membershipId,
         status: "incomplete",
+        $or: [
+          { subscriptionId: { $exists: false } },
+          { subscriptionId: null },
+          { subscriptionId: subscription.id }
+        ]
       });
 
       if (incompleteMembership) {
@@ -376,12 +386,16 @@ async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
       return;
     }
 
-    // Check for existing incomplete membership for this user/membership combo
+    // Check for existing incomplete membership for this user/membership combo (more robust)
     const incompleteMembership: IUserMembership | null = await UserMembership.findOne({
       user: user._id,
       membership: membershipId,
       status: "incomplete",
-      subscriptionId: { $exists: false } // No subscriptionId set yet
+      $or: [
+        { subscriptionId: { $exists: false } },
+        { subscriptionId: null },
+        { subscriptionId: subscriptionId }
+      ]
     });
 
     if (incompleteMembership) {
