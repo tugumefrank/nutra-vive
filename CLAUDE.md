@@ -8,6 +8,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Nutra-Vive is a Next.js 15 e-commerce application for premium organic juices and herbal teas. It uses TypeScript, React 19, and follows the App Router pattern with server components.
 
+## **CRITICAL TYPE SAFETY REQUIREMENT**
+
+**ALL CODE MUST BE FULLY TYPED AND TYPE-SAFE. NO EXCEPTIONS.**
+
+- Every variable, function parameter, return type, and component prop MUST have explicit TypeScript types
+- Use `any` only as an absolute last resort and document why it's necessary
+- All server actions must have proper input/output typing
+- Components must have properly typed props interfaces
+- Event handlers must be properly typed
+- State variables must have explicit type annotations
+- API responses must be properly typed
+
 ## Development Commands
 
 ```bash
