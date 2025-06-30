@@ -403,7 +403,7 @@ export async function updateReview(
 
     // If rating was updated or visibility changed, recalculate product rating
     if (validatedData.rating || validatedData.isVisible !== undefined) {
-      await updateProductRating(updatedReview.product._id.toString());
+      await updateProductRating(updatedReview.product.toString());
     }
 
     console.log("✅ Review updated successfully");

@@ -253,7 +253,18 @@ export async function addTrackingEvent(data: CreateTrackingEventData): Promise<{
         location: validatedData.location,
         carrier: validatedData.carrier,
         estimatedDelivery: validatedData.estimatedDelivery,
-        metadata: validatedData.metadata,
+        metadata: validatedData.metadata && {
+          ...validatedData.metadata,
+          coordinates:
+            validatedData.metadata.coordinates &&
+            typeof validatedData.metadata.coordinates.lat === "number" &&
+            typeof validatedData.metadata.coordinates.lng === "number"
+              ? {
+                  lat: validatedData.metadata.coordinates.lat,
+                  lng: validatedData.metadata.coordinates.lng,
+                }
+              : undefined,
+        },
       }
     );
 

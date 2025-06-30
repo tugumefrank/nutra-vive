@@ -145,18 +145,8 @@ export async function addToCart(
         freeFromMembership: freeFromMembership,
         paidQuantity: quantity - freeFromMembership,
         usesAllocation: freeFromMembership > 0,
-        categoryId:
-          typeof product.category === "object" &&
-          product.category !== null &&
-          "_id" in product.category
-            ? (product.category as { _id: any })._id.toString()
-            : product.category?.toString(),
-        categoryName:
-          typeof product.category === "object" &&
-          product.category !== null &&
-          "name" in product.category
-            ? (product.category as { name: string }).name
-            : undefined,
+        categoryId: (product.category as any)?._id?.toString() || product.category?.toString(),
+        categoryName: (product.category as any)?.name,
       };
 
       cart.items.push(newItem as any);
