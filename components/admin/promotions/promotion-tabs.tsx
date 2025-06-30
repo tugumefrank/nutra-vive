@@ -1,6 +1,6 @@
 // components/admin/promotions/promotion-tabs.tsx
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Search,
   Filter,
@@ -48,7 +48,6 @@ interface OverviewTabProps {
 
 // Overview Tab Component
 export const OverviewTab: React.FC<OverviewTabProps> = ({
-  promotions,
   stats,
 }) => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -359,30 +358,6 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
     setRemoveAssignmentDialogOpen(true);
   };
 
-  const confirmRemoveAssignment = async () => {
-    if (!assignmentToRemove) return;
-
-    try {
-      const { removePromotionAssignment } = await import(
-        "@/lib/actions/promotionServerActions"
-      );
-      const result = await removePromotionAssignment(assignmentToRemove);
-
-      if (result.success) {
-        toast.success("Promotion assignment removed successfully!");
-        loadAssignments();
-      } else {
-        toast.error(result.error || "Failed to remove assignment");
-      }
-    } catch (error) {
-      console.error("Failed to remove assignment:", error);
-      toast.error("Failed to remove assignment");
-    } finally {
-      // Close dialog and reset state
-      setRemoveAssignmentDialogOpen(false);
-      setAssignmentToRemove(null);
-    }
-  };
 
   const activePromotions = promotions.filter((p) => p.isActive);
   const filteredCustomers =
