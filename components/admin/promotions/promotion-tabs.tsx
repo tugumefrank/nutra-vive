@@ -313,13 +313,25 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
       const { assignPromotionToCustomers } = await import(
         "@/lib/actions/promotionServerActions"
       );
-      const result = await assignPromotionToCustomers({
+      const params: {
+        promotionId: string;
+        customerSegment?: string;
+        customerIds?: string[];
+        sendNotification?: boolean;
+      } = {
         promotionId: selectedPromotion,
-        customerSegment: selectedSegment || undefined,
-        customerIds:
-          selectedCustomers.length > 0 ? selectedCustomers : undefined,
         sendNotification: true,
-      });
+      };
+      
+      if (selectedSegment) {
+        params.customerSegment = selectedSegment;
+      }
+      
+      if (selectedCustomers.length > 0) {
+        params.customerIds = selectedCustomers;
+      }
+      
+      const result = await assignPromotionToCustomers(params);
 
       if (result.success) {
         toast.success(
@@ -1061,9 +1073,12 @@ export const ProductDiscountsTab: React.FC<ProductDiscountsTabProps> = ({
   const [removeAssignmentDialogOpen, setRemoveAssignmentDialogOpen] =
     React.useState(false);
 
-  const [filters, setFilters] = React.useState({
+  const [filters, setFilters] = React.useState<{
+    search?: string;
+    isActive?: boolean;
+    scope?: string;
+  }>({
     search: "",
-    isActive: undefined as boolean | undefined,
     scope: "",
   });
 
@@ -1400,10 +1415,16 @@ export const ProductDiscountsTab: React.FC<ProductDiscountsTabProps> = ({
             <input
               type="text"
               placeholder="Search campaigns..."
-              value={filters.search}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, search: e.target.value }))
-              }
+              value={filters.search || ""}
+              onChange={(e) => {
+                const newFilters = { ...filters };
+                if (e.target.value) {
+                  newFilters.search = e.target.value;
+                } else {
+                  delete newFilters.search;
+                }
+                setFilters(newFilters);
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
             />
           </div>
@@ -1417,15 +1438,15 @@ export const ProductDiscountsTab: React.FC<ProductDiscountsTabProps> = ({
                 ? "active"
                 : "inactive"
           }
-          onChange={(e) =>
-            setFilters((prev) => ({
-              ...prev,
-              isActive:
-                e.target.value === "all"
-                  ? undefined
-                  : e.target.value === "active",
-            }))
-          }
+          onChange={(e) => {
+            const newFilters = { ...filters };
+            if (e.target.value === "all") {
+              delete newFilters.isActive;
+            } else {
+              newFilters.isActive = e.target.value === "active";
+            }
+            setFilters(newFilters);
+          }}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
         >
           <option value="all">All Status</option>
@@ -1434,10 +1455,16 @@ export const ProductDiscountsTab: React.FC<ProductDiscountsTabProps> = ({
         </select>
 
         <select
-          value={filters.scope}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, scope: e.target.value }))
-          }
+          value={filters.scope || ""}
+          onChange={(e) => {
+            const newFilters = { ...filters };
+            if (e.target.value) {
+              newFilters.scope = e.target.value;
+            } else {
+              delete newFilters.scope;
+            }
+            setFilters(newFilters);
+          }}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
         >
           <option value="">All Scopes</option>
