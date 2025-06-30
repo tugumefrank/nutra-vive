@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { User } from "@/lib/db/schema";
+import { User } from "@/lib/db/models";
 
 interface UserStore {
   user: User | null;

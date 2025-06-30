@@ -20,6 +20,40 @@ Nutra-Vive is a Next.js 15 e-commerce application for premium organic juices and
 - State variables must have explicit type annotations
 - API responses must be properly typed
 
+## **🚀 Local Error Detection Setup**
+
+**MANDATORY: Run these commands before committing any code to prevent Vercel build failures:**
+
+```bash
+# Basic TypeScript check (fast)
+npm run type-check
+
+# Strict mode check (same as Vercel uses)
+npm run type-check:strict
+
+# Complete check: Lint + TypeScript strict
+npm run check-all
+
+# Automatic pre-build check (runs before build)
+npm run prebuild
+```
+
+**The build process now automatically runs TypeScript strict checking before building. If there are ANY TypeScript errors, the build will fail locally (same as Vercel).**
+
+### **How to Avoid Future Vercel Build Failures:**
+
+1. **ALWAYS run `npm run check-all` before committing**
+2. **Fix ALL TypeScript errors shown by the strict checker**
+3. **Never commit code with TypeScript errors**
+4. **Use the type-check scripts to catch errors early**
+
+### **Enhanced TypeScript Configuration:**
+- Strict mode enabled globally
+- `exactOptionalPropertyTypes` for precise optional property handling
+- `noImplicitReturns` to ensure all code paths return values
+- `noFallthroughCasesInSwitch` for safe switch statements
+- `noUncheckedIndexedAccess` for array/object access safety
+
 ## Development Commands
 
 ```bash

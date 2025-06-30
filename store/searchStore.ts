@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Product, Category } from "@/lib/db/schema";
+import { Product, Category } from "@/lib/db/models";
 import { ProductFilters, SearchResult } from "@/types";
 
 interface SearchStore {

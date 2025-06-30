@@ -1,4 +1,4 @@
-import { Category, Order, Product, Review, User } from "@/lib/db/schema";
+import { Category, Order, Product, Review, User } from "@/lib/db/models";
 import {
   IUser,
   IProduct,

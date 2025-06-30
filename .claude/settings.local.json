@@ -10,7 +10,10 @@
       "Bash(git push:*)",
       "Bash(npm run build:*)",
       "Bash(sed:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(rg:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": []
   }

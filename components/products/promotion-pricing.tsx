@@ -50,7 +50,7 @@ export default function PromotionPricing({
         const { getProductPricingWithPromotions } = await import('@/lib/actions/promotionServerActions');
         const data = await getProductPricingWithPromotions(productId);
         
-        if (data.success) {
+        if (data.success && data.pricing) {
           setPricing(data.pricing);
         } else {
           // Fallback to regular pricing
