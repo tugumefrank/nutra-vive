@@ -1,5 +1,3 @@
-// constants/index.ts
-
 // Application Configuration
 export const APP_CONFIG = {
   name: "Nutra-Vive",
