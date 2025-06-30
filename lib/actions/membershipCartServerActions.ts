@@ -109,11 +109,25 @@ export interface ProductUsage {
   lastUsed?: Date;
 }
 
+// Membership Plan Interface  
+interface MembershipPlan {
+  _id: string;
+  name: string;
+  tier: string;
+  price: number;
+  duration: number;
+  benefits: string[];
+  limits?: {
+    monthlyProducts?: number;
+    categoryLimits?: Record<string, number>;
+  };
+}
+
 export interface UserCartMembershipData {
   userId: string;
   user: IUser;
   cart: ICart;
-  membership: (IUserMembership & { membership: any }) | null;
+  membership: (IUserMembership & { membership: MembershipPlan }) | null;
 }
 
 export interface EligibilityResult {
@@ -152,17 +166,41 @@ function calculateTax(amount: number): number {
   return Math.round(amount * 0.08 * 100) / 100; // 8% tax
 }
 
+// Raw Membership Cart Item Interface (from database)
+interface RawMembershipCartItem {
+  _id?: any;
+  productId: string;
+  quantity: number;
+  price: number;
+  originalPrice?: number;
+  membershipPrice?: number;
+  name?: string;
+  image?: string;
+  product?: any; // Can be properly typed later
+}
+
+// Raw Membership Cart Interface (from database)
+interface RawMembershipCart {
+  _id?: any;
+  items?: RawMembershipCartItem[];
+  membershipDiscount?: number;
+  promotionDiscount?: number;
+  promotionCode?: string;
+  promotionName?: string;
+  promotionId?: string;
+}
+
 // Enhanced serialization function with membership support
 const serializeMembershipCart = (
-  cart: any,
-  membership?: IUserMembership & { membership: any }
+  cart: RawMembershipCart,
+  membership?: IUserMembership & { membership: MembershipPlan }
 ): MembershipCartWithPromotion | null => {
   if (!cart) return null;
 
   // Calculate subtotal from original prices
   const subtotal: number =
     cart.items?.reduce(
-      (sum: number, item: any) =>
+      (sum: number, item: RawMembershipCartItem) =>
         sum + item.quantity * (item.originalPrice || item.price),
       0
     ) || 0;

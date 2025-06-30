@@ -425,10 +425,21 @@ const updateCartItemSchema = z.object({
   quantity: z.number().min(0, "Quantity cannot be negative"),
 });
 
+// Cart Item Interface
+export interface CartItem {
+  _id: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  name: string;
+  image?: string;
+  slug?: string;
+}
+
 // Enhanced Cart Interface with Promotions
 export interface CartWithPromotion {
   _id: string;
-  items: any[];
+  items: CartItem[];
   subtotal: number;
   promotionDiscount: number;
   promotionCode?: string;
@@ -456,14 +467,49 @@ function calculateTax(amount: number): number {
   return Math.round(amount * 0.08 * 100) / 100; // 8% tax
 }
 
+// Raw Product Interface (from database)
+interface RawProduct {
+  _id?: any;
+  name?: string;
+  price?: number;
+  image?: string;
+  category?: {
+    _id?: any;
+    name?: string;
+    slug?: string;
+  };
+}
+
+// Raw Cart Item Interface (from database)
+interface RawCartItem {
+  _id?: any;
+  productId: string;
+  quantity: number;
+  price: number;
+  name?: string;
+  image?: string;
+  slug?: string;
+  product?: RawProduct;
+}
+
+// Raw Cart Interface (from database)
+interface RawCart {
+  _id?: any;
+  items?: RawCartItem[];
+  promotionDiscount?: number;
+  promotionCode?: string;
+  promotionName?: string;
+  promotionId?: string;
+}
+
 // Enhanced serialization function
-const serializeCart = (cart: any): CartWithPromotion | null => {
+const serializeCart = (cart: RawCart): CartWithPromotion | null => {
   if (!cart) return null;
 
   // Calculate subtotal from items
   const subtotal =
     cart.items?.reduce(
-      (sum: number, item: any) => sum + item.quantity * item.price,
+      (sum: number, item: RawCartItem) => sum + item.quantity * item.price,
       0
     ) || 0;
 
@@ -481,7 +527,7 @@ const serializeCart = (cart: any): CartWithPromotion | null => {
   return {
     _id: cart._id?.toString() || "",
     items:
-      cart.items?.map((item: any) => ({
+      cart.items?.map((item: RawCartItem) => ({
         ...item,
         _id: item._id?.toString(),
         product: item.product
