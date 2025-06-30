@@ -424,21 +424,73 @@ export async function confirmMembershipSubscription(
     const latestInvoice = subscription.latest_invoice as any;
     const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent;
 
+    // Check if payment was successful regardless of subscription status
+    const paymentSuccessful = paymentIntent?.status === "succeeded" || 
+                              paymentIntent?.status === "processing" ||
+                              latestInvoice?.status === "paid";
+
     const isSubscriptionValid =
       subscription.status === "active" ||
-      (subscription.status === "incomplete" &&
-        paymentIntent?.status === "succeeded");
+      subscription.status === "trialing" ||
+      (subscription.status === "incomplete" && paymentSuccessful) ||
+      paymentSuccessful; // Allow if payment was successful even if status is unexpected
+
+    console.log("Subscription validation check:", {
+      subscriptionStatus: subscription.status,
+      paymentIntentStatus: paymentIntent?.status,
+      invoiceStatus: latestInvoice?.status,
+      paymentSuccessful,
+      isSubscriptionValid,
+      subscriptionId,
+    });
 
     if (!isSubscriptionValid) {
-      console.log("Subscription validation failed:", {
-        subscriptionStatus: subscription.status,
-        paymentIntentStatus: paymentIntent?.status,
-        subscriptionId,
+      console.log("Subscription validation failed - all details:", {
+        subscription,
+        paymentIntent,
+        latestInvoice,
       });
+
+      // If payment was successful but subscription isn't valid, manually activate
+      if (paymentSuccessful) {
+        console.log("Payment successful but subscription invalid, manually activating membership");
+        try {
+          // Find existing incomplete membership and activate it
+          const existingMembership = await UserMembership.findOne({
+            user: userId,
+            subscriptionId: subscriptionId,
+            status: "incomplete"
+          });
+
+          if (existingMembership) {
+            const now = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+            await UserMembership.findByIdAndUpdate(existingMembership._id, {
+              status: "active",
+              currentPeriodStart: now,
+              currentPeriodEnd: nextMonth,
+              usageResetDate: nextMonth,
+              nextBillingDate: nextMonth,
+              lastPaymentDate: now,
+            });
+
+            console.log("✅ Manually activated membership after successful payment");
+            
+            return {
+              success: true,
+              userMembership: existingMembership,
+            };
+          }
+        } catch (fallbackError) {
+          console.error("❌ Error handling fallback activation:", fallbackError);
+        }
+      }
 
       return {
         success: false,
-        error: "Subscription is not active. Please complete payment.",
+        error: `Subscription is not active. Status: ${subscription.status}, Payment: ${paymentIntent?.status}, Invoice: ${latestInvoice?.status}`,
       };
     }
 

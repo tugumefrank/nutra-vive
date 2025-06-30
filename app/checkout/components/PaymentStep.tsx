@@ -140,7 +140,35 @@ export default function PaymentStep({
                   {isFreeOrder ? "Processing your free order..." : "Preparing your order..."}
                 </p>
                 <p className="text-sm mt-1">This will only take a moment</p>
+                <p className="text-xs mt-2 text-orange-600">
+                  If this takes longer than expected, please try refreshing the page
+                </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Debug: Missing Client Secret */}
+        {!isFreeOrder && !clientSecret && !orderId && !creatingOrder && !paymentError && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <div className="text-yellow-700">
+              <p className="font-medium">⚠️ Payment setup incomplete</p>
+              <p className="text-sm mt-1">
+                The payment form is not ready yet. This usually happens when:
+              </p>
+              <ul className="text-xs mt-2 space-y-1 ml-4">
+                <li>• Order creation is in progress</li>
+                <li>• Form validation failed</li>
+                <li>• Network connectivity issues</li>
+              </ul>
+              <Button
+                onClick={onRetryOrder}
+                variant="outline"
+                size="sm"
+                className="mt-3 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+              >
+                Retry Setup
+              </Button>
             </div>
           </div>
         )}

@@ -52,6 +52,11 @@ import {
 } from "@/lib/actions/userProfileServerActions";
 
 // Initialize Stripe
+console.log("🔧 Stripe Setup:", {
+  hasPublicKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY,
+  publicKeyStart: process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY?.slice(0, 10)
+});
+
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
 export default function CheckoutPage() {
@@ -308,12 +313,47 @@ export default function CheckoutPage() {
 
   // Validate form and create order when on payment step
   useEffect(() => {
+    console.log("🔍 Payment step effect:", {
+      currentStep,
+      hasClientSecret: !!clientSecret,
+      creatingOrder,
+      paymentError,
+      total,
+      shouldCreateOrder: currentStep === 5 && !clientSecret && !creatingOrder && !paymentError
+    });
+
     if (currentStep === 5 && !clientSecret && !creatingOrder && !paymentError) {
-      const allStepsValid = [1, 2, 3, 4].every((step) =>
-        validateStep(step, formData)
-      );
-      if (allStepsValid && total > 0) {
+      const stepValidations = [1, 2, 3, 4].map(step => ({
+        step,
+        isValid: validateStep(step, formData),
+        errors: getStepErrors(step, formData)
+      }));
+      
+      const allStepsValid = stepValidations.every(v => v.isValid);
+      const invalidSteps = stepValidations.filter(v => !v.isValid);
+      
+      console.log("🔍 Detailed validation:", { 
+        stepValidations, 
+        allStepsValid, 
+        invalidSteps,
+        total 
+      });
+      
+      if (!allStepsValid) {
+        // Set validation errors for display
+        const allErrors = invalidSteps.reduce((acc, stepValidation) => ({
+          ...acc,
+          ...stepValidation.errors
+        }), {});
+        setStepErrors(allErrors);
+        
+        console.log("❌ Validation failed for steps:", invalidSteps.map(s => s.step));
+        setPaymentError(`Please complete all required fields in step(s): ${invalidSteps.map(s => s.step).join(', ')}`);
+      } else if (allStepsValid && total > 0) {
+        console.log("🚀 Triggering createOrder...");
         createOrder();
+      } else if (total <= 0) {
+        console.log("🆓 Free order detected, should handle differently");
       }
     }
   }, [currentStep, formData, clientSecret, creatingOrder, paymentError, total]);
@@ -478,8 +518,16 @@ export default function CheckoutPage() {
       setCreatingOrder(true);
       setPaymentError(null);
 
+      console.log("🚀 Starting order creation process...");
+
+      // Add timeout to prevent hanging forever
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Order creation timed out after 30 seconds")), 30000);
+      });
+
       // Save user preferences first
-      await saveUserPreferences();
+      console.log("💾 Saving user preferences...");
+      await Promise.race([saveUserPreferences(), timeoutPromise]);
 
       const baseCheckoutData = {
         email: formData.email,
@@ -530,10 +578,14 @@ export default function CheckoutPage() {
         console.log("🆓 Creating free order with total:", total);
 
         // For free orders, skip Stripe and directly create the order
-        const result = await createCheckoutSession({
-          ...checkoutData,
-          skipPayment: true, // Add this flag to indicate free order
-        });
+        console.log("📝 Calling createCheckoutSession for free order...");
+        const result = await Promise.race([
+          createCheckoutSession({
+            ...checkoutData,
+            skipPayment: true, // Add this flag to indicate free order
+          }),
+          timeoutPromise
+        ]);
 
         console.log("📝 Free order creation result:", result);
 
@@ -554,7 +606,11 @@ export default function CheckoutPage() {
         }
       } else {
         // Regular paid orders - use Stripe
-        const result = await createCheckoutSession(checkoutData);
+        console.log("💳 Creating paid order with total:", total);
+        const result = await Promise.race([
+          createCheckoutSession(checkoutData),
+          timeoutPromise
+        ]);
 
         if (result.success && result.clientSecret && result.orderId) {
           setOrderId(result.orderId);
@@ -747,6 +803,14 @@ export default function CheckoutPage() {
             </div>
           );
         }
+
+        console.log("🔧 Stripe Elements Debug:", {
+          clientSecret: clientSecret,
+          hasClientSecret: !!clientSecret,
+          stripePublicKey: process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY?.slice(0, 10) + "...",
+          orderId: orderId,
+          total: total
+        });
 
         return (
           <Elements
