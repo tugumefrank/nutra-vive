@@ -19,19 +19,12 @@ import { toast } from "sonner";
 
 interface CartItem {
   _id: string;
-  product: {
-    _id: string;
-    name: string;
-    slug: string;
-    price: number;
-    images: string[];
-    category?: {
-      _id: string;
-      name: string;
-    };
-  };
+  productId: string;
   quantity: number;
   price: number;
+  name: string;
+  image?: string;
+  slug?: string;
 }
 
 interface CartState {
@@ -64,7 +57,7 @@ function cartReducer(state: CartState, action: OptimisticAction): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
       const existingItemIndex = state.items.findIndex(
-        (item) => item.product._id === action.product._id
+        (item) => item.productId === action.product._id
       );
 
       if (existingItemIndex >= 0) {
@@ -79,9 +72,12 @@ function cartReducer(state: CartState, action: OptimisticAction): CartState {
         // Add new item
         const newItem: CartItem = {
           _id: `temp_${Date.now()}`, // Temporary ID for optimistic update
-          product: action.product,
+          productId: action.product._id,
           quantity: action.quantity,
           price: action.product.price,
+          name: action.product.name,
+          image: action.product.images?.[0],
+          slug: action.product.slug,
         };
         return { ...state, items: [...state.items, newItem] };
       }
@@ -93,13 +89,13 @@ function cartReducer(state: CartState, action: OptimisticAction): CartState {
         return {
           ...state,
           items: state.items.filter(
-            (item) => item.product._id !== action.productId
+            (item) => item.productId !== action.productId
           ),
         };
       }
 
       const newItems = state.items.map((item) =>
-        item.product._id === action.productId
+        item.productId === action.productId
           ? { ...item, quantity: action.quantity }
           : item
       );
@@ -110,7 +106,7 @@ function cartReducer(state: CartState, action: OptimisticAction): CartState {
       return {
         ...state,
         items: state.items.filter(
-          (item) => item.product._id !== action.productId
+          (item) => item.productId !== action.productId
         ),
       };
     }
@@ -267,7 +263,7 @@ export function useOptimisticCart() {
       }
 
       const previousCart = cart;
-      const item = cart.items.find((item) => item.product._id === productId);
+      const item = cart.items.find((item) => item.productId === productId);
 
       // Optimistic update
       startTransition(() => {
@@ -282,7 +278,7 @@ export function useOptimisticCart() {
           if (result.cart) {
             setCart(result.cart);
           }
-          toast.success(`${item?.product.name || "Item"} removed from cart`);
+          toast.success(`${item?.name || "Item"} removed from cart`);
           return { success: true };
         } else {
           // Revert optimistic update on error
@@ -305,7 +301,7 @@ export function useOptimisticCart() {
   const isInCart = useCallback(
     (productId: string): boolean => {
       return optimisticCart.items.some(
-        (item) => item.product._id === productId
+        (item) => item.productId === productId
       );
     },
     [optimisticCart.items]
@@ -314,7 +310,7 @@ export function useOptimisticCart() {
   const getItemQuantity = useCallback(
     (productId: string): number => {
       const item = optimisticCart.items.find(
-        (item) => item.product._id === productId
+        (item) => item.productId === productId
       );
       return item ? item.quantity : 0;
     },

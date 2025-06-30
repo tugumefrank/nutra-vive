@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { User } from "@/lib/db/models";
+import { IUser } from "@/lib/db/models";
 
 interface UserStore {
-  user: User | null;
+  user: IUser | null;
   isLoading: boolean;
   preferences: {
     newsletter: boolean;
@@ -13,7 +13,7 @@ interface UserStore {
   };
 
   // Actions
-  setUser: (user: User | null) => void;
+  setUser: (user: IUser | null) => void;
   setLoading: (isLoading: boolean) => void;
   updatePreferences: (preferences: Partial<UserStore["preferences"]>) => void;
   clearUser: () => void;
@@ -30,7 +30,7 @@ const useUserStore = create<UserStore>((set) => ({
     language: "en",
   },
 
-  setUser: (user: User | null) => {
+  setUser: (user: IUser | null) => {
     set({ user });
   },
 

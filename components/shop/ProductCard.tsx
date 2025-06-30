@@ -565,9 +565,10 @@ export function EnhancedProductCard({
                 <span className="text-xs font-medium text-green-600 uppercase tracking-wide">
                   {typeof product.category === "object" &&
                   product.category !== null &&
+                  product.category &&
                   "name" in product.category
                     ? (product.category as { name: string }).name
-                    : product.category}
+                    : typeof product.category === "string" ? product.category : ""}
                 </span>
               )}
               <div className="flex items-center space-x-1">

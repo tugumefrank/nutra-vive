@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Product, Category } from "@/lib/db/models";
+import { IProduct, ICategory } from "@/lib/db/models";
 import { ProductFilters, SearchResult } from "@/types";
 
 interface SearchStore {
@@ -20,8 +20,8 @@ interface SearchStore {
   clearRecentSearches: () => void;
 
   // Quick search
-  quickSearchResults: Product[];
-  setQuickSearchResults: (results: Product[]) => void;
+  quickSearchResults: IProduct[];
+  setQuickSearchResults: (results: IProduct[]) => void;
   clearQuickSearch: () => void;
 }
 
@@ -75,7 +75,7 @@ const useSearchStore = create<SearchStore>((set, get) => ({
     set({ recentSearches: [] });
   },
 
-  setQuickSearchResults: (results: Product[]) => {
+  setQuickSearchResults: (results: IProduct[]) => {
     set({ quickSearchResults: results });
   },
 

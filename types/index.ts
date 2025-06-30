@@ -1,4 +1,3 @@
-import { Category, Order, Product, Review, User } from "@/lib/db/models";
 import {
   IUser,
   IProduct,
@@ -35,7 +34,7 @@ export interface ApiResponse<T = any> {
 export interface CartItem {
   id: string;
   productId: string;
-  product: Product;
+  product: IProduct;
   quantity: number;
   price: number;
   totalPrice: number;
@@ -52,11 +51,11 @@ export interface CartSummary {
 }
 
 // Product Types
-export interface ProductWithReviews extends Product {
-  reviews: Review[];
+export interface ProductWithReviews extends IProduct {
+  reviews: IReview[];
   averageRating: number;
   reviewCount: number;
-  category?: Category;
+  category?: string;
 }
 
 export interface ProductFilters {
@@ -77,10 +76,10 @@ export interface ProductFilters {
 }
 
 // Order Types
-export interface OrderWithProducts extends Order {
+export interface OrderWithProducts extends IOrder {
   itemsWithProducts: Array<{
     productId: string;
-    product: Product;
+    product: IProduct;
     quantity: number;
     price: number;
     totalPrice: number;
@@ -88,15 +87,15 @@ export interface OrderWithProducts extends Order {
 }
 
 // User Types
-export interface UserProfile extends User {
+export interface UserProfile extends IUser {
   orderCount: number;
   totalSpent: number;
   favoriteCount: number;
 }
 
 // Review Types
-export interface ReviewWithUser extends Review {
-  user: Pick<User, "firstName" | "lastName" | "imageUrl">;
+export interface ReviewWithUser extends Omit<IReview, "user"> {
+  user: Pick<IUser, "firstName" | "lastName" | "imageUrl">;
 }
 
 // Navigation Types
@@ -134,8 +133,8 @@ export interface CheckoutForm {
 
 // Search Types
 export interface SearchResult {
-  products: Product[];
-  categories: Category[];
+  products: IProduct[];
+  categories: ICategory[];
   total: number;
   page: number;
   limit: number;
@@ -169,7 +168,7 @@ export interface AnalyticsData {
     outOfStock: number;
   };
   topProducts: Array<{
-    product: Product;
+    product: IProduct;
     revenue: number;
     orderCount: number;
   }>;
@@ -177,7 +176,7 @@ export interface AnalyticsData {
 }
 
 // Notification Types
-export interface NotificationWithData extends Notification {
+export interface NotificationWithData extends INotification {
   formattedMessage: string;
   actionUrl?: string;
 }
@@ -186,7 +185,7 @@ export interface NotificationWithData extends Notification {
 export interface CartStore {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (product: Product, quantity?: number) => void;
+  addItem: (product: IProduct, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -219,13 +218,13 @@ export interface NotificationStore {
 
 // Component Props Types
 export interface ProductCardProps {
-  product: Product;
+  product: IProduct;
   showQuickAdd?: boolean;
   className?: string;
 }
 
 export interface ProductGridProps {
-  products: Product[];
+  products: IProduct[];
   loading?: boolean;
   columns?: 2 | 3 | 4;
   showFilters?: boolean;

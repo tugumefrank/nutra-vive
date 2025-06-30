@@ -60,7 +60,7 @@ interface ConsultationFormData {
   preferredDate: string;
   timeZone: string;
   communicationPreference: "email" | "phone" | "video-call" | "text" | "";
-  urgencyLevel: "low" | "medium" | "high" | "";
+  urgencyLevel: "3-5-days" | "1-week" | "2-weeks" | "1-month" | "";
   additionalNotes: string;
   howDidYouHear: string;
   agreeToTerms: boolean;
@@ -266,7 +266,7 @@ const ConsultationForm: React.FC = () => {
     preferredDate: "",
     timeZone: "",
     communicationPreference: "",
-    urgencyLevel: "medium", // Default to medium priority
+    urgencyLevel: "1-week", // Default to 1 week priority
     additionalNotes: "",
     howDidYouHear: "",
     agreeToTerms: false,
@@ -505,7 +505,7 @@ const ConsultationForm: React.FC = () => {
           | "phone"
           | "video-call"
           | "text",
-        urgencyLevel: formData.urgencyLevel as "low" | "medium" | "high",
+        urgencyLevel: formData.urgencyLevel as "3-5-days" | "1-week" | "2-weeks" | "1-month",
 
         // Additional
         additionalNotes: formData.additionalNotes,
