@@ -8,13 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
   Store,
-  Heart,
   ShoppingBag,
-  User,
   Settings,
   UserCog,
-  TelescopeIcon,
-  BookDashed,
   Book,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

@@ -582,11 +582,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag,
   Heart,
-  User,
   Menu,
   X,
-  Sun,
-  Moon,
   Leaf,
   Settings,
   UserCog,

@@ -16,10 +16,6 @@ import {
   Minus,
   LogIn,
   Crown,
-  Gift,
-  Sparkles,
-  Zap,
-  TrendingUp,
   Info,
 } from "lucide-react";
 import Image from "next/image";

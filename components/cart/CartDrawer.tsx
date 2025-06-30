@@ -326,10 +326,8 @@ import {
   Trash2,
   ShoppingBag,
   CreditCard,
-  Gift,
   Crown,
   Tag,
-  Sparkles,
   ArrowRight,
   Loader2,
   LogIn,
@@ -345,7 +343,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
   useUnifiedCartStore,

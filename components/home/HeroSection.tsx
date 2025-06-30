@@ -13,14 +13,10 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Play,
   Star,
-  Zap,
   Leaf,
-  Heart,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
 const slides = [
   {

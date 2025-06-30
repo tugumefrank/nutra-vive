@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Package,
   DollarSign,
@@ -9,7 +9,6 @@ import {
   Layers,
   Save,
   X,
-  Upload,
   Loader2,
   AlertCircle,
   CheckCircle,
@@ -21,9 +20,7 @@ import {
   Minus,
   Sparkles,
   Zap,
-  Heart,
   Leaf,
-  Camera,
 } from "lucide-react";
 
 // Import real server actions
