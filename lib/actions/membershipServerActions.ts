@@ -1,24 +1,17 @@
-// "use server";
+"use server";
 
-// import { auth } from "@clerk/nextjs/server";
-// import { revalidatePath } from "next/cache";
-// import { redirect } from "next/navigation";
-// import { z } from "zod";
-// import Stripe from "stripe";
-// import { connectToDatabase } from "../db";
-// import {
-//   Membership,
-//   UserMembership,
-//   MembershipOrder,
-//   MembershipAnalytics,
-//   User,
-//   Category,
-//   Product,
-//   IMembership,
-//   IUserMembership,
-//   IMembershipOrder,
-// } from "../db/models";
-// import mongoose from "mongoose";
+import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { connectToDatabase } from "../db";
+import {
+  Membership,
+  UserMembership,
+  User,
+  Category,
+  IMembership,
+  IUserMembership,
+} from "../db/models";
 
 // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 //   apiVersion: "2025-05-28.basil",

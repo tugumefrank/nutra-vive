@@ -18,14 +18,28 @@ async function createIncompleteUserMembership(
   subscriptionId: string
 ) {
   try {
-    // Check if already exists
-    const existing = await UserMembership.findOne({
-      user: userId,
+    // Check if already exists with this subscriptionId
+    const existingBySubscription = await UserMembership.findOne({
       subscriptionId: subscriptionId,
     });
 
-    if (existing) {
-      return existing;
+    if (existingBySubscription) {
+      return existingBySubscription;
+    }
+
+    // Check if user already has incomplete membership for same membership plan
+    const existingIncomplete = await UserMembership.findOne({
+      user: userId,
+      membership: membership._id,
+      status: "incomplete",
+      subscriptionId: { $exists: false } // No subscriptionId set yet
+    });
+
+    if (existingIncomplete) {
+      // Update existing incomplete membership with subscriptionId
+      existingIncomplete.subscriptionId = subscriptionId;
+      await existingIncomplete.save();
+      return existingIncomplete;
     }
 
     // Initialize product usage tracking
@@ -415,6 +429,32 @@ export async function confirmMembershipSubscription(
       return await handleFallbackPayment(paymentIntentId, userId);
     }
 
+    // First check if membership already exists and is active (webhook may have processed it)
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const existingMembership = await UserMembership.findOne({
+      user: user._id,
+      subscriptionId: subscriptionId,
+    });
+
+    if (existingMembership) {
+      console.log("Found existing membership:", {
+        id: existingMembership._id,
+        status: existingMembership.status,
+        subscriptionId: existingMembership.subscriptionId
+      });
+
+      if (existingMembership.status === "active") {
+        return {
+          success: true,
+          userMembership: existingMembership,
+        };
+      }
+    }
+
     // Handle real subscription
     const subscription = (await stripe.subscriptions.retrieve(subscriptionId, {
       expand: ["latest_invoice.payment_intent"],
@@ -445,52 +485,9 @@ export async function confirmMembershipSubscription(
     });
 
     if (!isSubscriptionValid) {
-      console.log("Subscription validation failed - all details:", {
-        subscription,
-        paymentIntent,
-        latestInvoice,
-      });
-
-      // If payment was successful but subscription isn't valid, manually activate
-      if (paymentSuccessful) {
-        console.log("Payment successful but subscription invalid, manually activating membership");
-        try {
-          // Find existing incomplete membership and activate it
-          const existingMembership = await UserMembership.findOne({
-            user: userId,
-            subscriptionId: subscriptionId,
-            status: "incomplete"
-          });
-
-          if (existingMembership) {
-            const now = new Date();
-            const nextMonth = new Date();
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-            await UserMembership.findByIdAndUpdate(existingMembership._id, {
-              status: "active",
-              currentPeriodStart: now,
-              currentPeriodEnd: nextMonth,
-              usageResetDate: nextMonth,
-              nextBillingDate: nextMonth,
-              lastPaymentDate: now,
-            });
-
-            console.log("✅ Manually activated membership after successful payment");
-            
-            return {
-              success: true,
-              userMembership: existingMembership,
-            };
-          }
-        } catch (fallbackError) {
-          console.error("❌ Error handling fallback activation:", fallbackError);
-        }
-      }
-
       return {
         success: false,
-        error: `Subscription is not active. Status: ${subscription.status}, Payment: ${paymentIntent?.status}, Invoice: ${latestInvoice?.status}`,
+        error: `Subscription is not active. Please complete payment.`,
       };
     }
 
@@ -505,28 +502,54 @@ export async function confirmMembershipSubscription(
       return { success: false, error: "Invalid subscription metadata" };
     }
 
-    // Get user and membership
-    const [user, membership] = await Promise.all([
-      User.findOne({ clerkId: userId }),
-      Membership.findById(membershipId),
-    ]);
-
-    if (!user || !membership) {
-      return { success: false, error: "User or membership not found" };
+    // Get membership details
+    const membership = await Membership.findById(membershipId);
+    if (!membership) {
+      return { success: false, error: "Membership not found" };
     }
 
-    // Check if membership already exists
-    const existingMembership = await UserMembership.findOne({
-      user: user._id,
-      subscriptionId: subscriptionId,
-    });
+    // If we have an existing incomplete membership, activate it
+    if (existingMembership && existingMembership.status === "incomplete") {
+      const now = new Date();
+      const currentPeriodStart = new Date(
+        (subscription as any).current_period_start * 1000
+      );
+      const currentPeriodEnd = new Date(
+        (subscription as any).current_period_end * 1000
+      );
 
-    if (existingMembership) {
+      await UserMembership.findByIdAndUpdate(existingMembership._id, {
+        status: "active",
+        currentPeriodStart,
+        currentPeriodEnd,
+        usageResetDate: currentPeriodEnd,
+        nextBillingDate: currentPeriodEnd,
+        lastPaymentDate: now,
+        lastPaymentAmount: membership.price,
+        autoRenewal: true,
+      });
+
+      console.log("✅ Activated existing incomplete membership");
+      
+      // Update membership stats
+      await Membership.findByIdAndUpdate(membershipId, {
+        $inc: {
+          totalSubscribers: 1,
+          totalRevenue: membership.price,
+        },
+      });
+
       return {
         success: true,
         userMembership: existingMembership,
       };
     }
+
+    // Should not create new membership here as webhook handles this
+    return {
+      success: false,
+      error: "Membership processing in progress. Please wait a moment and try again.",
+    };
 
     // Calculate dates
     const now = new Date();

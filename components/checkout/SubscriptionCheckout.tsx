@@ -68,18 +68,26 @@ const SubscriptionCheckout: React.FC<SubscriptionCheckoutProps> = ({
           result.paymentIntent &&
           result.paymentIntent.status === "succeeded"
         ) {
-          // Confirm the subscription and activate membership
+          console.log("✅ Payment succeeded, waiting for webhook processing...");
+          
+          // Give webhook time to process before confirming
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Try to confirm the subscription (webhook should have activated it)
           const confirmResult =
             await confirmMembershipSubscription(subscriptionId);
 
           if (confirmResult.success) {
-            console.log("Subscription confirmed and membership activated");
+            console.log("✅ Subscription confirmed and membership activated");
             onPaymentSuccess();
           } else {
-            throw new Error(
-              confirmResult.error || "Failed to activate membership"
-            );
+            // If confirm fails, the webhook might still be processing
+            console.log("⏳ Membership activation in progress via webhook");
+            onPaymentSuccess(); // Still show success, webhook will handle activation
           }
+        } else if (result.paymentIntent?.status === "processing") {
+          console.log("⏳ Payment is processing, showing success...");
+          onPaymentSuccess(); // Let webhook handle the rest
         } else {
           throw new Error("Payment was not successful. Please try again.");
         }
