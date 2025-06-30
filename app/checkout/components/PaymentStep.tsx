@@ -109,6 +109,22 @@ export default function PaymentStep({
               <div className="flex-1">
                 <p className="font-medium">Unable to process your order</p>
                 <p className="text-sm mt-1">{paymentError}</p>
+                
+                {/* Show helpful guidance if it's a validation error */}
+                {paymentError.includes('required fields') && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-amber-800 text-sm font-medium mb-2">
+                      📝 Quick Fix Guide:
+                    </p>
+                    <ul className="text-amber-700 text-xs space-y-1">
+                      <li>• Check that all required fields (*) are filled out</li>
+                      <li>• Verify your email address format is correct</li>
+                      <li>• Ensure your ZIP code is valid (e.g., 12345 or 12345-6789)</li>
+                      <li>• Select a delivery method if not chosen</li>
+                    </ul>
+                  </div>
+                )}
+                
                 <Button
                   onClick={onRetryOrder}
                   variant="outline"
@@ -122,7 +138,7 @@ export default function PaymentStep({
                       Retrying...
                     </>
                   ) : (
-                    "Try Again"
+                    "Go Back & Fix"
                   )}
                 </Button>
               </div>

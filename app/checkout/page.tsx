@@ -31,6 +31,7 @@ import AddressStep from "./components/AddressStep";
 import ReviewStep from "./components/ReviewStep";
 import PaymentStep from "./components/PaymentStep";
 import SuccessPage from "./components/SuccessPage";
+import ValidationSummary from "./components/ValidationSummary";
 
 // Import unified cart actions and types
 import { getCart, refreshCartPrices } from "@/lib/actions/unifiedCartServerActions";
@@ -343,12 +344,41 @@ export default function CheckoutPage() {
         // Set validation errors for display
         const allErrors = invalidSteps.reduce((acc, stepValidation) => ({
           ...acc,
-          ...stepValidation.errors
+          [stepValidation.step]: stepValidation.errors
         }), {});
         setStepErrors(allErrors);
         
+        // Navigate to the first step with validation errors
+        const firstInvalidStep = invalidSteps[0].step;
+        setCurrentStep(firstInvalidStep);
+        
+        // Create detailed error message
+        const stepNames = {
+          1: "Contact Information",
+          2: "Delivery Method", 
+          3: "Shipping Address",
+          4: "Order Review"
+        };
+        
+        const errorDetails = invalidSteps.map(stepValidation => {
+          const stepName = stepNames[stepValidation.step as keyof typeof stepNames] || `Step ${stepValidation.step}`;
+          const fieldNames = Object.keys(stepValidation.errors);
+          return `${stepName}: ${fieldNames.join(', ')}`;
+        }).join('; ');
+        
         console.log("❌ Validation failed for steps:", invalidSteps.map(s => s.step));
-        setPaymentError(`Please complete all required fields in step(s): ${invalidSteps.map(s => s.step).join(', ')}`);
+        setPaymentError(`Please complete the required fields. ${errorDetails}`);
+        
+        // Show helpful toast message
+        toast.error(`Please complete all required fields in ${stepNames[firstInvalidStep as keyof typeof stepNames] || `Step ${firstInvalidStep}`}`, {
+          description: "We've navigated you to the step that needs attention.",
+          duration: 5000
+        });
+        
+        // Smooth scroll to show the form
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 100);
       } else if (allStepsValid && total > 0) {
         console.log("🚀 Triggering createOrder...");
         createOrder();
@@ -585,7 +615,7 @@ export default function CheckoutPage() {
             skipPayment: true, // Add this flag to indicate free order
           }),
           timeoutPromise
-        ]);
+        ]) as any;
 
         console.log("📝 Free order creation result:", result);
 
@@ -610,7 +640,7 @@ export default function CheckoutPage() {
         const result = await Promise.race([
           createCheckoutSession(checkoutData),
           timeoutPromise
-        ]);
+        ]) as any;
 
         if (result.success && result.clientSecret && result.orderId) {
           setOrderId(result.orderId);
@@ -665,7 +695,7 @@ export default function CheckoutPage() {
   const handlePaymentSuccess = async (paymentIntentId: string) => {
     try {
       // For paid orders, confirm payment
-      const result = await confirmPayment(paymentIntentId);
+      const result = await confirmPayment(paymentIntentId) as any;
 
       if (result.success && result.order) {
         setOrderComplete(true);
@@ -897,6 +927,14 @@ export default function CheckoutPage() {
         <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
+            {/* Validation Summary - only show when there are errors */}
+            <ValidationSummary
+              stepErrors={stepErrors}
+              currentStep={currentStep}
+              onNavigateToStep={goToStep}
+              formData={formData}
+            />
+            
             <motion.div
               key={currentStep}
               initial={{ opacity: 0, x: 20 }}

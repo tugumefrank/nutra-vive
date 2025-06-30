@@ -20,6 +20,8 @@ export default function AddressStep({
   onInputChange,
   errors,
 }: StepProps) {
+  const hasErrors = Object.keys(errors).length > 0;
+  
   // If pickup is selected, show pickup confirmation
   if (formData.deliveryMethod === "pickup") {
     return (
@@ -56,7 +58,7 @@ export default function AddressStep({
   return (
     <div className="space-y-6">
       {/* Shipping Address */}
-      <Card className="glass border-white/20">
+      <Card className={`glass ${hasErrors ? 'border-red-200 bg-red-50/30' : 'border-white/20'}`}>
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <MapPin className="w-5 h-5 mr-2 text-orange-600" />
