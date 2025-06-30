@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown,
@@ -48,26 +48,36 @@ export function EnhancedProductsGrid({
   const [error, setError] = useState<string | null>(null);
   const [showMembershipSummary, setShowMembershipSummary] = useState(true);
 
-  // Load products with membership context
-  useEffect(() => {
-    loadProducts();
-  }, [search, category, sortBy, page, limit]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
       console.log("Loading products with membership context...");
 
-      const response = await getProductsWithMembership({
-        search: search || undefined,
-        category: category !== "All" ? category : undefined,
+      const params: {
+        search?: string;
+        category?: string;
+        sortBy?: string;
+        page?: number;
+        limit?: number;
+        isActive?: boolean;
+      } = {
         sortBy,
         page,
         limit,
         isActive: true,
-      });
+      };
+
+      if (search) {
+        params.search = search;
+      }
+
+      if (category && category !== "All") {
+        params.category = category;
+      }
+
+      const response = await getProductsWithMembership(params);
 
       setProductResponse(response);
       setProducts(response.products);
@@ -80,7 +90,12 @@ export function EnhancedProductsGrid({
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, category, sortBy, page, limit]);
+
+  // Load products with membership context
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // Calculate membership stats
   const membershipStats = productResponse?.membershipSummary;
@@ -323,7 +338,7 @@ export function EnhancedProductsGrid({
           </p>
           {membershipStats && (
             <p className="text-amber-600 text-sm">
-              Don't worry - your {membershipStats.tier} membership benefits are
+              Don&apos;t worry - your {membershipStats.tier} membership benefits are
               still waiting for you!
             </p>
           )}
