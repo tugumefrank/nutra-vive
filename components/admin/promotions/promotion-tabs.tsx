@@ -252,6 +252,8 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({ promotions = [] }) =
   const [isLoading, setIsLoading] = React.useState(false);
   const [customerTargeting, setCustomerTargeting] = React.useState<any>(null);
   const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [assignmentToRemove, setAssignmentToRemove] = React.useState<string | null>(null);
+  const [removeAssignmentDialogOpen, setRemoveAssignmentDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     loadCustomerTargeting();

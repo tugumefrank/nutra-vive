@@ -8,7 +8,8 @@
       "Bash(ls:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
