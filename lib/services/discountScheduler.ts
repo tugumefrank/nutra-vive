@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 /**
  * Service for handling automatic discount scheduling and expiration
  */
-export class DiscountScheduler {
+class DiscountScheduler {
   /**
    * Process all scheduled discounts that should be activated
    */
@@ -342,12 +342,30 @@ export class DiscountScheduler {
   }
 }
 
-// Server action wrapper for running the scheduler
+/**
+ * Process all scheduled discounts that should be activated
+ */
+export async function processScheduledDiscounts() {
+  return await DiscountScheduler.processScheduledDiscounts();
+}
+
+/**
+ * Process all expired discounts that should be deactivated
+ */
+export async function processExpiredDiscounts() {
+  return await DiscountScheduler.processExpiredDiscounts();
+}
+
+/**
+ * Run the complete discount scheduler process
+ */
 export async function runDiscountScheduler() {
   return await DiscountScheduler.runScheduler();
 }
 
-// Server action wrapper for getting analytics
+/**
+ * Get analytics for scheduled discounts
+ */
 export async function getDiscountSchedulerAnalytics() {
   return await DiscountScheduler.getSchedulerAnalytics();
 }
