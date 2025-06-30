@@ -1197,22 +1197,22 @@ export async function assignPromotionToCustomers(params: {
       // Filter customers based on segment
       switch (customerSegment) {
         case 'new_customers':
-          targetCustomers = allCustomers.filter(c => c.segment === 'New Customers');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'New Customers');
           break;
         case 'returning_customers':
-          targetCustomers = allCustomers.filter(c => c.segment === 'Returning Customers');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'Returning Customers');
           break;
         case 'vip_customers':
-          targetCustomers = allCustomers.filter(c => c.segment === 'VIP Customers');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'VIP Customers');
           break;
         case 'high_value':
-          targetCustomers = allCustomers.filter(c => c.segment === 'High Value');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'High Value');
           break;
         case 'at_risk':
-          targetCustomers = allCustomers.filter(c => c.segment === 'At Risk');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'At Risk');
           break;
         case 'recent_buyers':
-          targetCustomers = allCustomers.filter(c => c.segment === 'Recent Buyers');
+          targetCustomers = allCustomers.filter(c => (c as any).segment === 'Recent Buyers');
           break;
         default:
           targetCustomers = allCustomers;
@@ -1244,7 +1244,7 @@ export async function assignPromotionToCustomers(params: {
       email: customer.email,
       firstName: customer.firstName || '',
       lastName: customer.lastName || '',
-      type: 'permanent',
+      type: 'permanent' as 'permanent' | 'temporary',
       isActive: true,
       assignedAt: new Date()
     }));
@@ -1328,23 +1328,31 @@ export async function getProductPricingWithPromotions(productId: string, custome
     // Find active promotions that apply to this product
     const promotionQuery: any = {
       isActive: true,
-      $or: [
-        { startsAt: { $exists: false } },
-        { startsAt: { $lte: now } }
-      ],
-      $or: [
-        { endsAt: { $exists: false } },
-        { endsAt: { $gte: now } }
-      ],
-      $or: [
-        { applicabilityScope: 'entire_store' },
-        { 
-          applicabilityScope: 'products',
-          targetProducts: new mongoose.Types.ObjectId(productId)
+      $and: [
+        {
+          $or: [
+            { startsAt: { $exists: false } },
+            { startsAt: { $lte: now } }
+          ]
         },
         {
-          applicabilityScope: 'categories',
-          targetCategories: product.categoryId
+          $or: [
+            { endsAt: { $exists: false } },
+            { endsAt: { $gte: now } }
+          ]
+        },
+        {
+          $or: [
+            { applicabilityScope: 'entire_store' },
+            { 
+              applicabilityScope: 'products',
+              targetProducts: productId
+            },
+            {
+              applicabilityScope: 'categories',
+              targetCategories: product.category
+            }
+          ]
         }
       ]
     };
@@ -2083,10 +2091,7 @@ export async function getProductDiscounts(filters?: {
       campaigns: campaigns.map(campaign => ({
         ...campaign.toObject(),
         _id: campaign._id.toString(),
-        createdBy: campaign.createdBy ? {
-          ...campaign.createdBy.toObject(),
-          _id: campaign.createdBy._id.toString()
-        } : null
+        createdBy: campaign.createdBy || null
       }))
     };
   } catch (error) {

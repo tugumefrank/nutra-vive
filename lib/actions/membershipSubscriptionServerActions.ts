@@ -658,11 +658,13 @@ export async function cancelMembershipSubscription(
     }
 
     // Verify ownership
+    const populatedUser = userMembership.user as any;
     if (
-      typeof userMembership.user === "object" &&
-      userMembership.user !== null &&
-      "clerkId" in userMembership.user &&
-      (userMembership.user as any).clerkId === userId
+      populatedUser &&
+      typeof populatedUser === "object" &&
+      populatedUser !== null &&
+      "clerkId" in populatedUser &&
+      populatedUser.clerkId === userId
     ) {
       // authorized
     } else {
@@ -683,7 +685,7 @@ export async function cancelMembershipSubscription(
     });
 
     // Update membership stats
-    await Membership.findByIdAndUpdate(userMembership.membership._id, {
+    await Membership.findByIdAndUpdate(userMembership.membership, {
       $inc: { totalSubscribers: -1 },
     });
 
@@ -741,10 +743,12 @@ export async function getCurrentMembership(): Promise<{
         ...userMembership,
         _id: userMembership._id.toString(),
         user: userMembership.user.toString(),
-        membership: {
-          ...userMembership.membership,
-          _id: userMembership.membership._id.toString(),
-        },
+        membership: typeof userMembership.membership === 'string' 
+          ? userMembership.membership 
+          : {
+              ...(userMembership.membership as any),
+              _id: (userMembership.membership as any)._id.toString(),
+            },
       },
     };
   } catch (error) {

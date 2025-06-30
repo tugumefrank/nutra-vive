@@ -1,4 +1,4 @@
-import { useCartStore } from "@/store/cartStore";
+import { useUnifiedCartStore } from "@/store/unifiedCartStore";
 
 /**
  * Optimized cart selectors for specific data subscriptions
@@ -6,18 +6,18 @@ import { useCartStore } from "@/store/cartStore";
  */
 export const useCartSelectors = () => {
   // Subscribe only to stats - optimized for header/nav components
-  const stats = useCartStore((state) => state.stats);
+  const stats = useUnifiedCartStore((state) => state.stats);
 
   // Subscribe only to cart open state
-  const isOpen = useCartStore((state) => state.isOpen);
+  const isOpen = useUnifiedCartStore((state) => state.isOpen);
 
   // Subscribe only to loading states
-  const loading = useCartStore((state) => state.loading);
-  const initializing = useCartStore((state) => state.initializing);
+  const loading = useUnifiedCartStore((state) => state.loading);
+  const initializing = useUnifiedCartStore((state) => state.initializing);
 
   // Subscribe to actions (these don't cause re-renders)
-  const openCart = useCartStore((state) => state.openCart);
-  const closeCart = useCartStore((state) => state.closeCart);
+  const openCart = useUnifiedCartStore((state) => state.openCart);
+  const closeCart = useUnifiedCartStore((state) => state.closeCart);
 
   return {
     stats,
@@ -34,7 +34,7 @@ export const useCartSelectors = () => {
  * Perfect for header and mobile nav cart icons
  */
 export const useCartCount = () => {
-  return useCartStore((state) => state.stats.totalItems);
+  return useUnifiedCartStore((state) => state.stats.totalItems);
 };
 
 /**
@@ -42,5 +42,5 @@ export const useCartCount = () => {
  * totalItems = sum of all quantities, itemCount = number of unique products
  */
 export const useCartItemCount = () => {
-  return useCartStore((state) => state.stats.itemCount);
+  return useUnifiedCartStore((state) => state.stats.itemCount);
 };

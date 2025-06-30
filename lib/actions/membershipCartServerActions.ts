@@ -101,7 +101,7 @@ export interface MembershipInfo {
 }
 
 export interface ProductUsage {
-  categoryId: mongoose.Types.ObjectId;
+  categoryId: string;
   categoryName: string;
   allocatedQuantity: number;
   usedQuantity: number;
@@ -277,7 +277,7 @@ const serializeMembershipCart = (
           totalSavings: membershipDiscount,
           allocationsUsed: membership.productUsage.map(
             (usage: ProductUsage) => ({
-              categoryId: usage.categoryId.toString(),
+              categoryId: usage.categoryId,
               categoryName: usage.categoryName,
               used: usage.usedQuantity,
               allocated: usage.allocatedQuantity,
@@ -337,7 +337,7 @@ function isProductEligibleForMembership(
 
   const categoryUsage = membership.productUsage.find(
     (usage: ProductUsage) =>
-      usage.categoryId.toString() === product.category._id.toString()
+      usage.categoryId === product.category._id.toString()
   );
 
   if (!categoryUsage || categoryUsage.availableQuantity <= 0) {
