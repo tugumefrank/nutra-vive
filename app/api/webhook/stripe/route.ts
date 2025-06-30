@@ -230,57 +230,32 @@ async function handleInvoicePaymentSucceeded(invoice: StripeInvoiceWithSubscript
         return;
       }
 
-      // Check for existing incomplete membership (more robust query)
-      const incompleteMembership: IUserMembership | null = await UserMembership.findOne({
+      // Create new membership directly - no incomplete memberships anymore
+      // Initialize product usage tracking
+      const productUsage = membership.productAllocations.map((allocation: any) => ({
+        categoryId: allocation.categoryId,
+        categoryName: allocation.categoryName,
+        allocatedQuantity: allocation.quantity,
+        usedQuantity: 0,
+        availableQuantity: allocation.quantity,
+      }));
+
+      userMembership = new UserMembership({
         user: user._id,
         membership: membershipId,
-        status: "incomplete",
-        $or: [
-          { subscriptionId: { $exists: false } },
-          { subscriptionId: null },
-          { subscriptionId: subscription.id }
-        ]
+        subscriptionId: subscription.id,
+        status: "active",
+        startDate: new Date(),
+        nextBillingDate: new Date(subscription.current_period_end * 1000),
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        lastPaymentDate: new Date(),
+        lastPaymentAmount: invoice.amount_paid / 100, // Convert from cents
+        productUsage,
       });
 
-      if (incompleteMembership) {
-        // Activate existing incomplete membership
-        incompleteMembership.status = "active";
-        incompleteMembership.subscriptionId = subscription.id;
-        incompleteMembership.nextBillingDate = new Date(subscription.current_period_end * 1000);
-        incompleteMembership.currentPeriodStart = new Date(subscription.current_period_start * 1000);
-        incompleteMembership.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-        incompleteMembership.lastPaymentDate = new Date();
-        incompleteMembership.lastPaymentAmount = invoice.amount_paid / 100; // Convert from cents
-
-        await incompleteMembership.save();
-        console.log(`Activated incomplete membership ${incompleteMembership._id} for user ${user._id}`);
-      } else {
-        // Initialize product usage tracking
-        const productUsage = membership.productAllocations.map((allocation: any) => ({
-          categoryId: allocation.categoryId,
-          categoryName: allocation.categoryName,
-          allocatedQuantity: allocation.quantity,
-          usedQuantity: 0,
-          availableQuantity: allocation.quantity,
-        }));
-
-        userMembership = new UserMembership({
-          user: user._id,
-          membership: membershipId,
-          subscriptionId: subscription.id,
-          status: "active",
-          startDate: new Date(),
-          nextBillingDate: new Date(subscription.current_period_end * 1000),
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          lastPaymentDate: new Date(),
-          lastPaymentAmount: invoice.amount_paid / 100, // Convert from cents
-          productUsage,
-        });
-
-        await userMembership.save();
-        console.log(`Created new membership for user ${user._id}`);
-      }
+      await userMembership.save();
+      console.log(`Created new membership for user ${user._id}`);
     } else {
       // Renewal payment - reset usage for new period
       if (userMembership.membership) {
@@ -386,66 +361,63 @@ async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
       return;
     }
 
-    // Check for existing incomplete membership for this user/membership combo (more robust)
-    const incompleteMembership: IUserMembership | null = await UserMembership.findOne({
-      user: user._id,
-      membership: membershipId,
-      status: "incomplete",
-      $or: [
-        { subscriptionId: { $exists: false } },
-        { subscriptionId: null },
-        { subscriptionId: subscriptionId }
-      ]
+    // Get subscription details for period info
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as StripeSubscriptionWithPeriod;
+    
+    console.log("Subscription details:", {
+      id: subscription.id,
+      status: subscription.status,
+      current_period_start: subscription.current_period_start,
+      current_period_end: subscription.current_period_end
     });
 
-    if (incompleteMembership) {
-      // Activate existing incomplete membership
-      incompleteMembership.status = "active";
-      incompleteMembership.subscriptionId = subscriptionId;
-      incompleteMembership.lastPaymentDate = new Date();
-      incompleteMembership.lastPaymentAmount = charge.amount / 100; // Convert from cents
-      incompleteMembership.autoRenewal = true;
+    // Create new membership directly - no incomplete memberships anymore
+    const productUsage = membership.productAllocations.map((allocation: any) => ({
+      categoryId: allocation.categoryId,
+      categoryName: allocation.categoryName,
+      allocatedQuantity: allocation.quantity,
+      usedQuantity: 0,
+      availableQuantity: allocation.quantity,
+    }));
 
-      // Get subscription details for period info
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId) as unknown as StripeSubscriptionWithPeriod;
-      
-      console.log("Subscription details:", {
-        id: subscription.id,
-        status: subscription.status,
-        current_period_start: subscription.current_period_start,
-        current_period_end: subscription.current_period_end
-      });
-      
-      if (subscription.current_period_end && subscription.current_period_start) {
-        incompleteMembership.nextBillingDate = new Date(subscription.current_period_end * 1000);
-        incompleteMembership.currentPeriodStart = new Date(subscription.current_period_start * 1000);
-        incompleteMembership.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-        incompleteMembership.usageResetDate = new Date(subscription.current_period_end * 1000);
+    userMembership = new UserMembership({
+      user: user._id,
+      membership: membershipId,
+      subscriptionId: subscriptionId,
+      status: "active",
+      startDate: new Date(),
+      lastPaymentDate: new Date(),
+      lastPaymentAmount: charge.amount / 100,
+      autoRenewal: true,
+      productUsage,
+    });
+
+    if (subscription.current_period_end && subscription.current_period_start) {
+        userMembership.nextBillingDate = new Date(subscription.current_period_end * 1000);
+        userMembership.currentPeriodStart = new Date(subscription.current_period_start * 1000);
+        userMembership.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        userMembership.usageResetDate = new Date(subscription.current_period_end * 1000);
       } else {
         console.warn("Subscription period data missing, using fallback dates");
         const now = new Date();
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
         
-        incompleteMembership.nextBillingDate = nextMonth;
-        incompleteMembership.currentPeriodStart = now;
-        incompleteMembership.currentPeriodEnd = nextMonth;
-        incompleteMembership.usageResetDate = nextMonth;
+        userMembership.nextBillingDate = nextMonth;
+        userMembership.currentPeriodStart = now;
+        userMembership.currentPeriodEnd = nextMonth;
+        userMembership.usageResetDate = nextMonth;
       }
 
-      await incompleteMembership.save();
-      console.log(`✅ Activated incomplete membership ${incompleteMembership._id} for user ${user._id}`);
+      await userMembership.save();
+      console.log(`✅ Created new active membership ${userMembership._id} for user ${user._id}`);
       
-      // Update membership stats only once
+      // Update membership stats
       await Membership.findByIdAndUpdate(membershipId, {
         $inc: {
           totalSubscribers: 1,
           totalRevenue: membership.price,
         },
       });
-    } else {
-      console.warn(`No incomplete membership found for user ${user._id} and membership ${membershipId}`);
-      console.log("This should not happen - incomplete membership should exist before charge.succeeded");
-    }
 
     console.log("🎉 Successfully processed subscription charge:", {
       chargeId: charge.id,

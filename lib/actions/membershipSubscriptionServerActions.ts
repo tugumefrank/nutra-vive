@@ -229,12 +229,7 @@ export async function createMembershipSubscription(
         status: subscription.status,
       });
 
-      // Create UserMembership record with incomplete status to prevent duplicates
-      await createIncompleteUserMembership(
-        user._id,
-        membership,
-        subscription.id
-      );
+      // Note: UserMembership will be created by webhook when payment succeeds
 
       const invoice = subscription.latest_invoice as Stripe.Invoice;
       
