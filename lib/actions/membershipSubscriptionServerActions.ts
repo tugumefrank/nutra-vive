@@ -29,22 +29,35 @@ async function createIncompleteUserMembership(
     }
 
     // Initialize product usage tracking
-    const productUsage = membership.productAllocations.map(
-      (allocation: any) => ({
-        categoryId: allocation.categoryId,
-        categoryName: allocation.categoryName,
-        allocatedQuantity: allocation.quantity,
+    console.log("Membership productAllocations:", membership.productAllocations);
+    const productUsage = membership.productAllocations
+      .filter((allocation: any) => allocation.categoryId || allocation.category)
+      .map((allocation: any) => ({
+        categoryId: allocation.categoryId?.toString() || allocation.category?.toString(),
+        categoryName: allocation.categoryName || 'Unknown Category',
+        allocatedQuantity: allocation.quantity || 0,
         usedQuantity: 0,
-        availableQuantity: allocation.quantity,
-      })
-    );
+        availableQuantity: allocation.quantity || 0,
+      }));
+    console.log("Generated productUsage:", productUsage);
+    
+    if (productUsage.length === 0) {
+      throw new Error("No valid product allocations found for membership");
+    }
 
+    const now = new Date();
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
     const userMembership = new UserMembership({
       user: userId,
       membership: membership._id,
       subscriptionId: subscriptionId,
       status: "incomplete", // Will be updated to "active" by webhook
-      startDate: new Date(),
+      startDate: now,
+      currentPeriodStart: now,
+      currentPeriodEnd: nextMonth,
+      usageResetDate: nextMonth,
       productUsage,
     });
 
@@ -476,15 +489,21 @@ export async function confirmMembershipSubscription(
     );
 
     // Initialize product usage tracking
-    const productUsage = membership.productAllocations.map(
-      (allocation: any) => ({
-        categoryId: allocation.categoryId,
-        categoryName: allocation.categoryName,
-        allocatedQuantity: allocation.quantity,
+    console.log("Membership productAllocations:", membership.productAllocations);
+    const productUsage = membership.productAllocations
+      .filter((allocation: any) => allocation.categoryId || allocation.category)
+      .map((allocation: any) => ({
+        categoryId: allocation.categoryId?.toString() || allocation.category?.toString(),
+        categoryName: allocation.categoryName || 'Unknown Category',
+        allocatedQuantity: allocation.quantity || 0,
         usedQuantity: 0,
-        availableQuantity: allocation.quantity,
-      })
-    );
+        availableQuantity: allocation.quantity || 0,
+      }));
+    console.log("Generated productUsage:", productUsage);
+    
+    if (productUsage.length === 0) {
+      throw new Error("No valid product allocations found for membership");
+    }
 
     // Create user membership
     const userMembership = new UserMembership({
@@ -578,15 +597,21 @@ async function handleFallbackPayment(
     currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
 
     // Initialize product usage tracking
-    const productUsage = membership.productAllocations.map(
-      (allocation: any) => ({
-        categoryId: allocation.categoryId,
-        categoryName: allocation.categoryName,
-        allocatedQuantity: allocation.quantity,
+    console.log("Membership productAllocations:", membership.productAllocations);
+    const productUsage = membership.productAllocations
+      .filter((allocation: any) => allocation.categoryId || allocation.category)
+      .map((allocation: any) => ({
+        categoryId: allocation.categoryId?.toString() || allocation.category?.toString(),
+        categoryName: allocation.categoryName || 'Unknown Category',
+        allocatedQuantity: allocation.quantity || 0,
         usedQuantity: 0,
-        availableQuantity: allocation.quantity,
-      })
-    );
+        availableQuantity: allocation.quantity || 0,
+      }));
+    console.log("Generated productUsage:", productUsage);
+    
+    if (productUsage.length === 0) {
+      throw new Error("No valid product allocations found for membership");
+    }
 
     // Create user membership (without subscription ID for fallback)
     const userMembership = new UserMembership({
