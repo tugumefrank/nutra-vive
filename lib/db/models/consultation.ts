@@ -87,8 +87,8 @@ export interface IConsultation extends Document {
 // Consultation Notes Interface
 export interface IConsultationNote extends Document {
   _id: string;
-  consultation: mongoose.Types.ObjectId;
-  consultant: mongoose.Types.ObjectId; // Admin/Consultant user
+  consultation: string;
+  consultant: string; // Admin/Consultant user
   session: number; // Session number (1, 2, 3...)
   sessionType: "initial" | "follow-up" | "check-in";
   notes: string;
@@ -101,7 +101,7 @@ export interface IConsultationNote extends Document {
 // Meal Plans Interface
 export interface IMealPlan extends Document {
   _id: string;
-  consultation: mongoose.Types.ObjectId;
+  consultation: string;
   title: string;
   description?: string;
   duration: number; // days
@@ -160,7 +160,7 @@ export interface IMealPlan extends Document {
 const consultationSchema = new Schema<IConsultation>(
   {
     consultationNumber: { type: String, required: true, unique: true },
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String, ref: "User" },
 
     personalInfo: {
       firstName: { type: String, required: true },
@@ -272,11 +272,11 @@ const consultationSchema = new Schema<IConsultation>(
 const consultationNoteSchema = new Schema<IConsultationNote>(
   {
     consultation: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Consultation",
       required: true,
     },
-    consultant: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    consultant: { type: String, ref: "User", required: true },
     session: { type: Number, required: true },
     sessionType: {
       type: String,
@@ -295,7 +295,7 @@ const consultationNoteSchema = new Schema<IConsultationNote>(
 const mealPlanSchema = new Schema<IMealPlan>(
   {
     consultation: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Consultation",
       required: true,
     },

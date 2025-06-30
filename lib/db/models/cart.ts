@@ -13,7 +13,7 @@ export interface ICart extends Document {
   }[];
 
   // NEW: Promotion fields
-  promotionId?: mongoose.Types.ObjectId; // Reference to Promotion
+  promotionId?: string; // Reference to Promotion
   promotionCode?: string; // Applied promotion code
   promotionName?: string; // Display name of promotion
   promotionDiscount?: number; // Discount amount applied
@@ -26,7 +26,7 @@ export interface ICart extends Document {
 export interface IFavorite extends Document {
   _id: string;
   user: string; // Clerk userId instead of ObjectId reference
-  product: mongoose.Types.ObjectId; // Product ID
+  product: string; // Product ID
   createdAt: Date;
 }
 
@@ -49,13 +49,13 @@ export interface IDiscountCode extends Document {
 // Cart Schema
 const cartSchema = new Schema<ICart>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String, ref: "User" },
     sessionId: String,
     clerkUserId: { type: String },
     items: [
       {
         product: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Product",
           required: true,
         },
@@ -64,7 +64,7 @@ const cartSchema = new Schema<ICart>(
       },
     ],
     // NEW: Promotion fields
-    promotionId: { type: Schema.Types.ObjectId, ref: "Promotion" },
+    promotionId: { type: String, ref: "Promotion" },
     promotionCode: { type: String, uppercase: true },
     promotionName: String,
     promotionDiscount: { type: Number, default: 0 },
@@ -76,7 +76,7 @@ const cartSchema = new Schema<ICart>(
 const favoriteSchema = new Schema<IFavorite>(
   {
     user: { type: String, required: true }, // Store Clerk userId directly
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    product: { type: String, ref: "Product", required: true },
   },
   { timestamps: true }
 );

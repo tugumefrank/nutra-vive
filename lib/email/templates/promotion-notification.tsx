@@ -67,7 +67,7 @@ function PromotionNotification({
       <Section style={promotionSection}>
         <Text style={promotionTitle}>{promotionName}</Text>
         {promotionDescription && (
-          <Text style={promotionDescription}>{promotionDescription}</Text>
+          <Text style={promotionDescriptionStyle}>{promotionDescription}</Text>
         )}
         
         <div style={discountBadge}>
@@ -178,7 +178,7 @@ const promotionTitle = {
   margin: "0 0 12px 0",
 };
 
-const promotionDescription = {
+const promotionDescriptionStyle = {
   fontSize: "16px",
   color: "#374151",
   margin: "0 0 20px 0",

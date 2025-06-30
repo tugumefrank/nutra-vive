@@ -42,8 +42,8 @@ export interface IUser extends Document {
 // User Profile/Preferences Interface for Checkout
 export interface IUserProfile extends Document {
   _id: string;
-  user: mongoose.Types.ObjectId;
-  
+  user: string;
+
   // Saved Addresses
   defaultShippingAddress?: {
     firstName: string;
@@ -56,7 +56,7 @@ export interface IUserProfile extends Document {
     country: string;
     phone?: string;
   };
-  
+
   savedAddresses: {
     id: string;
     label: string; // "Home", "Work", "Other"
@@ -72,22 +72,22 @@ export interface IUserProfile extends Document {
     isDefault: boolean;
     createdAt: Date;
   }[];
-  
+
   // Delivery Preferences
   preferredDeliveryMethod: "standard" | "express" | "pickup";
   deliveryInstructions?: string;
-  
+
   // Communication Preferences
   marketingOptIn: boolean;
   smsNotifications: boolean;
   emailNotifications: boolean;
-  
+
   // Order History Stats (for quick reference)
   totalOrders: number;
   totalSpent: number;
   averageOrderValue: number;
   lastOrderDate?: Date;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -161,8 +161,8 @@ export interface IProduct extends Document {
 // Review Interface
 export interface IReview extends Document {
   _id: string;
-  product: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
+  product: string;
+  user: string;
   rating: number;
   title?: string;
   content?: string;
@@ -175,18 +175,18 @@ export interface IReview extends Document {
 // Enhanced Cart Interface with Promotion Support
 export interface ICart extends Document {
   _id: string;
-  user?: mongoose.Types.ObjectId; // User ID
+  user?: string; // User ID
   clerkUserId?: string; // Clerk User ID for compatibility
   sessionId?: string; // For guest users
   items: {
-    product: mongoose.Types.ObjectId;
+    product: string;
     quantity: number;
     price: number;
     originalPrice?: number; // Store original price for comparison
   }[];
 
   // Promotion fields
-  promotionId?: mongoose.Types.ObjectId;
+  promotionId?: string;
   promotionCode?: string;
   promotionName?: string;
   promotionDiscount?: number;
@@ -204,7 +204,7 @@ export interface ICart extends Document {
 export interface IOrder extends Document {
   _id: string;
   orderNumber: string;
-  user?: mongoose.Types.ObjectId;
+  user?: string;
   email: string;
   status:
     | "pending"
@@ -231,7 +231,7 @@ export interface IOrder extends Document {
 
   // Promotion tracking
   appliedPromotion?: {
-    promotionId: mongoose.Types.ObjectId;
+    promotionId: string;
     code: string;
     name: string;
     discountAmount: number;
@@ -286,7 +286,7 @@ export interface IOrder extends Document {
 // Tracking Event Interface
 export interface ITrackingEvent extends Document {
   _id: string;
-  order: mongoose.Types.ObjectId; // Order ID
+  order: string; // Order ID
   status:
     | "order_placed"
     | "payment_confirmed"
@@ -334,8 +334,8 @@ export interface IOrderTrackingInfo {
 // Favorites Interface
 export interface IFavorite extends Document {
   _id: string;
-  user: mongoose.Types.ObjectId;
-  product: mongoose.Types.ObjectId;
+  user: string;
+  product: string;
   createdAt: Date;
 }
 
@@ -362,8 +362,8 @@ export interface IPromotion extends Document {
     | "products"
     | "collections"
     | "customer_segments";
-  targetCategories: mongoose.Types.ObjectId[];
-  targetProducts: mongoose.Types.ObjectId[];
+  targetCategories: string[];
+  targetProducts: string[];
   targetCollections: string[];
   customerSegments:
     | "new_customers"
@@ -381,8 +381,8 @@ export interface IPromotion extends Document {
   minimumQuantity?: number;
 
   // Exclusions
-  excludedCategories: mongoose.Types.ObjectId[];
-  excludedProducts: mongoose.Types.ObjectId[];
+  excludedCategories: string[];
+  excludedProducts: string[];
   excludedCollections: string[];
   excludeDiscountedItems: boolean;
 
@@ -420,8 +420,8 @@ export interface IPromotion extends Document {
   averageOrderValue: number;
 
   // Metadata
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  createdBy: string;
+  updatedBy?: string;
   tags: string[];
   notes?: string;
 
@@ -432,11 +432,11 @@ export interface IPromotion extends Document {
 // Customer Promotion Usage Interface
 export interface ICustomerPromotionUsage extends Document {
   _id: string;
-  promotion: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId; // Changed from 'customer' to 'user' for consistency
+  promotion: string;
+  user: string; // Changed from 'customer' to 'user' for consistency
   customerEmail: string;
   code: string;
-  order?: mongoose.Types.ObjectId;
+  order?: string;
   discountAmount: number;
   orderTotal: number;
   usedAt: Date;
@@ -464,29 +464,29 @@ export interface IProductDiscount extends Document {
   startsAt: Date;
   endsAt?: Date;
   autoDisable: boolean;
-  
+
   // Enhanced scheduling options
   scheduleType: "immediate" | "scheduled";
   duration?: {
     amount: number;
     unit: "hours" | "days" | "weeks" | "months";
   };
-  
+
   // Bulk management features
   canStackWithOtherDiscounts: boolean;
   priority: number; // Higher priority discounts apply first
-  
+
   // Analytics and tracking
   totalSavings: number;
   usageCount: number;
   viewCount: number;
-  
+
   // Admin metadata
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  createdBy: string;
+  updatedBy?: string;
   notes?: string;
   tags: string[];
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -512,8 +512,13 @@ const userSchema = new Schema<IUser>(
 // User Profile Schema
 const userProfileSchema = new Schema<IUserProfile>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-    
+    user: {
+      type: String,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+
     // Default shipping address
     defaultShippingAddress: {
       firstName: String,
@@ -526,37 +531,39 @@ const userProfileSchema = new Schema<IUserProfile>(
       country: { type: String, default: "US" },
       phone: String,
     },
-    
+
     // Multiple saved addresses
-    savedAddresses: [{
-      id: { type: String, required: true },
-      label: { type: String, default: "Home" },
-      firstName: String,
-      lastName: String,
-      address1: String,
-      address2: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: { type: String, default: "US" },
-      phone: String,
-      isDefault: { type: Boolean, default: false },
-      createdAt: { type: Date, default: Date.now },
-    }],
-    
+    savedAddresses: [
+      {
+        id: { type: String, required: true },
+        label: { type: String, default: "Home" },
+        firstName: String,
+        lastName: String,
+        address1: String,
+        address2: String,
+        city: String,
+        state: String,
+        zipCode: String,
+        country: { type: String, default: "US" },
+        phone: String,
+        isDefault: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
     // Delivery preferences
     preferredDeliveryMethod: {
       type: String,
       enum: ["standard", "express", "pickup"],
-      default: "standard"
+      default: "standard",
     },
     deliveryInstructions: String,
-    
+
     // Communication preferences
     marketingOptIn: { type: Boolean, default: false },
     smsNotifications: { type: Boolean, default: true },
     emailNotifications: { type: Boolean, default: true },
-    
+
     // Order stats
     totalOrders: { type: Number, default: 0 },
     totalSpent: { type: Number, default: 0 },
@@ -590,7 +597,7 @@ const productSchema = new Schema<IProduct>(
     costPrice: Number,
     sku: { type: String, unique: true, sparse: true },
     barcode: String,
-    category: { type: Schema.Types.ObjectId, ref: "Category" },
+    category: { type: String, ref: "Category" },
     images: [String],
     tags: [String],
     features: [String],
@@ -634,8 +641,8 @@ const productSchema = new Schema<IProduct>(
 // Review Schema
 const reviewSchema = new Schema<IReview>(
   {
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    product: { type: String, ref: "Product", required: true },
+    user: { type: String, ref: "User", required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     title: String,
     content: String,
@@ -648,13 +655,13 @@ const reviewSchema = new Schema<IReview>(
 // Enhanced Cart Schema with Promotion Support
 const cartSchema = new Schema<ICart>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String, ref: "User" },
     clerkUserId: String, // For Clerk integration
     sessionId: String,
     items: [
       {
         product: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Product",
           required: true,
         },
@@ -665,7 +672,7 @@ const cartSchema = new Schema<ICart>(
     ],
 
     // Promotion fields
-    promotionId: { type: Schema.Types.ObjectId, ref: "Promotion" },
+    promotionId: { type: String, ref: "Promotion" },
     promotionCode: { type: String, uppercase: true },
     promotionName: String,
     promotionDiscount: { type: Number, default: 0 },
@@ -682,7 +689,7 @@ const cartSchema = new Schema<ICart>(
 const orderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: String, required: true, unique: true },
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String, ref: "User" },
     email: { type: String, required: true },
     status: {
       type: String,
@@ -711,7 +718,7 @@ const orderSchema = new Schema<IOrder>(
 
     // Applied promotion tracking
     appliedPromotion: {
-      promotionId: { type: Schema.Types.ObjectId, ref: "Promotion" },
+      promotionId: { type: String, ref: "Promotion" },
       code: String,
       name: String,
       discountAmount: Number,
@@ -750,7 +757,7 @@ const orderSchema = new Schema<IOrder>(
     items: [
       {
         product: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Product",
           required: true,
         },
@@ -775,7 +782,7 @@ const orderSchema = new Schema<IOrder>(
 // Tracking Event Schema
 const trackingEventSchema = new Schema<ITrackingEvent>(
   {
-    order: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    order: { type: String, ref: "Order", required: true },
     status: {
       type: String,
       enum: [
@@ -813,8 +820,8 @@ const trackingEventSchema = new Schema<ITrackingEvent>(
 // Favorites Schema
 const favoriteSchema = new Schema<IFavorite>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    user: { type: String, ref: "User", required: true },
+    product: { type: String, ref: "Product", required: true },
   },
   { timestamps: true }
 );
@@ -855,8 +862,8 @@ const promotionSchema = new Schema<IPromotion>(
       ],
       required: true,
     },
-    targetCategories: [{ type: Schema.Types.ObjectId, ref: "Category" }],
-    targetProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    targetCategories: [{ type: String, ref: "Category" }],
+    targetProducts: [{ type: String, ref: "Product" }],
     targetCollections: [String],
     customerSegments: {
       type: String,
@@ -874,8 +881,8 @@ const promotionSchema = new Schema<IPromotion>(
     minimumQuantity: { type: Number, min: 1 },
 
     // Exclusions
-    excludedCategories: [{ type: Schema.Types.ObjectId, ref: "Category" }],
-    excludedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    excludedCategories: [{ type: String, ref: "Category" }],
+    excludedProducts: [{ type: String, ref: "Product" }],
     excludedCollections: [String],
     excludeDiscountedItems: { type: Boolean, default: false },
 
@@ -921,8 +928,8 @@ const promotionSchema = new Schema<IPromotion>(
     averageOrderValue: { type: Number, default: 0 },
 
     // Metadata
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: String, ref: "User", required: true },
+    updatedBy: { type: String, ref: "User" },
     tags: [String],
     notes: String,
   },
@@ -933,14 +940,14 @@ const promotionSchema = new Schema<IPromotion>(
 const customerPromotionUsageSchema = new Schema<ICustomerPromotionUsage>(
   {
     promotion: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Promotion",
       required: true,
     },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Changed from 'customer'
+    user: { type: String, ref: "User", required: true }, // Changed from 'customer'
     customerEmail: { type: String, required: true },
     code: { type: String, required: true },
-    order: { type: Schema.Types.ObjectId, ref: "Order" },
+    order: { type: String, ref: "Order" },
     discountAmount: { type: Number, required: true },
     orderTotal: { type: Number, required: true },
     usedAt: { type: Date, default: Date.now },
@@ -978,7 +985,7 @@ const productDiscountSchema = new Schema<IProductDiscount>(
     startsAt: { type: Date, default: Date.now },
     endsAt: Date,
     autoDisable: { type: Boolean, default: false },
-    
+
     // Enhanced scheduling
     scheduleType: {
       type: String,
@@ -992,19 +999,19 @@ const productDiscountSchema = new Schema<IProductDiscount>(
         enum: ["hours", "days", "weeks", "months"],
       },
     },
-    
+
     // Bulk management
     canStackWithOtherDiscounts: { type: Boolean, default: false },
     priority: { type: Number, default: 0 },
-    
+
     // Analytics
     totalSavings: { type: Number, default: 0 },
     usageCount: { type: Number, default: 0 },
     viewCount: { type: Number, default: 0 },
-    
+
     // Admin metadata
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: String, ref: "User", required: true },
+    updatedBy: { type: String, ref: "User" },
     notes: String,
     tags: [String],
   },
@@ -1102,7 +1109,8 @@ export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema);
 
 export const UserProfile: Model<IUserProfile> =
-  mongoose.models.UserProfile || mongoose.model<IUserProfile>("UserProfile", userProfileSchema);
+  mongoose.models.UserProfile ||
+  mongoose.model<IUserProfile>("UserProfile", userProfileSchema);
 
 export const Category: Model<ICategory> =
   mongoose.models.Category ||
@@ -1155,10 +1163,10 @@ export interface IMembership extends Document {
 
   // Product Allocations
   productAllocations: {
-    categoryId: mongoose.Types.ObjectId;
+    categoryId: string;
     categoryName: string;
     quantity: number;
-    allowedProducts?: mongoose.Types.ObjectId[]; // Specific products if restricted
+    allowedProducts?: string[]; // Specific products if restricted
   }[];
 
   // Custom Benefits
@@ -1189,8 +1197,8 @@ export interface IMembership extends Document {
   stripePriceId?: string; // Store Stripe price ID for subscriptions
 
   // Admin tracking
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  createdBy: string;
+  updatedBy?: string;
 
   // Analytics
   totalSubscribers: number;
@@ -1202,12 +1210,18 @@ export interface IMembership extends Document {
 
 export interface IUserMembership extends Document {
   _id: string;
-  user: mongoose.Types.ObjectId;
-  membership: mongoose.Types.ObjectId;
+  user: string;
+  membership: string;
 
   // Subscription Details
   subscriptionId?: string; // Stripe subscription ID
-  status: "active" | "cancelled" | "expired" | "paused" | "trial" | "incomplete";
+  status:
+    | "active"
+    | "cancelled"
+    | "expired"
+    | "paused"
+    | "trial"
+    | "incomplete";
   startDate: Date;
   endDate?: Date;
   nextBillingDate?: Date;
@@ -1224,7 +1238,7 @@ export interface IUserMembership extends Document {
 
   // Benefits Tracking
   productUsage: {
-    categoryId: mongoose.Types.ObjectId;
+    categoryId: string;
     categoryName: string;
     allocatedQuantity: number;
     usedQuantity: number;
@@ -1244,7 +1258,7 @@ export interface IUserMembership extends Document {
 
   // Membership History
   previousMemberships: {
-    membershipId: mongoose.Types.ObjectId;
+    membershipId: string;
     startDate: Date;
     endDate: Date;
     reason?: string; // upgrade, downgrade, cancellation
@@ -1259,18 +1273,18 @@ export interface IUserMembership extends Document {
 
 export interface IMembershipOrder extends Document {
   _id: string;
-  userMembership: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
-  membership: mongoose.Types.ObjectId;
+  userMembership: string;
+  user: string;
+  membership: string;
 
   // Order Details
   orderNumber: string;
 
   // Products Selected
   selectedProducts: {
-    product: mongoose.Types.ObjectId;
+    product: string;
     productName: string;
-    categoryId: mongoose.Types.ObjectId;
+    categoryId: string;
     categoryName: string;
     quantity: number;
     unitPrice: number;
@@ -1322,7 +1336,7 @@ export interface IMembershipOrder extends Document {
 
 export interface IMembershipAnalytics extends Document {
   _id: string;
-  membership: mongoose.Types.ObjectId;
+  membership: string;
   period: "daily" | "weekly" | "monthly" | "yearly";
   periodStart: Date;
   periodEnd: Date;
@@ -1337,7 +1351,7 @@ export interface IMembershipAnalytics extends Document {
 
   // Product Usage
   popularProducts: {
-    productId: mongoose.Types.ObjectId;
+    productId: string;
     productName: string;
     timesSelected: number;
   }[];
@@ -1379,13 +1393,13 @@ const membershipSchema = new Schema<IMembership>(
     productAllocations: [
       {
         categoryId: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Category",
           required: true,
         },
         categoryName: { type: String, required: true },
         quantity: { type: Number, required: true, min: 0 },
-        allowedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+        allowedProducts: [{ type: String, ref: "Product" }],
       },
     ],
 
@@ -1423,8 +1437,8 @@ const membershipSchema = new Schema<IMembership>(
     icon: String,
 
     // Admin tracking
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: String, ref: "User", required: true },
+    updatedBy: { type: String, ref: "User" },
 
     // Analytics
     totalSubscribers: { type: Number, default: 0 },
@@ -1435,9 +1449,9 @@ const membershipSchema = new Schema<IMembership>(
 
 const userMembershipSchema = new Schema<IUserMembership>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: String, ref: "User", required: true },
     membership: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Membership",
       required: true,
     },
@@ -1467,7 +1481,7 @@ const userMembershipSchema = new Schema<IUserMembership>(
     productUsage: [
       {
         categoryId: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Category",
           required: true,
         },
@@ -1492,7 +1506,7 @@ const userMembershipSchema = new Schema<IUserMembership>(
 
     previousMemberships: [
       {
-        membershipId: { type: Schema.Types.ObjectId, ref: "Membership" },
+        membershipId: { type: String, ref: "Membership" },
         startDate: Date,
         endDate: Date,
         reason: String,
@@ -1507,13 +1521,13 @@ const userMembershipSchema = new Schema<IUserMembership>(
 const membershipOrderSchema = new Schema<IMembershipOrder>(
   {
     userMembership: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "UserMembership",
       required: true,
     },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: String, ref: "User", required: true },
     membership: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Membership",
       required: true,
     },
@@ -1523,13 +1537,13 @@ const membershipOrderSchema = new Schema<IMembershipOrder>(
     selectedProducts: [
       {
         product: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Product",
           required: true,
         },
         productName: { type: String, required: true },
         categoryId: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Category",
           required: true,
         },
@@ -1584,7 +1598,7 @@ const membershipOrderSchema = new Schema<IMembershipOrder>(
 const membershipAnalyticsSchema = new Schema<IMembershipAnalytics>(
   {
     membership: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Membership",
       required: true,
     },
@@ -1605,7 +1619,7 @@ const membershipAnalyticsSchema = new Schema<IMembershipAnalytics>(
 
     popularProducts: [
       {
-        productId: { type: Schema.Types.ObjectId, ref: "Product" },
+        productId: { type: String, ref: "Product" },
         productName: String,
         timesSelected: { type: Number, default: 0 },
       },

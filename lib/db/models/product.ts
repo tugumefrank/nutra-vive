@@ -63,8 +63,8 @@ export interface IProduct extends Document {
 // Review Interface
 export interface IReview extends Document {
   _id: string;
-  product: mongoose.Types.ObjectId; // Product ID
-  user: mongoose.Types.ObjectId; // User ID
+  product: string; // Product ID
+  user: string; // User ID
   rating: number;
   title?: string;
   content?: string;
@@ -98,7 +98,7 @@ const productSchema = new Schema<IProduct>(
     costPrice: Number,
     sku: { type: String, unique: true, sparse: true },
     barcode: String,
-    category: { type: Schema.Types.ObjectId, ref: "Category" },
+    category: { type: String, ref: "Category" },
     images: [String],
     tags: [String],
     features: [String],
@@ -136,8 +136,8 @@ const productSchema = new Schema<IProduct>(
 // Review Schema
 const reviewSchema = new Schema<IReview>(
   {
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    product: { type: String, ref: "Product", required: true },
+    user: { type: String, ref: "User", required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     title: String,
     content: String,

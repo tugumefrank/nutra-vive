@@ -70,7 +70,7 @@ export interface IOrder extends Document {
 // Tracking Event Interface
 export interface ITrackingEvent extends Document {
   _id: string;
-  order: mongoose.Types.ObjectId; // Order ID
+  order: string; // Order ID
   status:
     | "order_placed"
     | "payment_confirmed"
@@ -119,7 +119,7 @@ export interface IOrderTrackingInfo {
 const orderSchema = new Schema<IOrder>(
   {
     orderNumber: { type: String, required: true, unique: true },
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String, ref: "User" },
     email: { type: String, required: true },
     status: {
       type: String,
@@ -172,7 +172,7 @@ const orderSchema = new Schema<IOrder>(
     items: [
       {
         product: {
-          type: Schema.Types.ObjectId,
+          type: String,
           ref: "Product",
           required: true,
         },
@@ -195,7 +195,7 @@ const orderSchema = new Schema<IOrder>(
 // Tracking Event Schema
 const trackingEventSchema = new Schema<ITrackingEvent>(
   {
-    order: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    order: { type: String, ref: "Order", required: true },
     status: {
       type: String,
       enum: [

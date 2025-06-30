@@ -23,8 +23,8 @@ export interface IPromotion extends Document {
     | "products"
     | "collections"
     | "customer_segments";
-  targetCategories: mongoose.Types.ObjectId[];
-  targetProducts: mongoose.Types.ObjectId[];
+  targetCategories: string[];
+  targetProducts: string[];
   targetCollections: string[];
   customerSegments:
     | "new_customers"
@@ -42,8 +42,8 @@ export interface IPromotion extends Document {
   minimumQuantity?: number;
 
   // Exclusions
-  excludedCategories: mongoose.Types.ObjectId[];
-  excludedProducts: mongoose.Types.ObjectId[];
+  excludedCategories: string[];
+  excludedProducts: string[];
   excludedCollections: string[];
   excludeDiscountedItems: boolean;
 
@@ -81,8 +81,8 @@ export interface IPromotion extends Document {
   averageOrderValue: number;
 
   // Metadata
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  createdBy: string;
+  updatedBy?: string;
   tags: string[];
   notes?: string;
 
@@ -93,11 +93,11 @@ export interface IPromotion extends Document {
 // Customer Promotion Usage Interface
 export interface ICustomerPromotionUsage extends Document {
   _id: string;
-  promotion: mongoose.Types.ObjectId;
-  customer: mongoose.Types.ObjectId;
+  promotion: string;
+  customer: string;
   customerEmail: string;
   code: string;
-  order?: mongoose.Types.ObjectId;
+  order?: string;
   discountAmount: number;
   orderTotal: number;
   usedAt: Date;
@@ -144,8 +144,8 @@ const promotionSchema = new Schema<IPromotion>(
       ],
       required: true,
     },
-    targetCategories: [{ type: Schema.Types.ObjectId, ref: "Category" }],
-    targetProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    targetCategories: [{ type: String, ref: "Category" }],
+    targetProducts: [{ type: String, ref: "Product" }],
     targetCollections: [String],
     customerSegments: {
       type: String,
@@ -163,8 +163,8 @@ const promotionSchema = new Schema<IPromotion>(
     minimumQuantity: { type: Number, min: 1 },
 
     // Exclusions
-    excludedCategories: [{ type: Schema.Types.ObjectId, ref: "Category" }],
-    excludedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    excludedCategories: [{ type: String, ref: "Category" }],
+    excludedProducts: [{ type: String, ref: "Product" }],
     excludedCollections: [String],
     excludeDiscountedItems: { type: Boolean, default: false },
 
@@ -210,8 +210,8 @@ const promotionSchema = new Schema<IPromotion>(
     averageOrderValue: { type: Number, default: 0 },
 
     // Metadata
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: String, ref: "User", required: true },
+    updatedBy: { type: String, ref: "User" },
     tags: [String],
     notes: String,
   },
@@ -222,14 +222,14 @@ const promotionSchema = new Schema<IPromotion>(
 const customerPromotionUsageSchema = new Schema<ICustomerPromotionUsage>(
   {
     promotion: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Promotion",
       required: true,
     },
-    customer: { type: Schema.Types.ObjectId, ref: "User" },
+    customer: { type: String, ref: "User" },
     customerEmail: { type: String, required: true },
     code: { type: String, required: true },
-    order: { type: Schema.Types.ObjectId, ref: "Order" },
+    order: { type: String, ref: "Order" },
     discountAmount: { type: Number, required: true },
     orderTotal: { type: Number, required: true },
     usedAt: { type: Date, default: Date.now },
