@@ -324,13 +324,64 @@ async function handleInvoicePaymentFailed(invoice: StripeInvoiceWithSubscription
 async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
   console.log("Processing charge.succeeded:", charge.id);
 
-  // Check if this charge has subscription metadata
+  // First check if this charge has subscription metadata (for memberships)
   const { membershipId, subscriptionId, userId } = charge.metadata;
 
-  if (!membershipId || !subscriptionId || !userId) {
-    console.log("Charge is missing subscription metadata, skipping");
+  if (membershipId && subscriptionId && userId) {
+    // This is a membership subscription charge - handle it
+    await handleMembershipCharge(charge, { membershipId, subscriptionId, userId });
     return;
   }
+
+  // If no subscription metadata, check if this is a consultation payment
+  // Get payment intent to access its metadata
+  if (charge.payment_intent) {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(charge.payment_intent as string);
+      const { submissionId, transactionType } = paymentIntent.metadata;
+
+      if (submissionId && transactionType === 'consultation') {
+        console.log("Processing consultation payment charge:", {
+          chargeId: charge.id,
+          paymentIntentId: paymentIntent.id,
+          submissionId,
+          amount: charge.amount / 100
+        });
+
+        // Update the consultation payment status
+        const consultation = await Consultation.findOneAndUpdate(
+          { 
+            $or: [
+              { _id: submissionId },
+              { paymentIntentId: paymentIntent.id }
+            ]
+          },
+          { 
+            paymentStatus: "paid",
+            paymentIntentId: paymentIntent.id,
+            status: "confirmed" // Also update consultation status to confirmed when payment succeeds
+          },
+          { new: true }
+        );
+
+        if (consultation) {
+          console.log(`✅ Updated consultation ${consultation._id} payment status to paid`);
+          console.log(`✅ Updated consultation status to confirmed`);
+        } else {
+          console.warn(`No consultation found for payment intent ${paymentIntent.id} with submissionId ${submissionId}`);
+        }
+        return;
+      }
+    } catch (error) {
+      console.error("Error retrieving payment intent:", error);
+    }
+  }
+
+  console.log("Charge has no recognized metadata, skipping");
+}
+
+async function handleMembershipCharge(charge: Stripe.Charge, metadata: { membershipId: string; subscriptionId: string; userId: string }): Promise<void> {
+  const { membershipId, subscriptionId, userId } = metadata;
 
   console.log("Processing subscription charge with metadata:", {
     membershipId,
