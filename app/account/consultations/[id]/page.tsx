@@ -30,9 +30,9 @@ import { ConsultationTimeline } from "../components/ConsultationTimeline";
 import { HealthMetrics } from "../components/HealthMetrics";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // ✅ SERIALIZATION HELPER FUNCTION
@@ -68,27 +68,34 @@ function serializeConsultation(consultation: any) {
       allergies: consultation.healthInfo?.allergies || "",
       medicalConditions: consultation.healthInfo?.medicalConditions || "",
       currentMedications: consultation.healthInfo?.currentMedications || "",
-      previousDietExperience: consultation.healthInfo?.previousDietExperience || "",
+      previousDietExperience:
+        consultation.healthInfo?.previousDietExperience || "",
     },
 
     // Serialize goals and lifestyle
     goalsAndLifestyle: {
       primaryGoals: consultation.goalsAndLifestyle?.primaryGoals || [],
       motivationLevel: consultation.goalsAndLifestyle?.motivationLevel || 5,
-      biggestChallenges: consultation.goalsAndLifestyle?.biggestChallenges || [],
-      currentEatingHabits: consultation.goalsAndLifestyle?.currentEatingHabits || "",
-      mealPrepExperience: consultation.goalsAndLifestyle?.mealPrepExperience || "none",
+      biggestChallenges:
+        consultation.goalsAndLifestyle?.biggestChallenges || [],
+      currentEatingHabits:
+        consultation.goalsAndLifestyle?.currentEatingHabits || "",
+      mealPrepExperience:
+        consultation.goalsAndLifestyle?.mealPrepExperience || "none",
       cookingSkills: consultation.goalsAndLifestyle?.cookingSkills || "basic",
       budgetRange: consultation.goalsAndLifestyle?.budgetRange || "under-50",
     },
 
     // Serialize service preferences
     servicePreferences: {
-      servicesInterested: consultation.servicePreferences?.servicesInterested || [],
-      preferredConsultationTime: consultation.servicePreferences?.preferredConsultationTime || "",
+      servicesInterested:
+        consultation.servicePreferences?.servicesInterested || [],
+      preferredConsultationTime:
+        consultation.servicePreferences?.preferredConsultationTime || "",
       preferredDate: consultation.servicePreferences?.preferredDate || "",
       timeZone: consultation.servicePreferences?.timeZone || "",
-      communicationPreference: consultation.servicePreferences?.communicationPreference || "email",
+      communicationPreference:
+        consultation.servicePreferences?.communicationPreference || "email",
       urgencyLevel: consultation.servicePreferences?.urgencyLevel || "1-week",
     },
 
@@ -143,25 +150,29 @@ async function ConsultationData({ id }: { id: string }) {
     switch (status) {
       case "completed":
         return {
-          color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+          color:
+            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
           icon: CheckCircle,
           iconColor: "text-green-600",
         };
       case "confirmed":
         return {
-          color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+          color:
+            "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
           icon: Clock,
           iconColor: "text-blue-600",
         };
       case "pending":
         return {
-          color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+          color:
+            "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
           icon: AlertCircle,
           iconColor: "text-yellow-600",
         };
       default:
         return {
-          color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+          color:
+            "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
           icon: Clock,
           iconColor: "text-gray-600",
         };
@@ -181,19 +192,22 @@ async function ConsultationData({ id }: { id: string }) {
             Back to Consultations
           </Link>
         </Button>
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               Consultation #{consultation.consultationNumber}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              {consultation.personalInfo.firstName} {consultation.personalInfo.lastName}
+              {consultation.personalInfo.firstName}{" "}
+              {consultation.personalInfo.lastName}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
             <Badge className={`${statusConfig.color} w-fit`}>
-              <StatusIcon className={`w-4 h-4 mr-2 ${statusConfig.iconColor}`} />
+              <StatusIcon
+                className={`w-4 h-4 mr-2 ${statusConfig.iconColor}`}
+              />
               {consultation.status}
             </Badge>
             <span className="text-lg sm:text-sm font-medium text-gray-900 dark:text-white">
@@ -292,7 +306,8 @@ async function ConsultationData({ id }: { id: string }) {
                   Name
                 </p>
                 <p className="text-gray-900 dark:text-white">
-                  {consultation.personalInfo.firstName} {consultation.personalInfo.lastName}
+                  {consultation.personalInfo.firstName}{" "}
+                  {consultation.personalInfo.lastName}
                 </p>
               </div>
               <div>
@@ -356,11 +371,19 @@ async function ConsultationData({ id }: { id: string }) {
                   Services Requested
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {consultation.servicePreferences.servicesInterested.map((service, index) => (
-                    <Badge key={`${service}-${index}`} variant="outline" className="text-sm">
-                      {service.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </Badge>
-                  ))}
+                  {consultation.servicePreferences.servicesInterested.map(
+                    (service, index) => (
+                      <Badge
+                        key={`${service}-${index}`}
+                        variant="outline"
+                        className="text-sm"
+                      >
+                        {service
+                          .replace("-", " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </Badge>
+                    )
+                  )}
                 </div>
               </div>
 
@@ -370,7 +393,9 @@ async function ConsultationData({ id }: { id: string }) {
                     Preferred Date
                   </p>
                   <p className="text-gray-900 dark:text-white">
-                    {new Date(consultation.servicePreferences.preferredDate).toLocaleDateString()}
+                    {new Date(
+                      consultation.servicePreferences.preferredDate
+                    ).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
@@ -386,7 +411,10 @@ async function ConsultationData({ id }: { id: string }) {
                     Communication
                   </p>
                   <p className="text-gray-900 dark:text-white capitalize">
-                    {consultation.servicePreferences.communicationPreference.replace("-", " ")}
+                    {consultation.servicePreferences.communicationPreference.replace(
+                      "-",
+                      " "
+                    )}
                   </p>
                 </div>
                 <div>
@@ -394,7 +422,10 @@ async function ConsultationData({ id }: { id: string }) {
                     Urgency Level
                   </p>
                   <p className="text-gray-900 dark:text-white">
-                    {consultation.servicePreferences.urgencyLevel.replace("-", " ")}
+                    {consultation.servicePreferences.urgencyLevel.replace(
+                      "-",
+                      " "
+                    )}
                   </p>
                 </div>
                 {consultation.servicePreferences.timeZone && (
@@ -480,15 +511,17 @@ function ConsultationDetailSkeleton() {
   );
 }
 
-export default function ConsultationDetailPage({ params }: PageProps) {
+export default async function ConsultationDetailPage({ params }: PageProps) {
+  const { id } = await params;
   return (
     <Suspense fallback={<ConsultationDetailSkeleton />}>
-      <ConsultationData id={params.id} />
+      <ConsultationData id={id} />
     </Suspense>
   );
 }
 
 export const metadata = {
   title: "Consultation Details - Nutra-Vive",
-  description: "View detailed information about your consultation including notes and meal plans.",
+  description:
+    "View detailed information about your consultation including notes and meal plans.",
 };
