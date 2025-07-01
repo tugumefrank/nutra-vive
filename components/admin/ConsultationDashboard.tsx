@@ -32,7 +32,15 @@ import {
   updateConsultationStatus,
   getConsultationStats,
   addConsultationNote,
+  createUserConsultationNote,
+  getUserConsultationNotes,
+  uploadMealPlanFile,
+  getConsultationMealPlanFiles,
+  deleteMealPlanFile,
 } from "@/lib/actions/consultation";
+import { useUploadThing } from "@/lib/uploadthing";
+import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 interface Consultation {
   _id: string;
@@ -89,6 +97,49 @@ interface Stats {
   completed: number;
   revenue: number;
   recentConsultations: number;
+}
+
+interface UserConsultationNote {
+  _id: string;
+  consultation: string;
+  consultant: {
+    firstName: string;
+    lastName: string;
+  };
+  title: string;
+  content: string;
+  noteType: "nutrition" | "progress" | "recommendation" | "general";
+  isVisible: boolean;
+  readByUser: boolean;
+  sentAt: string;
+  readAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MealPlanFile {
+  _id: string;
+  consultation: string;
+  user: string;
+  uploadedBy: {
+    firstName: string;
+    lastName: string;
+  };
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  fileSize: number;
+  fileType: string;
+  title: string;
+  description?: string;
+  nutritionNotes?: string;
+  downloadCount: number;
+  isActive: boolean;
+  expiresAt?: string;
+  uploadedAt: string;
+  lastDownloadedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const ConsultationCard: React.FC<{
@@ -285,10 +336,93 @@ const ConsultationDetailModal: React.FC<{
   consultation: Consultation | null;
   onClose: () => void;
   onAddNote: (consultationId: string, note: string) => void;
-}> = ({ consultation, onClose, onAddNote }) => {
+  currentUserId: string;
+}> = ({ consultation, onClose, onAddNote, currentUserId }) => {
   const [newNote, setNewNote] = useState("");
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
+
+  // User consultation notes state
+  const [userNotes, setUserNotes] = useState<UserConsultationNote[]>([]);
+  const [showUserNoteForm, setShowUserNoteForm] = useState(false);
+  const [userNoteForm, setUserNoteForm] = useState({
+    title: "",
+    content: "",
+    noteType: "general" as
+      | "nutrition"
+      | "progress"
+      | "recommendation"
+      | "general",
+  });
+  const [isCreatingUserNote, setIsCreatingUserNote] = useState(false);
+
+  // Meal plan files state
+  const [mealPlanFiles, setMealPlanFiles] = useState<MealPlanFile[]>([]);
+  const [showFileUploadForm, setShowFileUploadForm] = useState(false);
+  const [fileUploadForm, setFileUploadForm] = useState({
+    title: "",
+    description: "",
+    nutritionNotes: "",
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  // UploadThing hook for meal plan uploads
+  const { startUpload, isUploading } = useUploadThing("mealPlanUploader", {
+    onUploadBegin: () => {
+      console.log("📤 Starting meal plan upload...");
+    },
+    onUploadProgress: (progress: number) => {
+      console.log(`⏳ Upload progress: ${progress}%`);
+    },
+    onClientUploadComplete: (files) => {
+      console.log("✅ Client upload complete:", files);
+    },
+    onUploadError: (error: Error) => {
+      console.error("❌ Upload error:", error);
+      toast.error(`Upload failed: ${error.message}`);
+    },
+  });
+
+  // Load user notes and meal plan files when consultation changes
+  React.useEffect(() => {
+    if (consultation?._id) {
+      loadUserNotesAndFiles();
+    }
+  }, [consultation?._id]);
+
+  const loadUserNotesAndFiles = async () => {
+    if (!consultation?._id) return;
+
+    try {
+      const [notes, files] = await Promise.all([
+        getUserConsultationNotes(consultation._id),
+        getConsultationMealPlanFiles(consultation._id),
+      ]);
+
+      setUserNotes(
+        (notes as any[]).map((note) => ({
+          ...note,
+          consultant:
+            typeof note.consultant === "string"
+              ? { firstName: note.consultant, lastName: "" }
+              : note.consultant,
+        }))
+      );
+      setMealPlanFiles(
+        (files as any[]).map((file) => ({
+          ...file,
+          uploadedBy:
+            typeof file.uploadedBy === "string"
+              ? { firstName: file.uploadedBy, lastName: "" }
+              : file.uploadedBy,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading user notes and files:", error);
+      toast.error("Failed to load notes and files");
+    }
+  };
 
   if (!consultation) return null;
 
@@ -299,6 +433,138 @@ const ConsultationDetailModal: React.FC<{
       setNewNote("");
       setShowNoteForm(false);
       setIsAddingNote(false);
+    }
+  };
+
+  const handleCreateUserNote = async () => {
+    if (!userNoteForm.title.trim() || !userNoteForm.content.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsCreatingUserNote(true);
+    try {
+      const result = await createUserConsultationNote(
+        consultation._id,
+        currentUserId,
+        {
+          title: userNoteForm.title,
+          content: userNoteForm.content,
+          noteType: userNoteForm.noteType,
+        }
+      );
+
+      if (result.success) {
+        toast.success("Note sent to user successfully!");
+        setUserNoteForm({ title: "", content: "", noteType: "general" });
+        setShowUserNoteForm(false);
+        await loadUserNotesAndFiles(); // Reload notes
+      } else {
+        toast.error(result.error || "Failed to create note");
+      }
+    } catch (error) {
+      console.error("Error creating user note:", error);
+      toast.error("Failed to create note");
+    } finally {
+      setIsCreatingUserNote(false);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !fileUploadForm.title.trim()) {
+      toast.error("Please select a file and enter a title");
+      return;
+    }
+
+    setIsUploadingFile(true);
+    try {
+      // Upload file using UploadThing
+      const uploadResult = await startUpload([selectedFile]);
+
+      if (uploadResult && uploadResult[0]) {
+        const uploadedFile = uploadResult[0];
+
+        // Save file record to database with additional metadata
+        const result = await uploadMealPlanFile(
+          consultation._id,
+          currentUserId,
+          {
+            fileName: uploadedFile.name || selectedFile.name,
+            fileUrl: uploadedFile.url,
+            fileKey: uploadedFile.key,
+            fileSize: uploadedFile.size || selectedFile.size,
+            fileType: uploadedFile.type || selectedFile.type,
+            title: fileUploadForm.title,
+            description: fileUploadForm.description,
+            nutritionNotes: fileUploadForm.nutritionNotes,
+          }
+        );
+
+        if (result.success) {
+          toast.success("Meal plan uploaded successfully!");
+          setSelectedFile(null);
+          setFileUploadForm({ title: "", description: "", nutritionNotes: "" });
+          setShowFileUploadForm(false);
+          await loadUserNotesAndFiles(); // Reload files
+        } else {
+          toast.error(result.error || "Failed to save file record");
+        }
+      } else {
+        toast.error("File upload failed");
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!confirm("Are you sure you want to delete this meal plan file?")) {
+      return;
+    }
+
+    try {
+      const result = await deleteMealPlanFile(fileId, currentUserId);
+      if (result.success) {
+        toast.success("File deleted successfully");
+        await loadUserNotesAndFiles(); // Reload files
+      } else {
+        toast.error(result.error || "Failed to delete file");
+      }
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      toast.error("Failed to delete file");
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes("pdf")) return "📄";
+    if (fileType.includes("word") || fileType.includes("document")) return "📝";
+    if (fileType.includes("excel") || fileType.includes("spreadsheet"))
+      return "📊";
+    return "📁";
+  };
+
+  const getNoteTypeColor = (noteType: string) => {
+    switch (noteType) {
+      case "nutrition":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "progress":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "recommendation":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
@@ -670,14 +936,14 @@ const ConsultationDetailModal: React.FC<{
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-orange-500" />
-                  Consultant Notes
+                  Consultant Notes (Internal)
                 </h3>
                 <button
                   onClick={() => setShowNoteForm(!showNoteForm)}
                   className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm transition-colors flex items-center gap-2 font-medium"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Note
+                  Add Internal Note
                 </button>
               </div>
 
@@ -686,7 +952,7 @@ const ConsultationDetailModal: React.FC<{
                   <textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Add your consultation notes here..."
+                    placeholder="Add your internal consultation notes here (not visible to user)..."
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none resize-none"
                   />
@@ -717,7 +983,7 @@ const ConsultationDetailModal: React.FC<{
                 <div className="p-6 bg-orange-50 border border-orange-200 rounded-xl">
                   <div className="flex justify-between items-start mb-3">
                     <span className="text-sm font-medium text-orange-800">
-                      Consultant Note
+                      Internal Note
                     </span>
                     <span className="text-xs text-orange-600">
                       {new Date(consultation.createdAt).toLocaleDateString()}
@@ -729,6 +995,380 @@ const ConsultationDetailModal: React.FC<{
                 </div>
               )}
             </section>
+
+            {/* User Notes Section */}
+            <section>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  Notes to User
+                  {userNotes.length > 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {userNotes.length}
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setShowUserNoteForm(!showUserNoteForm)}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors flex items-center gap-2 font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Send Note to User
+                </button>
+              </div>
+
+              {showUserNoteForm && (
+                <div className="mb-6 p-6 border border-blue-200 rounded-xl bg-blue-50">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Note Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={userNoteForm.title}
+                        onChange={(e) =>
+                          setUserNoteForm((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Weekly Progress Update"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Note Type *
+                      </label>
+                      <select
+                        value={userNoteForm.noteType}
+                        onChange={(e) =>
+                          setUserNoteForm((prev) => ({
+                            ...prev,
+                            noteType: e.target.value as any,
+                          }))
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      >
+                        <option value="general">General</option>
+                        <option value="nutrition">Nutrition</option>
+                        <option value="progress">Progress</option>
+                        <option value="recommendation">Recommendation</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Note Content *
+                      </label>
+                      <textarea
+                        value={userNoteForm.content}
+                        onChange={(e) =>
+                          setUserNoteForm((prev) => ({
+                            ...prev,
+                            content: e.target.value,
+                          }))
+                        }
+                        placeholder="Write your note to the user here..."
+                        rows={6}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={handleCreateUserNote}
+                      disabled={
+                        isCreatingUserNote ||
+                        !userNoteForm.title.trim() ||
+                        !userNoteForm.content.trim()
+                      }
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isCreatingUserNote ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      {isCreatingUserNote ? "Sending..." : "Send to User"}
+                    </button>
+                    <button
+                      onClick={() => setShowUserNoteForm(false)}
+                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Display user notes */}
+              <div className="space-y-4">
+                {userNotes.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No notes sent to user yet</p>
+                  </div>
+                ) : (
+                  userNotes.map((note) => (
+                    <div
+                      key={note._id}
+                      className="p-6 bg-white border border-gray-200 rounded-xl"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold text-gray-900">
+                            {note.title}
+                          </h4>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium border ${getNoteTypeColor(
+                              note.noteType
+                            )}`}
+                          >
+                            {note.noteType}
+                          </span>
+                          {note.readByUser ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              Read
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              Unread
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">
+                            {new Date(note.sentAt).toLocaleDateString()}
+                          </div>
+                          {note.readAt && (
+                            <div className="text-xs text-green-600">
+                              Read: {new Date(note.readAt).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {note.content}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {/* Meal Plan Files Section */}
+            <section>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-500" />
+                  Meal Plan Files
+                  {mealPlanFiles.length > 0 && (
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                      {mealPlanFiles.length}
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setShowFileUploadForm(!showFileUploadForm)}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition-colors flex items-center gap-2 font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Upload Meal Plan
+                </button>
+              </div>
+
+              {showFileUploadForm && (
+                <div className="mb-6 p-6 border border-green-200 rounded-xl bg-green-50">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        File *
+                      </label>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                        onChange={(e) =>
+                          setSelectedFile(e.target.files?.[0] || null)
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Supported formats: PDF, Word (.doc, .docx), Excel (.xls,
+                        .xlsx), Text (.txt)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Meal Plan Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={fileUploadForm.title}
+                        onChange={(e) =>
+                          setFileUploadForm((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Week 1 Meal Plan - Low Carb"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description (Optional)
+                      </label>
+                      <textarea
+                        value={fileUploadForm.description}
+                        onChange={(e) =>
+                          setFileUploadForm((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        placeholder="Brief description of this meal plan..."
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nutrition Notes (Optional)
+                      </label>
+                      <textarea
+                        value={fileUploadForm.nutritionNotes}
+                        onChange={(e) =>
+                          setFileUploadForm((prev) => ({
+                            ...prev,
+                            nutritionNotes: e.target.value,
+                          }))
+                        }
+                        placeholder="Special notes about nutrition, allergies, or modifications..."
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={handleFileUpload}
+                      disabled={
+                        isUploadingFile ||
+                        isUploading ||
+                        !selectedFile ||
+                        !fileUploadForm.title.trim()
+                      }
+                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isUploadingFile || isUploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      {isUploadingFile || isUploading
+                        ? "Uploading..."
+                        : "Upload File"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowFileUploadForm(false);
+                        setSelectedFile(null);
+                        setFileUploadForm({
+                          title: "",
+                          description: "",
+                          nutritionNotes: "",
+                        });
+                      }}
+                      className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Display meal plan files */}
+              <div className="space-y-4">
+                {mealPlanFiles.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No meal plan files uploaded yet</p>
+                  </div>
+                ) : (
+                  mealPlanFiles.map((file) => (
+                    <div
+                      key={file._id}
+                      className="p-6 bg-white border border-gray-200 rounded-xl"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">
+                            {getFileIcon(file.fileType)}
+                          </span>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {file.title}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {file.fileName} • {formatFileSize(file.fileSize)}
+                            </p>
+                            {file.description && (
+                              <p className="text-sm text-gray-700 mt-1">
+                                {file.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">
+                            Downloaded: {file.downloadCount} times
+                          </span>
+                          <button
+                            onClick={() => handleDeleteFile(file._id)}
+                            className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {file.nutritionNotes && (
+                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <span className="text-sm font-medium text-green-800">
+                            Nutrition Notes:
+                          </span>
+                          <p className="text-sm text-green-700 mt-1 whitespace-pre-wrap">
+                            {file.nutritionNotes}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="mt-3 text-xs text-gray-500">
+                        Uploaded:{" "}
+                        {new Date(file.uploadedAt).toLocaleDateString()} by{" "}
+                        {file.uploadedBy.firstName} {file.uploadedBy.lastName}
+                        {file.lastDownloadedAt && (
+                          <span className="ml-3">
+                            Last downloaded:{" "}
+                            {new Date(
+                              file.lastDownloadedAt
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -737,6 +1377,7 @@ const ConsultationDetailModal: React.FC<{
 };
 
 const AdminConsultationDashboard: React.FC = () => {
+  const { userId } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [selectedConsultation, setSelectedConsultation] =
     useState<Consultation | null>(null);
@@ -1115,11 +1756,14 @@ const AdminConsultationDashboard: React.FC = () => {
       </div>
 
       {/* Detail Modal */}
-      <ConsultationDetailModal
-        consultation={selectedConsultation}
-        onClose={() => setSelectedConsultation(null)}
-        onAddNote={handleAddNote}
-      />
+      {userId && (
+        <ConsultationDetailModal
+          consultation={selectedConsultation}
+          onClose={() => setSelectedConsultation(null)}
+          onAddNote={handleAddNote}
+          currentUserId={userId}
+        />
+      )}
     </div>
   );
 };

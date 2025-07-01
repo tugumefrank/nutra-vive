@@ -8,7 +8,15 @@ import Stripe from "stripe";
 
 import { connectToDatabase } from "../db";
 import { sendEmail } from "../email";
-import { Consultation, IConsultation, User } from "../db/models";
+import {
+  Consultation,
+  IConsultation,
+  User,
+  UserConsultationNote,
+  IUserConsultationNote,
+  MealPlanFile,
+  IMealPlanFile,
+} from "../db/models";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-05-28.basil",
@@ -592,5 +600,500 @@ export async function getUserConsultations(
   } catch (error) {
     console.error("Error fetching user consultations:", error);
     return [];
+  }
+}
+
+// ==================== USER CONSULTATION NOTES ACTIONS ====================
+
+// Validation schema for user consultation notes
+const userConsultationNoteSchema = z.object({
+  consultationId: z.string().min(1, "Consultation ID is required"),
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  content: z
+    .string()
+    .min(1, "Content is required")
+    .max(5000, "Content too long"),
+  noteType: z.enum(["nutrition", "progress", "recommendation", "general"]),
+  nutritionNotes: z.string().optional(),
+});
+
+export async function createUserConsultationNote(
+  consultationId: string,
+  consultantId: string,
+  data: {
+    title: string;
+    content: string;
+    noteType: "nutrition" | "progress" | "recommendation" | "general";
+  }
+): Promise<{ success: boolean; noteId?: string; error?: string }> {
+  try {
+    await connectToDatabase();
+
+    console.log("🔍 Creating user consultation note...");
+
+    // Validate data
+    const validatedData = userConsultationNoteSchema.parse({
+      consultationId,
+      ...data,
+    });
+
+    // Verify consultation exists and consultant has access
+    const consultation = await Consultation.findById(consultationId);
+    if (!consultation) {
+      return {
+        success: false,
+        error: "Consultation not found",
+      };
+    }
+
+    // Verify consultant exists (find by clerkId since consultantId is from Clerk)
+    const consultant = await User.findOne({ clerkId: consultantId });
+    if (!consultant || consultant.role !== "admin") {
+      return {
+        success: false,
+        error: "Unauthorized: Only consultants can create notes",
+      };
+    }
+
+    // Create user consultation note
+    const userNote = new UserConsultationNote({
+      consultation: consultationId,
+      consultant: consultant._id, // Use MongoDB _id for the relationship
+      title: validatedData.title,
+      content: validatedData.content,
+      noteType: validatedData.noteType,
+      isVisible: true,
+      readByUser: false,
+      sentAt: new Date(),
+    });
+
+    await userNote.save();
+
+    console.log(
+      "✅ User consultation note created successfully:",
+      userNote._id
+    );
+
+    // Send email notification to user
+    try {
+      await sendEmail({
+        to: consultation.personalInfo.email,
+        subject: `New ${data.noteType} note from your consultant - ${consultation.consultationNumber}`,
+        template: "consultation-note-notification",
+        data: {
+          firstName: consultation.personalInfo.firstName,
+          consultationNumber: consultation.consultationNumber,
+          noteTitle: data.title,
+          noteType: data.noteType,
+          noteContent: data.content,
+        },
+      });
+
+      console.log("📧 Note notification email sent to user");
+    } catch (emailError) {
+      console.error("📧 Failed to send note notification email:", emailError);
+      // Don't fail the entire operation if email fails
+    }
+
+    revalidatePath("/admin/consultations");
+    revalidatePath("/consultation");
+
+    return {
+      success: true,
+      noteId: userNote._id.toString(),
+    };
+  } catch (error) {
+    console.error("❌ Error creating user consultation note:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
+
+export async function getUserConsultationNotes(
+  consultationId: string,
+  userId?: string
+): Promise<IUserConsultationNote[]> {
+  try {
+    await connectToDatabase();
+
+    // If userId is provided, verify the consultation belongs to them
+    if (userId) {
+      const user = await User.findOne({ clerkId: userId });
+      if (!user) return [];
+
+      const consultation = await Consultation.findOne({
+        _id: consultationId,
+        user: user._id,
+      });
+      if (!consultation) return [];
+    }
+
+    const notes = await UserConsultationNote.find({
+      consultation: consultationId,
+      isVisible: true,
+    })
+      .populate("consultant", "firstName lastName")
+      .sort({ sentAt: -1 })
+      .lean();
+
+    return notes;
+  } catch (error) {
+    console.error("Error fetching user consultation notes:", error);
+    return [];
+  }
+}
+
+export async function markConsultationNoteAsRead(
+  noteId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await connectToDatabase();
+
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    // Verify the note belongs to a consultation the user owns
+    const note = await UserConsultationNote.findById(noteId).populate({
+      path: "consultation",
+      model: "Consultation",
+    });
+
+    if (!note) {
+      return {
+        success: false,
+        error: "Note not found",
+      };
+    }
+
+    let consultation = note.consultation as IConsultation | string;
+    if (typeof consultation === "string") {
+      // If not populated, fetch the consultation document
+      consultation = await Consultation.findById(consultation).lean();
+    }
+    if (
+      !consultation ||
+      (consultation as any).user?.toString() !== user._id.toString()
+    ) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    // Mark as read
+    note.readByUser = true;
+    note.readAt = new Date();
+    await note.save();
+
+    revalidatePath("/consultation");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error marking consultation note as read:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
+
+// ==================== MEAL PLAN FILE ACTIONS ====================
+
+// Validation schema for meal plan files
+const mealPlanFileSchema = z.object({
+  consultationId: z.string().min(1, "Consultation ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+  fileName: z.string().min(1, "File name is required"),
+  fileUrl: z.string().url("Valid file URL is required"),
+  fileKey: z.string().min(1, "File key is required"),
+  fileSize: z.number().min(1, "File size must be greater than 0"),
+  fileType: z.string().min(1, "File type is required"),
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().max(1000, "Description too long").optional(),
+  nutritionNotes: z.string().max(2000, "Nutrition notes too long").optional(),
+});
+
+export async function uploadMealPlanFile(
+  consultationId: string,
+  uploadedById: string,
+  fileData: {
+    fileName: string;
+    fileUrl: string;
+    fileKey: string;
+    fileSize: number;
+    fileType: string;
+    title: string;
+    description?: string;
+    nutritionNotes?: string;
+  }
+): Promise<{ success: boolean; fileId?: string; error?: string }> {
+  try {
+    await connectToDatabase();
+
+    console.log("🔍 Uploading meal plan file...");
+
+    // Get consultation and verify it exists
+    const consultation = await Consultation.findById(consultationId);
+    if (!consultation) {
+      return {
+        success: false,
+        error: "Consultation not found",
+      };
+    }
+
+    // Get user from consultation
+    const userId = consultation.user;
+    if (!userId) {
+      return {
+        success: false,
+        error: "No user associated with this consultation",
+      };
+    }
+
+    // Validate data
+    const validatedData = mealPlanFileSchema.parse({
+      consultationId,
+      userId,
+      ...fileData,
+    });
+
+    // Verify uploader exists and has permission (find by clerkId since uploadedById is from Clerk)
+    const uploader = await User.findOne({ clerkId: uploadedById });
+    if (!uploader || uploader.role !== "admin") {
+      return {
+        success: false,
+        error: "Unauthorized: Only consultants can upload meal plans",
+      };
+    }
+
+    // Create meal plan file record
+    const mealPlanFile = new MealPlanFile({
+      consultation: consultationId,
+      user: userId,
+      uploadedBy: uploader._id, // Use MongoDB _id for the relationship
+      fileName: validatedData.fileName,
+      fileUrl: validatedData.fileUrl,
+      fileKey: validatedData.fileKey,
+      fileSize: validatedData.fileSize,
+      fileType: validatedData.fileType,
+      title: validatedData.title,
+      description: validatedData.description,
+      nutritionNotes: validatedData.nutritionNotes,
+      downloadCount: 0,
+      isActive: true,
+      uploadedAt: new Date(),
+    });
+
+    await mealPlanFile.save();
+
+    console.log("✅ Meal plan file uploaded successfully:", mealPlanFile._id);
+
+    // Send email notification to user
+    try {
+      await sendEmail({
+        to: consultation.personalInfo.email,
+        subject: `New meal plan available - ${consultation.consultationNumber}`,
+        template: "meal-plan-notification",
+        data: {
+          firstName: consultation.personalInfo.firstName,
+          consultationNumber: consultation.consultationNumber,
+          mealPlanTitle: fileData.title,
+          mealPlanDescription: fileData.description,
+          nutritionNotes: fileData.nutritionNotes,
+        },
+      });
+
+      console.log("📧 Meal plan notification email sent to user");
+    } catch (emailError) {
+      console.error(
+        "📧 Failed to send meal plan notification email:",
+        emailError
+      );
+      // Don't fail the entire operation if email fails
+    }
+
+    revalidatePath("/admin/consultations");
+    revalidatePath("/consultation");
+
+    return {
+      success: true,
+      fileId: mealPlanFile._id.toString(),
+    };
+  } catch (error) {
+    console.error("❌ Error uploading meal plan file:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
+
+export async function getUserMealPlanFiles(
+  userId: string,
+  consultationId?: string
+): Promise<IMealPlanFile[]> {
+  try {
+    await connectToDatabase();
+
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) return [];
+
+    const query: any = {
+      user: user._id,
+      isActive: true,
+    };
+
+    if (consultationId) {
+      // Verify the consultation belongs to the user
+      const consultation = await Consultation.findOne({
+        _id: consultationId,
+        user: user._id,
+      });
+      if (!consultation) return [];
+
+      query.consultation = consultationId;
+    }
+
+    const files = await MealPlanFile.find(query)
+      .populate("uploadedBy", "firstName lastName")
+      .populate("consultation", "consultationNumber")
+      .sort({ uploadedAt: -1 })
+      .lean();
+
+    return files;
+  } catch (error) {
+    console.error("Error fetching user meal plan files:", error);
+    return [];
+  }
+}
+
+export async function downloadMealPlanFile(
+  fileId: string,
+  userId: string
+): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
+  try {
+    await connectToDatabase();
+
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    // Find the file and verify ownership
+    const file = await MealPlanFile.findOne({
+      _id: fileId,
+      user: user._id,
+      isActive: true,
+    });
+
+    if (!file) {
+      return {
+        success: false,
+        error: "File not found or access denied",
+      };
+    }
+
+    // Check if file has expired
+    if (file.expiresAt && file.expiresAt < new Date()) {
+      return {
+        success: false,
+        error: "File has expired",
+      };
+    }
+
+    // Update download count and last downloaded date
+    file.downloadCount += 1;
+    file.lastDownloadedAt = new Date();
+    await file.save();
+
+    console.log(`✅ File ${file.fileName} downloaded by user ${user._id}`);
+
+    return {
+      success: true,
+      fileUrl: file.fileUrl,
+    };
+  } catch (error) {
+    console.error("Error downloading meal plan file:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
+
+export async function getConsultationMealPlanFiles(
+  consultationId: string
+): Promise<IMealPlanFile[]> {
+  try {
+    await connectToDatabase();
+
+    const files = await MealPlanFile.find({
+      consultation: consultationId,
+      isActive: true,
+    })
+      .populate("uploadedBy", "firstName lastName")
+      .sort({ uploadedAt: -1 })
+      .lean();
+
+    return files;
+  } catch (error) {
+    console.error("Error fetching consultation meal plan files:", error);
+    return [];
+  }
+}
+
+export async function deleteMealPlanFile(
+  fileId: string,
+  adminId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await connectToDatabase();
+
+    // Verify admin permissions (find by clerkId since adminId is from Clerk)
+    const admin = await User.findOne({ clerkId: adminId });
+    if (!admin || admin.role !== "admin") {
+      return {
+        success: false,
+        error: "Unauthorized: Only consultants can delete meal plans",
+      };
+    }
+
+    // Soft delete the file
+    const file = await MealPlanFile.findByIdAndUpdate(
+      fileId,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!file) {
+      return {
+        success: false,
+        error: "File not found",
+      };
+    }
+
+    console.log(`✅ Meal plan file ${file.fileName} marked as deleted`);
+
+    revalidatePath("/admin/consultations");
+    revalidatePath("/consultation");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting meal plan file:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An error occurred",
+    };
   }
 }

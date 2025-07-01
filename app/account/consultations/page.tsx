@@ -30,7 +30,11 @@ import {
 import Link from "next/link";
 
 // Import server actions
-import { getUserConsultations } from "@/lib/actions/consultation";
+import { 
+  getUserConsultations,
+  getUserConsultationNotes,
+  getUserMealPlanFiles 
+} from "@/lib/actions/consultation";
 import {
   ConsultationCard,
   ConsultationStats,
@@ -138,6 +142,34 @@ async function ConsultationsData() {
   // ✅ SERIALIZE DATA BEFORE PASSING TO CLIENT COMPONENTS
   const consultations = serializeConsultations(rawConsultations);
 
+  // Load notification data for each consultation
+  const consultationsWithNotifications = await Promise.all(
+    consultations.map(async (consultation) => {
+      try {
+        // Get unread notes count
+        const notes = await getUserConsultationNotes(consultation._id, userId);
+        const unreadNotesCount = notes.filter((note: any) => !note.readByUser).length;
+
+        // Get meal plan files count
+        const files = await getUserMealPlanFiles(userId, consultation._id);
+        const mealPlanFilesCount = files.length;
+
+        return {
+          ...consultation,
+          unreadNotesCount,
+          mealPlanFilesCount,
+        };
+      } catch (error) {
+        console.error(`Error loading notification data for consultation ${consultation._id}:`, error);
+        return {
+          ...consultation,
+          unreadNotesCount: 0,
+          mealPlanFilesCount: 0,
+        };
+      }
+    })
+  );
+
   // Calculate stats using serialized data
   const totalConsultations = consultations.length;
   const pendingConsultations = consultations.filter(
@@ -233,10 +265,14 @@ async function ConsultationsData() {
         />
       ) : (
         <div className="space-y-4">
-          {consultations.map((consultation, index) => (
+          {consultationsWithNotifications.map((consultation, index) => (
             // ✅ Remove motion.div from server component
             <div key={consultation._id}>
-              <ConsultationCard consultation={consultation} />
+              <ConsultationCard 
+                consultation={consultation}
+                unreadNotesCount={consultation.unreadNotesCount}
+                mealPlanFilesCount={consultation.mealPlanFilesCount}
+              />
             </div>
           ))}
         </div>

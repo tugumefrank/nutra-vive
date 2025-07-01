@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { connectToDatabase } from "@/lib/db";
-import { User, UserMembership, Membership, IUser, IUserMembership, IMembership } from "@/lib/db/models";
+import { User, UserMembership, Membership, Consultation, IUser, IUserMembership, IMembership, IConsultation } from "@/lib/db/models";
 
 // Stripe webhook event handlers interface
 interface WebhookHandlers {
@@ -12,6 +12,7 @@ interface WebhookHandlers {
   'invoice.payment_succeeded': (invoice: StripeInvoiceWithSubscription) => Promise<void>;
   'invoice.payment_failed': (invoice: StripeInvoiceWithSubscription) => Promise<void>;
   'charge.succeeded': (charge: Stripe.Charge) => Promise<void>;
+  'payment_intent.succeeded': (paymentIntent: Stripe.PaymentIntent) => Promise<void>;
 }
 
 // Extended Stripe types for missing properties
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       'invoice.payment_succeeded': handleInvoicePaymentSucceeded,
       'invoice.payment_failed': handleInvoicePaymentFailed,
       'charge.succeeded': handleChargeSucceeded,
+      'payment_intent.succeeded': handlePaymentIntentSucceeded,
     };
 
     const handler = handlers[event.type as keyof WebhookHandlers];
@@ -106,6 +108,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       } else if (event.type === 'charge.succeeded') {
         await (handler as WebhookHandlers['charge.succeeded'])(
           event.data.object as Stripe.Charge
+        );
+      } else if (event.type === 'payment_intent.succeeded') {
+        await (handler as WebhookHandlers['payment_intent.succeeded'])(
+          event.data.object as Stripe.PaymentIntent
         );
       }
     } else {
@@ -429,5 +435,46 @@ async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
   } catch (error) {
     const err = error as Error;
     console.error("❌ Error processing charge.succeeded:", err.message);
+  }
+}
+
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  console.log("Processing payment_intent.succeeded:", paymentIntent.id);
+
+  try {
+    // Check if this is a consultation payment by looking for submissionId in metadata
+    const { submissionId, transactionType } = paymentIntent.metadata;
+
+    if (!submissionId || transactionType !== 'consultation') {
+      console.log("Payment intent is not for a consultation, skipping");
+      return;
+    }
+
+    // Update the consultation payment status
+    const consultation = await Consultation.findOneAndUpdate(
+      { 
+        $or: [
+          { _id: submissionId },
+          { paymentIntentId: paymentIntent.id }
+        ]
+      },
+      { 
+        paymentStatus: "paid",
+        paymentIntentId: paymentIntent.id,
+        status: "confirmed" // Also update consultation status to confirmed when payment succeeds
+      },
+      { new: true }
+    );
+
+    if (consultation) {
+      console.log(`✅ Updated consultation ${consultation._id} payment status to paid`);
+      console.log(`✅ Updated consultation status to confirmed`);
+    } else {
+      console.warn(`No consultation found for payment intent ${paymentIntent.id} with submissionId ${submissionId}`);
+    }
+
+  } catch (error) {
+    const err = error as Error;
+    console.error("❌ Error processing payment_intent.succeeded:", err.message);
   }
 }

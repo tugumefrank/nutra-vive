@@ -14,6 +14,9 @@ import {
   Activity,
   DollarSign,
   MapPin,
+  MessageSquare,
+  Bell,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +45,8 @@ interface Consultation {
 
 interface ConsultationCardProps {
   consultation: Consultation;
+  unreadNotesCount?: number;
+  mealPlanFilesCount?: number;
 }
 
 interface ConsultationStatsProps {
@@ -59,7 +64,11 @@ interface EmptyStateProps {
 }
 
 // ConsultationCard Component
-export function ConsultationCard({ consultation }: ConsultationCardProps) {
+export function ConsultationCard({ 
+  consultation, 
+  unreadNotesCount = 0, 
+  mealPlanFilesCount = 0 
+}: ConsultationCardProps) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "completed":
@@ -104,9 +113,26 @@ export function ConsultationCard({ consultation }: ConsultationCardProps) {
 
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all">
+      <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all relative">
+        {/* Notification badges */}
+        {(unreadNotesCount > 0 || mealPlanFilesCount > 0) && (
+          <div className="absolute -top-2 -right-2 flex gap-2 z-10">
+            {unreadNotesCount > 0 && (
+              <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                <Bell className="w-3 h-3" />
+                {unreadNotesCount}
+              </div>
+            )}
+            {mealPlanFilesCount > 0 && (
+              <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                <Download className="w-3 h-3" />
+                {mealPlanFilesCount}
+              </div>
+            )}
+          </div>
+        )}
         <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
@@ -124,11 +150,11 @@ export function ConsultationCard({ consultation }: ConsultationCardProps) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Badge className={statusConfig.color}>
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 self-start sm:self-auto">
+              <Badge className={`${statusConfig.color} w-fit`}>
                 {consultation.status}
               </Badge>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
+              <span className="text-lg sm:text-sm font-medium text-gray-900 dark:text-white">
                 ${consultation.totalAmount.toFixed(2)}
               </span>
             </div>

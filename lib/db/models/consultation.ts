@@ -98,7 +98,46 @@ export interface IConsultationNote extends Document {
   createdAt: Date;
 }
 
-// Meal Plans Interface
+// User-Visible Consultation Notes Interface (sent by admin to user)
+export interface IUserConsultationNote extends Document {
+  _id: string;
+  consultation: string; // Consultation ID
+  consultant: string; // Admin/Consultant user who sent the note
+  title: string; // Note title/subject
+  content: string; // Note content visible to user
+  noteType: "nutrition" | "progress" | "recommendation" | "general";
+  isVisible: boolean; // Whether user can see this note
+  readByUser: boolean; // Whether user has read this note
+  sentAt: Date;
+  readAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Meal Plan Files Interface (PDF, Word, etc.)
+export interface IMealPlanFile extends Document {
+  _id: string;
+  consultation: string; // Consultation ID
+  user: string; // User ID
+  uploadedBy: string; // Admin/Consultant who uploaded
+  fileName: string; // Original file name
+  fileUrl: string; // UploadThing URL or file path
+  fileKey: string; // UploadThing key for deletion
+  fileSize: number; // File size in bytes
+  fileType: string; // MIME type (application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, etc.)
+  title: string; // Display title for the meal plan
+  description?: string; // Optional description
+  nutritionNotes?: string; // Special nutrition notes for this meal plan
+  downloadCount: number; // Track how many times user downloaded
+  isActive: boolean; // Whether file is active/available
+  expiresAt?: Date; // Optional expiration date
+  uploadedAt: Date;
+  lastDownloadedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Meal Plans Interface (Structured meal plans - keeping existing functionality)
 export interface IMealPlan extends Document {
   _id: string;
   consultation: string;
@@ -357,6 +396,57 @@ const mealPlanSchema = new Schema<IMealPlan>(
   { timestamps: true }
 );
 
+// User Consultation Note Schema (for admin-to-user notes)
+const userConsultationNoteSchema = new Schema<IUserConsultationNote>(
+  {
+    consultation: {
+      type: String,
+      ref: "Consultation",
+      required: true,
+    },
+    consultant: { type: String, ref: "User", required: true },
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    noteType: {
+      type: String,
+      enum: ["nutrition", "progress", "recommendation", "general"],
+      required: true,
+    },
+    isVisible: { type: Boolean, default: true },
+    readByUser: { type: Boolean, default: false },
+    sentAt: { type: Date, default: Date.now },
+    readAt: Date,
+  },
+  { timestamps: true }
+);
+
+// Meal Plan File Schema (for PDF, Word, etc. uploads)
+const mealPlanFileSchema = new Schema<IMealPlanFile>(
+  {
+    consultation: {
+      type: String,
+      ref: "Consultation",
+      required: true,
+    },
+    user: { type: String, ref: "User", required: true },
+    uploadedBy: { type: String, ref: "User", required: true },
+    fileName: { type: String, required: true },
+    fileUrl: { type: String, required: true },
+    fileKey: { type: String, required: true },
+    fileSize: { type: Number, required: true },
+    fileType: { type: String, required: true },
+    title: { type: String, required: true },
+    description: String,
+    nutritionNotes: String,
+    downloadCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    expiresAt: Date,
+    uploadedAt: { type: Date, default: Date.now },
+    lastDownloadedAt: Date,
+  },
+  { timestamps: true }
+);
+
 // Add indexes (consultationNumber already has unique index from field definition)
 consultationSchema.index({ user: 1 });
 consultationSchema.index({ status: 1 });
@@ -368,6 +458,16 @@ consultationNoteSchema.index({ consultation: 1 });
 consultationNoteSchema.index({ consultant: 1 });
 
 mealPlanSchema.index({ consultation: 1 });
+
+userConsultationNoteSchema.index({ consultation: 1 });
+userConsultationNoteSchema.index({ consultant: 1 });
+userConsultationNoteSchema.index({ isVisible: 1 });
+userConsultationNoteSchema.index({ readByUser: 1 });
+
+mealPlanFileSchema.index({ consultation: 1 });
+mealPlanFileSchema.index({ user: 1 });
+mealPlanFileSchema.index({ uploadedBy: 1 });
+mealPlanFileSchema.index({ isActive: 1 });
 
 // Auto-generate consultation number
 consultationSchema.pre("save", async function (next) {
@@ -390,3 +490,11 @@ export const ConsultationNote: Model<IConsultationNote> =
 export const MealPlan: Model<IMealPlan> =
   mongoose.models.MealPlan ||
   mongoose.model<IMealPlan>("MealPlan", mealPlanSchema);
+
+export const UserConsultationNote: Model<IUserConsultationNote> =
+  mongoose.models.UserConsultationNote ||
+  mongoose.model<IUserConsultationNote>("UserConsultationNote", userConsultationNoteSchema);
+
+export const MealPlanFile: Model<IMealPlanFile> =
+  mongoose.models.MealPlanFile ||
+  mongoose.model<IMealPlanFile>("MealPlanFile", mealPlanFileSchema);
