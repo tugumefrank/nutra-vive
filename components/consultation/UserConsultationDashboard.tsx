@@ -317,8 +317,24 @@ const ConsultationDetailModal: React.FC<{
         getUserMealPlanFiles(userId, consultation._id),
       ]);
 
-      setUserNotes(notes as UserConsultationNote[]);
-      setMealPlanFiles(files as MealPlanFile[]);
+      setUserNotes(
+        (notes as any[]).map((note) => ({
+          ...note,
+          consultant:
+            typeof note.consultant === "string"
+              ? { firstName: note.consultant, lastName: "" }
+              : note.consultant,
+        }))
+      );
+      setMealPlanFiles(
+        (files as any[]).map((file) => ({
+          ...file,
+          consultation:
+            typeof file.consultation === "string"
+              ? { consultationNumber: file.consultation }
+              : file.consultation,
+        }))
+      );
     } catch (error) {
       console.error("Error loading user notes and files:", error);
       toast.error("Failed to load consultation data");
@@ -401,7 +417,8 @@ const ConsultationDetailModal: React.FC<{
   const getFileIcon = (fileType: string) => {
     if (fileType.includes("pdf")) return "📄";
     if (fileType.includes("word") || fileType.includes("document")) return "📝";
-    if (fileType.includes("excel") || fileType.includes("spreadsheet")) return "📊";
+    if (fileType.includes("excel") || fileType.includes("spreadsheet"))
+      return "📊";
     return "📁";
   };
 
@@ -628,7 +645,9 @@ const ConsultationDetailModal: React.FC<{
                           ) : (
                             <Download className="w-4 h-4" />
                           )}
-                          {downloading === file._id ? "Downloading..." : "Download"}
+                          {downloading === file._id
+                            ? "Downloading..."
+                            : "Download"}
                         </button>
                       </div>
 
@@ -644,8 +663,9 @@ const ConsultationDetailModal: React.FC<{
                       )}
 
                       <div className="mt-3 text-xs text-gray-500">
-                        Uploaded: {new Date(file.uploadedAt).toLocaleDateString()}{" "}
-                        by {file.uploadedBy.firstName} {file.uploadedBy.lastName}
+                        Uploaded:{" "}
+                        {new Date(file.uploadedAt).toLocaleDateString()} by{" "}
+                        {file.uploadedBy.firstName} {file.uploadedBy.lastName}
                         {file.downloadCount > 0 && (
                           <span className="ml-3">
                             Downloaded: {file.downloadCount} time
@@ -686,24 +706,44 @@ const UserConsultationDashboard: React.FC = () => {
     setLoading(true);
     try {
       const consultationsData = await getUserConsultations(userId);
-      setConsultations(consultationsData as Consultation[]);
+      setConsultations(
+        (consultationsData as any[]).map((consultation) => ({
+          ...consultation,
+          scheduledAt:
+            consultation.scheduledAt instanceof Date
+              ? consultation.scheduledAt.toISOString()
+              : consultation.scheduledAt,
+        }))
+      );
 
       // Load notes and files count for each consultation
       const notesCountMap: Record<string, number> = {};
       const filesCountMap: Record<string, number> = {};
 
       await Promise.all(
-        consultationsData.map(async (consultation: Consultation) => {
+        consultationsData.map(async (consultation) => {
           try {
             const [notes, files] = await Promise.all([
               getUserConsultationNotes(consultation._id, userId),
               getUserMealPlanFiles(userId, consultation._id),
             ]);
 
-            notesCountMap[consultation._id] = (
-              notes as UserConsultationNote[]
-            ).filter((note) => !note.readByUser).length;
-            filesCountMap[consultation._id] = (files as MealPlanFile[]).length;
+            notesCountMap[consultation._id] = (notes as any[])
+              .map((note) => ({
+                ...note,
+                consultant:
+                  typeof note.consultant === "string"
+                    ? { firstName: note.consultant, lastName: "" }
+                    : note.consultant,
+              }))
+              .filter((note) => !note.readByUser).length;
+            filesCountMap[consultation._id] = (files as any[]).map((file) => ({
+              ...file,
+              consultation:
+                typeof file.consultation === "string"
+                  ? { consultationNumber: file.consultation }
+                  : file.consultation,
+            })).length;
           } catch (error) {
             console.error(
               `Error loading data for consultation ${consultation._id}:`,
