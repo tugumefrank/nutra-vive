@@ -154,6 +154,11 @@ async function syncUserMembership(
   membership: any
 ) {
   try {
+    // Skip syncing for incomplete subscriptions that don't have period data
+    if (subscription.status === "incomplete" && !(subscription as any).current_period_start) {
+      console.log(`⏭️ Skipping sync for incomplete subscription ${subscription.id} - no period data`);
+      return;
+    }
     const existingMembership = await UserMembership.findOne({
       user: userId,
       subscriptionId: subscription.id,
@@ -162,18 +167,32 @@ async function syncUserMembership(
     // Properly parse dates from Stripe timestamps
     const sub = subscription as any;
     const startDate = new Date(subscription.start_date * 1000);
-    const currentPeriodStart = new Date(sub.current_period_start * 1000);
-    const currentPeriodEnd = new Date(sub.current_period_end * 1000);
+    
+    // Handle missing period dates (for incomplete subscriptions)
+    const currentPeriodStart = sub.current_period_start 
+      ? new Date(sub.current_period_start * 1000)
+      : startDate;
+    const currentPeriodEnd = sub.current_period_end 
+      ? new Date(sub.current_period_end * 1000)
+      : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from start
     
     // Validate dates
     if (isNaN(startDate.getTime()) || isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
       console.error(`❌ Invalid dates from subscription:`, {
         start_date: subscription.start_date,
         current_period_start: sub.current_period_start,
-        current_period_end: sub.current_period_end
+        current_period_end: sub.current_period_end,
+        subscription_status: subscription.status
       });
       throw new Error('Invalid subscription dates from Stripe');
     }
+    
+    console.log(`📅 Subscription dates parsed:`, {
+      startDate: startDate.toISOString(),
+      currentPeriodStart: currentPeriodStart.toISOString(),
+      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      status: subscription.status
+    });
     
     const membershipData = {
       user: userId,
@@ -198,8 +217,8 @@ async function syncUserMembership(
         existingMembership._id,
         membershipData
       );
-    } else if (membership && subscription.status === "active") {
-      // Create new membership only if subscription is active
+    } else if (membership && (subscription.status === "active" || subscription.status === "trialing")) {
+      // Create new membership only if subscription is active or trialing
       const productUsage = membership.productAllocations?.map((allocation: any) => {
         // Ensure categoryId is properly set
         const categoryId = allocation.categoryId?.toString() || 

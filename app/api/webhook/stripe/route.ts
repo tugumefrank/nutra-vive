@@ -224,15 +224,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       // Properly parse dates from Stripe timestamps
       const sub = subscription as any;
       const startDate = new Date(subscription.start_date * 1000);
-      const currentPeriodStart = new Date(sub.current_period_start * 1000);
-      const currentPeriodEnd = new Date(sub.current_period_end * 1000);
+      
+      // Handle missing period dates (for incomplete subscriptions)
+      const currentPeriodStart = sub.current_period_start 
+        ? new Date(sub.current_period_start * 1000)
+        : startDate;
+      const currentPeriodEnd = sub.current_period_end 
+        ? new Date(sub.current_period_end * 1000)
+        : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from start
       
       // Validate dates
       if (isNaN(startDate.getTime()) || isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
         console.error(`❌ Invalid dates from subscription:`, {
           start_date: subscription.start_date,
           current_period_start: sub.current_period_start,
-          current_period_end: sub.current_period_end
+          current_period_end: sub.current_period_end,
+          subscription_status: subscription.status
         });
         throw new Error('Invalid subscription dates from Stripe');
       }
