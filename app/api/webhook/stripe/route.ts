@@ -143,19 +143,105 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     metadata: session.metadata
   });
   
-  if (!session.customer) {
-    console.log("❌ Checkout session has no customer, skipping");
+  if (!session.customer || !session.subscription || !session.metadata) {
+    console.log("❌ Checkout session missing required data, skipping");
     return;
   }
 
   try {
-    // Use centralized sync function to handle checkout completion
-    console.log(`🔄 Calling syncStripeDataToDatabase for customer: ${session.customer}`);
-    const result = await syncStripeDataToDatabase(session.customer as string);
-    console.log(`✅ Sync result:`, result);
-    console.log(`✅ Synced checkout data for customer ${session.customer}`);
+    // Extract data from webhook instead of calling Stripe API again
+    const { userId, membershipId, membershipTier } = session.metadata;
+    
+    if (!userId || !membershipId) {
+      console.error("❌ Missing userId or membershipId in metadata");
+      return;
+    }
+
+    console.log(`🔄 Processing subscription for user ${userId}`);
+    
+    // Find user by clerkId (from metadata)
+    const user = await User.findOne({ clerkId: userId });
+    if (!user) {
+      console.error(`❌ User not found with clerkId: ${userId}`);
+      return;
+    }
+    
+    // Update user with Stripe customer ID if not set
+    if (!user.stripeCustomerId) {
+      await User.findByIdAndUpdate(user._id, {
+        stripeCustomerId: session.customer
+      });
+      console.log(`✅ Updated user ${userId} with stripeCustomerId: ${session.customer}`);
+    }
+    
+    // Find membership
+    const membership = await Membership.findById(membershipId);
+    if (!membership) {
+      console.error(`❌ Membership not found: ${membershipId}`);
+      return;
+    }
+    
+    // Get subscription status from Stripe (we need the detailed status)
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+    console.log(`📊 Subscription status: ${subscription.status}`);
+    
+    // Check if membership already exists
+    const existingMembership = await UserMembership.findOne({
+      user: user._id,
+      subscriptionId: subscription.id,
+    });
+    
+    if (existingMembership) {
+      // Update existing membership to active
+      await UserMembership.findByIdAndUpdate(existingMembership._id, {
+        status: "active",
+        lastPaymentDate: new Date(),
+        lastPaymentAmount: membership.price || 0,
+      });
+      console.log(`✅ Updated existing membership to active`);
+    } else {
+      // Create new membership
+      const productUsage = membership.productAllocations?.map((allocation: any) => ({
+        categoryId: allocation.categoryId?.toString() || allocation.category?.toString(),
+        categoryName: allocation.categoryName || 'Unknown Category',
+        allocatedQuantity: allocation.quantity || 0,
+        usedQuantity: 0,
+        availableQuantity: allocation.quantity || 0,
+      })) || [];
+      
+      const sub = subscription as any;
+      
+      await UserMembership.create({
+        user: user._id,
+        membership: membershipId,
+        subscriptionId: subscription.id,
+        status: "active",
+        startDate: new Date(subscription.start_date * 1000),
+        currentPeriodStart: new Date(sub.current_period_start * 1000),
+        currentPeriodEnd: new Date(sub.current_period_end * 1000),
+        usageResetDate: new Date(sub.current_period_end * 1000),
+        nextBillingDate: subscription.cancel_at_period_end 
+          ? null 
+          : new Date(sub.current_period_end * 1000),
+        autoRenewal: !subscription.cancel_at_period_end,
+        lastPaymentDate: new Date(),
+        lastPaymentAmount: membership.price || 0,
+        productUsage,
+      });
+      
+      // Update membership stats
+      await Membership.findByIdAndUpdate(membershipId, {
+        $inc: {
+          totalSubscribers: 1,
+          totalRevenue: membership.price || 0,
+        },
+      });
+      
+      console.log(`✅ Created new membership for user ${userId}`);
+    }
+    
   } catch (error) {
-    console.error(`❌ Error syncing checkout data:`, error);
+    console.error(`❌ Error processing checkout completion:`, error);
     console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
   }
 }
