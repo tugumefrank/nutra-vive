@@ -159,21 +159,34 @@ async function syncUserMembership(
       subscriptionId: subscription.id,
     });
 
-    // Type assertion for runtime properties
+    // Properly parse dates from Stripe timestamps
     const sub = subscription as any;
+    const startDate = new Date(subscription.start_date * 1000);
+    const currentPeriodStart = new Date(sub.current_period_start * 1000);
+    const currentPeriodEnd = new Date(sub.current_period_end * 1000);
+    
+    // Validate dates
+    if (isNaN(startDate.getTime()) || isNaN(currentPeriodStart.getTime()) || isNaN(currentPeriodEnd.getTime())) {
+      console.error(`❌ Invalid dates from subscription:`, {
+        start_date: subscription.start_date,
+        current_period_start: sub.current_period_start,
+        current_period_end: sub.current_period_end
+      });
+      throw new Error('Invalid subscription dates from Stripe');
+    }
     
     const membershipData = {
       user: userId,
       membership: membership?._id,
       subscriptionId: subscription.id,
       status: mapStripeStatusToMembershipStatus(subscription.status),
-      startDate: new Date(subscription.start_date * 1000),
-      currentPeriodStart: new Date(sub.current_period_start * 1000),
-      currentPeriodEnd: new Date(sub.current_period_end * 1000),
-      usageResetDate: new Date(sub.current_period_end * 1000),
+      startDate,
+      currentPeriodStart,
+      currentPeriodEnd,
+      usageResetDate: currentPeriodEnd,
       nextBillingDate: subscription.cancel_at_period_end 
         ? null 
-        : new Date(sub.current_period_end * 1000),
+        : currentPeriodEnd,
       autoRenewal: !subscription.cancel_at_period_end,
       lastPaymentDate: new Date(),
       lastPaymentAmount: membership?.price || 0,
@@ -187,13 +200,25 @@ async function syncUserMembership(
       );
     } else if (membership && subscription.status === "active") {
       // Create new membership only if subscription is active
-      const productUsage = membership.productAllocations?.map((allocation: any) => ({
-        categoryId: allocation.categoryId?.toString() || allocation.category?.toString(),
-        categoryName: allocation.categoryName || 'Unknown Category',
-        allocatedQuantity: allocation.quantity || 0,
-        usedQuantity: 0,
-        availableQuantity: allocation.quantity || 0,
-      })) || [];
+      const productUsage = membership.productAllocations?.map((allocation: any) => {
+        // Ensure categoryId is properly set
+        const categoryId = allocation.categoryId?.toString() || 
+                          allocation.category?.toString() || 
+                          allocation._id?.toString();
+        
+        if (!categoryId) {
+          console.warn(`Missing categoryId for allocation:`, allocation);
+          return null;
+        }
+        
+        return {
+          categoryId,
+          categoryName: allocation.categoryName || allocation.name || 'Unknown Category',
+          allocatedQuantity: allocation.quantity || 0,
+          usedQuantity: 0,
+          availableQuantity: allocation.quantity || 0,
+        };
+      }).filter(Boolean) || [];
 
       await UserMembership.create({
         ...membershipData,
