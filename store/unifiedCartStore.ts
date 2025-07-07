@@ -18,6 +18,7 @@ import {
   validatePromotionCode,
   refreshCartPrices,
 } from "@/lib/actions/unifiedCartServerActions";
+// Unified cart system handles membership automatically
 import { useCallback } from "react";
 
 // Enhanced cart stats for unified system
@@ -101,6 +102,7 @@ interface UnifiedCartState {
 
 export const useUnifiedCartStore = create<UnifiedCartState>()(
   subscribeWithSelector((set, get) => {
+
     // Helper function to calculate comprehensive stats
     const calculateStats = (cart: UnifiedCart | null): UnifiedCartStats => {
       if (!cart || !cart.items.length) {
@@ -172,9 +174,13 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
       async (product: any, quantity: number) => {
         const state = get();
         try {
+          // Use unified cart system which handles membership automatically
+          console.log('🛒 Adding to unified cart:', product.name, 'quantity:', quantity);
           const result = await addToCart(product._id, quantity);
+          console.log('🛒 Unified cart result:', result);
 
           if (result.success && result.cart) {
+            // Cart is already in unified format
             const newStats = calculateStats(result.cart);
             set({
               cart: result.cart,
@@ -183,10 +189,17 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
               isAddingToCart: { ...state.isAddingToCart, [product._id]: false },
             });
 
-            // Show success message with membership info if applicable
-            if (result.membershipInfo?.wasApplied) {
+            // Check if any items are free from membership
+            const hasFreeItems = result.cart.items.some((item: any) => 
+              item.freeFromMembership > 0 || item.membershipSavings > 0
+            );
+            
+            if (hasFreeItems) {
+              const totalSavings = result.cart.items.reduce((sum: number, item: any) => 
+                sum + (item.membershipSavings || 0), 0
+              );
               toast.success(
-                `${product.name} added to cart! Saved $${result.membershipInfo.savings.toFixed(2)} with membership`
+                `${product.name} added to cart! Saved $${totalSavings.toFixed(2)} with membership`
               );
             } else {
               toast.success(`${product.name} added to cart`);
@@ -237,8 +250,22 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
         try {
           set({ initializing: true, error: null });
           const result = await getCart();
+          
+          console.log('🛒 Cart initialization result:', result);
 
           if (result.success && result.cart) {
+            console.log('🛒 Cart items:', result.cart.items);
+            console.log('🛒 Cart membership info:', result.cart.membershipInfo);
+            result.cart.items.forEach((item: any, index: number) => {
+              console.log(`🛒 Item ${index}:`, {
+                name: item.product.name,
+                finalPrice: item.finalPrice,
+                freeFromMembership: item.freeFromMembership,
+                membershipSavings: item.membershipSavings,
+                membershipEligible: item.membershipEligible
+              });
+            });
+            
             const newStats = calculateStats(result.cart);
             set({
               cart: result.cart,
@@ -642,8 +669,21 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
         try {
           set({ loading: true, error: null });
           const result = await getCart();
+          
+          console.log('🔄 Refresh cart result:', result);
 
           if (result.success && result.cart) {
+            console.log('🔄 Refreshed cart items:', result.cart.items);
+            result.cart.items.forEach((item: any, index: number) => {
+              console.log(`🔄 Refreshed Item ${index}:`, {
+                name: item.product.name,
+                finalPrice: item.finalPrice,
+                freeFromMembership: item.freeFromMembership,
+                membershipSavings: item.membershipSavings,
+                membershipEligible: item.membershipEligible
+              });
+            });
+            
             const newStats = calculateStats(result.cart);
             set({ cart: result.cart, stats: newStats, loading: false });
           } else {

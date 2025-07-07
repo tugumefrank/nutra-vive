@@ -4,11 +4,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { connectToDatabase } from "@/lib/db";
-import { Cart, Product } from "@/lib/db/models";
+import { Cart, Product, Category } from "@/lib/db/models";
 import {
   getUserCartContext,
   getOrCreateCart,
   checkProductEligibility,
+  calculateItemPricing,
   serializeUnifiedCart,
   validatePromotionForUnifiedCart,
 } from "@/lib/helpers/unifiedCartHelpers";
@@ -385,10 +386,10 @@ export async function getCart(): Promise<CartOperationResult> {
     await cart.populate({
       path: "items.product",
       select:
-        "name slug price images category isActive compareAtPrice promotionEligible",
+        "name slug price images category isActive compareAtPrice promotionEligible isDiscounted",
       populate: {
         path: "category",
-        select: "name slug",
+        select: "name slug _id",  // Added _id to the select
       },
     });
 
@@ -397,6 +398,91 @@ export async function getCart(): Promise<CartOperationResult> {
       (item: any) => !item.product?.isActive
     );
     cart.items = cart.items.filter((item: any) => item.product?.isActive);
+
+    // Re-calculate pricing for all existing items with current membership status
+    let cartNeedsUpdate = false;
+    console.log('🔍 Cart items after populate:', cart.items.map((item: any) => ({
+      itemId: item._id,
+      productId: item.product?._id,
+      productName: item.product?.name,
+      productCategory: item.product?.category,
+      isProductValid: !!item.product,
+      isActive: item.product?.isActive
+    })));
+    
+    for (const cartItem of cart.items) {
+      const product = cartItem.product as any;
+      console.log('🔍 Processing cart item:', {
+        productId: product?._id,
+        productName: product?.name,
+        productCategory: product?.category,
+        categoryPopulated: !!product?.category
+      });
+      
+      if (product && product.isActive) {
+        // If category is not populated, manually fetch the product
+        if (!product.category) {
+          console.log('🔍 Category not populated, fetching product manually:', product._id);
+          const fullProduct = await Product.findById(product._id).populate('category', 'name slug _id').lean();
+          if (fullProduct && fullProduct.category) {
+            product.category = fullProduct.category;
+            console.log('🔍 Manually populated category:', product.category);
+          }
+        }
+        
+        const eligibility = await checkProductEligibility(product, context);
+        const pricing = calculateItemPricing(
+          product,
+          cartItem.quantity,
+          eligibility,
+          0 // No promotion discount on individual items for now
+        );
+
+        // Update cart item with current membership pricing
+        const oldValues = {
+          membershipSavings: (cartItem as any).membershipSavings || 0,
+          freeFromMembership: (cartItem as any).freeFromMembership || 0,
+          finalPrice: (cartItem as any).finalPrice || product.price,
+          membershipEligible: (cartItem as any).membershipEligible || false
+        };
+
+        const hasChanged = 
+          oldValues.membershipSavings !== pricing.membershipSavings ||
+          oldValues.freeFromMembership !== pricing.freeFromMembership ||
+          oldValues.finalPrice !== pricing.finalPrice ||
+          oldValues.membershipEligible !== eligibility.isMembershipEligible;
+
+        console.log(`🔄 Checking if ${product.name} needs update:`, {
+          oldValues,
+          newValues: {
+            membershipSavings: pricing.membershipSavings,
+            freeFromMembership: pricing.freeFromMembership,
+            finalPrice: pricing.finalPrice,
+            membershipEligible: eligibility.isMembershipEligible
+          },
+          hasChanged
+        });
+
+        // Force update for now to debug
+        if (true) {
+          (cartItem as any).membershipPrice = pricing.membershipPrice;
+          (cartItem as any).freeFromMembership = pricing.freeFromMembership;
+          (cartItem as any).paidQuantity = pricing.paidQuantity;
+          (cartItem as any).membershipSavings = pricing.membershipSavings;
+          (cartItem as any).promotionSavings = pricing.promotionSavings;
+          (cartItem as any).totalSavings = pricing.totalSavings;
+          (cartItem as any).membershipEligible = eligibility.isMembershipEligible;
+          (cartItem as any).finalPrice = pricing.finalPrice;
+          cartNeedsUpdate = true;
+          
+          console.log(`✅ Updated pricing for ${product.name}:`, {
+            freeFromMembership: pricing.freeFromMembership,
+            membershipSavings: pricing.membershipSavings,
+            finalPrice: pricing.finalPrice
+          });
+        }
+      }
+    }
 
     // Restore allocations for removed items
     // NOTE: Membership allocations are NOT restored here since they were never
@@ -419,8 +505,9 @@ export async function getCart(): Promise<CartOperationResult> {
       }
     }
 
-    if (cart.isModified()) {
+    if (cart.isModified() || cartNeedsUpdate) {
       await cart.save();
+      console.log('💾 Cart saved with updated membership pricing');
     }
 
     const unifiedCart = await serializeUnifiedCart(cart, context);
@@ -671,12 +758,12 @@ export async function refreshCartPrices(): Promise<CartOperationResult> {
       return { success: true, cart: unifiedCart };
     }
 
-    // Get current product prices from database
+    // Get current product prices from database WITH categories for membership eligibility
     const productIds = cart.items.map((item: any) => item.product);
     const products = await Product.find({ 
       _id: { $in: productIds },
       isActive: true 
-    }).select('_id price compareAtPrice isDiscounted');
+    }).populate('category', 'name slug _id').select('_id name price compareAtPrice isDiscounted category');
 
     let cartUpdated = false;
 
@@ -691,12 +778,74 @@ export async function refreshCartPrices(): Promise<CartOperationResult> {
       if (currentProduct) {
         console.log(`🔍 Product ${currentProduct._id}: DB price=${currentProduct.price}, cart price=${(cartItem as any).price}, isDiscounted=${currentProduct.isDiscounted}, compareAtPrice=${currentProduct.compareAtPrice}`);
         
+        // Update price if changed
         if ((cartItem as any).price !== currentProduct.price) {
           console.log(`💰 Updating price for item ${cartItem.product}: ${(cartItem as any).price} → ${currentProduct.price}`);
           (cartItem as any).price = currentProduct.price;
           cartUpdated = true;
         } else {
           console.log(`✅ Price already up to date for item ${cartItem.product}`);
+        }
+
+        // Debug: Check what we actually got from the database
+        console.log('🔍 Raw product from DB:', {
+          id: currentProduct._id,
+          name: currentProduct.name,
+          category: currentProduct.category,
+          categoryType: typeof currentProduct.category,
+          keys: Object.keys(currentProduct)
+        });
+
+        // If category is null, let's check the raw product in the database
+        if (!currentProduct.category) {
+          console.log('🔍 Category is null, checking raw database entry...');
+          const rawProduct = await Product.findById(currentProduct._id).lean();
+          console.log('🔍 Raw DB product:', {
+            id: rawProduct?._id,
+            name: rawProduct?.name,
+            category: rawProduct?.category,
+            categoryField: rawProduct?.category ? 'exists' : 'missing'
+          });
+          
+          // Try manual populate
+          if (rawProduct?.category) {
+            const categoryDoc = await Category.findById(rawProduct.category).lean();
+            console.log('🔍 Manual category lookup:', categoryDoc);
+            if (categoryDoc) {
+              (currentProduct as any).category = categoryDoc;
+            }
+          }
+        }
+
+        // ALSO check and update membership eligibility
+        const eligibility = await checkProductEligibility(currentProduct as any, context);
+        const pricing = calculateItemPricing(
+          currentProduct,
+          cartItem.quantity,
+          eligibility,
+          0
+        );
+
+        // Update membership pricing
+        const oldMembershipSavings = (cartItem as any).membershipSavings || 0;
+        const oldFreeFromMembership = (cartItem as any).freeFromMembership || 0;
+        
+        if (oldMembershipSavings !== pricing.membershipSavings || 
+            oldFreeFromMembership !== pricing.freeFromMembership) {
+          console.log(`🏆 Updating membership pricing for ${currentProduct.name}:`, {
+            old: { membershipSavings: oldMembershipSavings, freeFromMembership: oldFreeFromMembership },
+            new: { membershipSavings: pricing.membershipSavings, freeFromMembership: pricing.freeFromMembership }
+          });
+          
+          (cartItem as any).membershipPrice = pricing.membershipPrice;
+          (cartItem as any).freeFromMembership = pricing.freeFromMembership;
+          (cartItem as any).paidQuantity = pricing.paidQuantity;
+          (cartItem as any).membershipSavings = pricing.membershipSavings;
+          (cartItem as any).promotionSavings = pricing.promotionSavings;
+          (cartItem as any).totalSavings = pricing.totalSavings;
+          (cartItem as any).membershipEligible = eligibility.isMembershipEligible;
+          (cartItem as any).finalPrice = pricing.finalPrice;
+          cartUpdated = true;
         }
       } else {
         console.log(`❌ Product not found in database for cart item ${cartItem.product}`);

@@ -46,7 +46,7 @@ import {
 
 export default function CartPage() {
   const router = useRouter();
-  
+
   // Cart state from unified store
   const cart = useUnifiedCartStore((state) => state.cart);
   const stats = useCartStats();
@@ -56,7 +56,7 @@ export default function CartPage() {
   const isAddingToCart = useIsAddingToCart();
   const isUpdatingItem = useIsUpdatingItem();
   const isRemovingItem = useIsRemovingItem();
-  
+
   // Cart actions
   const {
     initializeCart,
@@ -65,7 +65,7 @@ export default function CartPage() {
     clearCartOptimistic,
     refreshCartPrices,
   } = useUnifiedCartStore();
-  
+
   // Promotion state and actions
   const {
     promotionCodeInput,
@@ -87,7 +87,7 @@ export default function CartPage() {
       // Refresh cart prices to ensure they reflect any recent auto-discounts
       await refreshCartPrices();
     };
-    
+
     initializeAndRefresh();
   }, [initializeCart, refreshCartPrices]);
 
@@ -148,9 +148,13 @@ export default function CartPage() {
                 Your cart is empty
               </h1>
               <p className="text-gray-600 mb-8">
-                Add some delicious organic juices and herbal teas to get started!
+                Add some delicious organic juices and herbal teas to get
+                started!
               </p>
-              <Button asChild className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-8 py-3">
+              <Button
+                asChild
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-8 py-3"
+              >
                 <Link href="/shop">
                   <ArrowLeft className="w-4 h-4 mr-2 rotate-180" />
                   Continue Shopping
@@ -185,22 +189,23 @@ export default function CartPage() {
                 {stats.itemCount} items
               </Badge>
               {cart.hasMembershipApplied && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-100 text-amber-700"
+                >
                   <Crown className="w-3 h-3 mr-1" />
                   Member
                 </Badge>
               )}
-              {/* Debug refresh button - remove in production */}
-              {process.env.NODE_ENV === 'development' && (
-                <Button 
-                  variant="outline" 
-                  onClick={refreshCartPrices}
-                  size="sm"
-                  className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                >
-                  🔄 Refresh
-                </Button>
-              )}
+              {/* Refresh button for testing membership pricing */}
+              <Button
+                variant="outline"
+                onClick={refreshCartPrices}
+                size="sm"
+                className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+              >
+                🔄 Refresh Pricing
+              </Button>
             </div>
           </div>
         </div>
@@ -231,7 +236,8 @@ export default function CartPage() {
                   </div>
                 </div>
                 <div className="text-lg font-bold text-amber-700 bg-amber-100 px-3 py-2 rounded-lg inline-block">
-                  👑 ${stats.membershipDiscount.toFixed(2)} saved with membership
+                  👑 ${stats.membershipDiscount.toFixed(2)} saved with
+                  membership
                 </div>
               </motion.div>
             )}
@@ -252,7 +258,9 @@ export default function CartPage() {
                       {/* Product Image - Smaller */}
                       <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
                         <Image
-                          src={item.product.images[0] || "/api/placeholder/150/150"}
+                          src={
+                            item.product.images[0] || "/api/placeholder/150/150"
+                          }
                           alt={item.product.name}
                           fill
                           className="object-cover"
@@ -276,21 +284,22 @@ export default function CartPage() {
                                 {item.product.name}
                               </Link>
                             </h3>
-                            
+
                             {/* Price and Category in one line */}
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-base font-bold text-gray-900">
-                                ${item.finalPrice.toFixed(2)}
-                              </span>
-                              {item.originalPrice > item.finalPrice && (
-                                <span className="text-xs text-gray-400 line-through">
-                                  ${item.originalPrice.toFixed(2)}
+                              {/* Check if item is free from membership */}
+                              {item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0 ? (
+                                <span className="text-base font-bold text-green-600">
+                                  FREE with membership
+                                </span>
+                              ) : (
+                                <span className="text-base font-bold text-gray-900">
+                                  ${(item.finalPrice || item.product?.price || 0).toFixed(2)}
                                 </span>
                               )}
-                              {/* Debug info - remove this later */}
-                              {process.env.NODE_ENV === 'development' && (
-                                <span className="text-xs text-blue-500 bg-blue-50 px-1 rounded">
-                                  DB: ${item.product.price} | Final: ${item.finalPrice} | Reg: ${item.regularPrice}
+                              {(item.originalPrice || 0) > (item.finalPrice || 0) && item.finalPrice > 0 && (
+                                <span className="text-xs text-gray-400 line-through">
+                                  ${(item.originalPrice || 0).toFixed(2)}
                                 </span>
                               )}
                               {item.product.category && (
@@ -311,7 +320,10 @@ export default function CartPage() {
                                   {item.freeFromMembership} FREE
                                 </Badge>
                                 {item.paidQuantity > 0 && (
-                                  <Badge variant="outline" className="text-xs py-0 px-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs py-0 px-1"
+                                  >
                                     +{item.paidQuantity} paid
                                   </Badge>
                                 )}
@@ -342,16 +354,20 @@ export default function CartPage() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                updateQuantity(item.product._id, item.quantity - 1)
+                                updateQuantity(
+                                  item.product._id,
+                                  item.quantity - 1
+                                )
                               }
                               disabled={
-                                item.quantity <= 1 || isUpdatingItem[item.product._id]
+                                item.quantity <= 1 ||
+                                isUpdatingItem[item.product._id]
                               }
                               className="w-6 h-6 p-0"
                             >
                               <Minus className="w-2 h-2" />
                             </Button>
-                            
+
                             <span className="font-medium text-gray-900 min-w-[1.5rem] text-center text-sm">
                               {isUpdatingItem[item.product._id] ? (
                                 <Loader2 className="w-3 h-3 animate-spin mx-auto" />
@@ -359,12 +375,15 @@ export default function CartPage() {
                                 item.quantity
                               )}
                             </span>
-                            
+
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                updateQuantity(item.product._id, item.quantity + 1)
+                                updateQuantity(
+                                  item.product._id,
+                                  item.quantity + 1
+                                )
                               }
                               disabled={isUpdatingItem[item.product._id]}
                               className="w-6 h-6 p-0"
@@ -375,9 +394,16 @@ export default function CartPage() {
 
                           {/* Item Total and Savings */}
                           <div className="text-right">
-                            <div className="text-base font-bold text-gray-900">
-                              ${(item.quantity * item.finalPrice).toFixed(2)}
-                            </div>
+                            {/* Check if item is free from membership */}
+                            {item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0 ? (
+                              <div className="text-base font-bold text-green-600">
+                                $0.00
+                              </div>
+                            ) : (
+                              <div className="text-base font-bold text-gray-900">
+                                ${(item.quantity * (item.finalPrice || item.product?.price || 0)).toFixed(2)}
+                              </div>
+                            )}
                             {item.totalSavings > 0 && (
                               <div className="text-xs text-green-600">
                                 Saved ${item.totalSavings.toFixed(2)}
@@ -417,7 +443,10 @@ export default function CartPage() {
                 <h3 className="text-xl font-semibold text-gray-900">
                   Order Summary
                 </h3>
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-700"
+                >
                   {stats.itemCount} items
                 </Badge>
               </div>
@@ -484,7 +513,9 @@ export default function CartPage() {
                       <Button
                         variant="outline"
                         onClick={applyPromotion}
-                        disabled={!promotionCodeInput.trim() || isApplyingPromotion}
+                        disabled={
+                          !promotionCodeInput.trim() || isApplyingPromotion
+                        }
                       >
                         {isApplyingPromotion ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -500,7 +531,7 @@ export default function CartPage() {
                     )}
                     <div className="text-xs text-gray-500 flex items-center">
                       <Info className="w-3 h-3 mr-1" />
-                      {cart.hasMembershipApplied 
+                      {cart.hasMembershipApplied
                         ? "Stack with membership benefits for maximum savings"
                         : "Enter a valid promotion code to save on your order"}
                     </div>
@@ -512,41 +543,72 @@ export default function CartPage() {
 
               {/* Price Breakdown */}
               <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium">${stats.subtotal.toFixed(2)}</span>
-                </div>
+                {/* Check if any items are free from membership */}
+                {items.some(item => item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0) ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">$0.00</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm bg-green-50 -mx-3 px-3 py-2 rounded">
+                      <span className="text-green-700 flex items-center font-medium">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Membership Benefits:
+                      </span>
+                      <span className="font-bold text-green-600">FREE</span>
+                    </div>
 
-                {stats.membershipDiscount > 0 && (
-                  <div className="flex justify-between text-sm bg-amber-50 -mx-3 px-3 py-2 rounded">
-                    <span className="text-amber-700 flex items-center font-medium">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Membership Savings:
-                    </span>
-                    <span className="font-bold text-amber-600">
-                      -${stats.membershipDiscount.toFixed(2)}
-                    </span>
-                  </div>
+                    <Separator />
+
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total:</span>
+                      <span className="text-green-600">$0.00</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">
+                        ${(stats.subtotal || 0).toFixed(2)}
+                      </span>
+                    </div>
+
+                    {stats.membershipDiscount > 0 && (
+                      <div className="flex justify-between text-sm bg-amber-50 -mx-3 px-3 py-2 rounded">
+                        <span className="text-amber-700 flex items-center font-medium">
+                          <Crown className="w-3 h-3 mr-1" />
+                          Membership Savings:
+                        </span>
+                        <span className="font-bold text-amber-600">
+                          -${stats.membershipDiscount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {stats.promotionDiscount > 0 && (
+                      <div className="flex justify-between text-sm bg-green-50 -mx-3 px-3 py-2 rounded">
+                        <span className="text-green-700 flex items-center font-medium">
+                          <Percent className="w-3 h-3 mr-1" />
+                          Promotion Savings:
+                        </span>
+                        <span className="font-bold text-green-600">
+                          -${stats.promotionDiscount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total:</span>
+                      <span className="text-green-600">
+                        ${(stats.finalTotal || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
                 )}
-
-                {stats.promotionDiscount > 0 && (
-                  <div className="flex justify-between text-sm bg-green-50 -mx-3 px-3 py-2 rounded">
-                    <span className="text-green-700 flex items-center font-medium">
-                      <Percent className="w-3 h-3 mr-1" />
-                      Promotion Savings:
-                    </span>
-                    <span className="font-bold text-green-600">
-                      -${stats.promotionDiscount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-green-600">${stats.finalTotal.toFixed(2)}</span>
-                </div>
 
                 {stats.totalSavings > 0 && (
                   <motion.div

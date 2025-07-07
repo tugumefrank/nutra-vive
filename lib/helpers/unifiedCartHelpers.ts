@@ -50,6 +50,17 @@ export async function getUserCartContext(): Promise<UserCartContext> {
     .populate("membership")
     .lean()) as (IUserMembership & { membership: any }) | null;
 
+  console.log('🏷️ User cart context:', {
+    userId,
+    userFound: !!user,
+    membershipFound: !!membership,
+    membershipData: membership ? {
+      tier: membership.membership?.tier,
+      status: membership.status,
+      productUsage: membership.productUsage
+    } : null
+  });
+
   return {
     userId,
     user,
@@ -87,12 +98,39 @@ export async function checkProductEligibility(
     availableForFree: 0,
   };
 
+  console.log('🔍 Checking eligibility for product:', {
+    productName: product.name,
+    productCategory: product.category?.name,
+    productCategoryId: product.category?._id,
+    hasMembership: context.hasMembership,
+    membershipExists: !!context.membership
+  });
+
   // Check membership eligibility
   if (context.hasMembership && context.membership && product.category) {
+    console.log('🔍 Searching for category match:', {
+      productCategoryId: product.category._id.toString(),
+      availableAllocations: context.membership.productUsage.map((usage: any) => ({
+        categoryId: usage.categoryId.toString(),
+        categoryName: usage.categoryName,
+        available: usage.availableQuantity
+      }))
+    });
+
     const categoryUsage = context.membership.productUsage.find(
       (usage: any) =>
         usage.categoryId.toString() === product.category._id.toString()
     );
+
+    console.log('🔍 Category usage found:', {
+      categoryUsage: categoryUsage ? {
+        categoryId: categoryUsage.categoryId,
+        categoryName: categoryUsage.categoryName,
+        allocated: categoryUsage.allocatedQuantity,
+        used: categoryUsage.usedQuantity,
+        available: categoryUsage.availableQuantity
+      } : null
+    });
 
     if (categoryUsage && categoryUsage.availableQuantity > 0) {
       result.isMembershipEligible = true;
@@ -108,6 +146,7 @@ export async function checkProductEligibility(
     }
   }
 
+  console.log('🔍 Eligibility result:', result);
   return result;
 }
 
@@ -129,6 +168,15 @@ export function calculateItemPricing(
   promotionSavings: number;
   totalSavings: number;
 } {
+  console.log('💰 Calculating pricing for:', {
+    productName: product.name,
+    quantity,
+    eligibility: {
+      isMembershipEligible: eligibility.isMembershipEligible,
+      availableForFree: eligibility.availableForFree
+    }
+  });
+
   // For auto-discounted products, compareAtPrice is the original price before discount
   // For non-discounted products, use the current price as the original price
   const originalPrice = product.isDiscounted && product.compareAtPrice 
@@ -141,6 +189,12 @@ export function calculateItemPricing(
     ? Math.min(quantity, eligibility.availableForFree)
     : 0;
   const paidQuantity = quantity - freeFromMembership;
+
+  console.log('💰 Pricing calculation:', {
+    freeFromMembership,
+    paidQuantity,
+    regularPrice
+  });
 
   // Calculate pricing
   const membershipPrice = paidQuantity * regularPrice;
@@ -158,7 +212,7 @@ export function calculateItemPricing(
 
   const totalSavings = membershipSavings + promotionSavings + autoDiscountSavings;
 
-  return {
+  const result = {
     freeFromMembership,
     paidQuantity,
     membershipPrice,
@@ -168,6 +222,10 @@ export function calculateItemPricing(
     promotionSavings,
     totalSavings,
   };
+
+  console.log('💰 Final pricing result:', result);
+
+  return result;
 }
 
 /**

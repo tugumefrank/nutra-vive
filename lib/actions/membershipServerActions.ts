@@ -537,6 +537,62 @@ export async function deleteMembership(
   }
 }
 
+// Public function for regular users to get available memberships
+export async function getAvailableMemberships(
+  filters?: { 
+    isActive?: boolean;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }
+): Promise<{
+  memberships: any[];
+  error?: string;
+}> {
+  try {
+    await connectToDatabase();
+
+    // Build query for public memberships only
+    const query: any = { isActive: true };
+    if (filters?.isActive !== undefined) {
+      query.isActive = filters.isActive;
+    }
+
+    // Build sort
+    const sortBy = filters?.sortBy || 'tier';
+    const sortOrder = filters?.sortOrder || 'asc';
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const limit = filters?.limit || 20;
+
+    const memberships = await Membership.find(query)
+      .sort(sort)
+      .limit(limit)
+      .lean();
+
+    const serializedMemberships = memberships.map((membership) => ({
+      ...membership,
+      _id: membership._id.toString(),
+      productAllocations: membership.productAllocations?.map((allocation: any) => ({
+        ...allocation,
+        categoryId: extractId(allocation.categoryId),
+      })) || [],
+    }));
+
+    return {
+      memberships: serializedMemberships,
+    };
+  } catch (error) {
+    console.error("❌ Error getting available memberships:", error);
+    return {
+      memberships: [],
+      error: error instanceof Error ? error.message : "Failed to get memberships",
+    };
+  }
+}
+
+// Admin function (existing)
 export async function getMemberships(
   filters?: Partial<MembershipFilters>
 ): Promise<{

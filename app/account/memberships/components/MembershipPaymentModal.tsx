@@ -2,8 +2,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +23,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { createMembershipSubscription } from "@/lib/actions/membershipSubscriptionServerActions";
-import SubscriptionCheckout from "@/components/checkout/SubscriptionCheckout";
+import { createMembershipSubscriptionCheckout, completeMembershipCheckout } from "@/lib/actions/membershipSubscriptionActions";
 
-if (!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
-  throw new Error("NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not defined");
-}
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY);
 
 interface Membership {
   _id: string;
@@ -76,18 +69,12 @@ export function MembershipPaymentModal({
   membership,
   onSuccess,
 }: MembershipPaymentModalProps) {
-  const [step, setStep] = useState<"overview" | "payment">("overview");
   const [isLoading, setIsLoading] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setStep("overview");
-      setClientSecret(null);
-      setSubscriptionId(null);
       setError(null);
     }
   }, [isOpen]);
@@ -108,24 +95,22 @@ export function MembershipPaymentModal({
     setError(null);
 
     try {
-      console.log("Creating subscription for membership:", membership._id);
+      console.log("Creating checkout for membership:", membership._id);
 
-      const result = await createMembershipSubscription(membership._id);
+      const result = await createMembershipSubscriptionCheckout(membership._id);
 
-      if (result.success && result.clientSecret && result.subscriptionId) {
-        setClientSecret(result.clientSecret);
-        setSubscriptionId(result.subscriptionId);
-        setStep("payment");
-        toast.success("Payment form ready!");
+      if (result.success && result.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.checkoutUrl;
       } else {
-        throw new Error(result.error || "Failed to create subscription");
+        throw new Error(result.error || "Failed to create checkout");
       }
     } catch (error) {
-      console.error("Subscription creation error:", error);
+      console.error("Checkout creation error:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to create subscription";
+          : "Failed to create checkout";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -133,19 +118,26 @@ export function MembershipPaymentModal({
     }
   };
 
-  const handlePaymentSuccess = () => {
-    toast.success("🎉 Membership activated successfully!");
-    onSuccess();
-    onClose();
-    // Optional: redirect to membership dashboard
-    setTimeout(() => {
-      window.location.href = "/account/memberships";
-    }, 1500);
-  };
-
-  const handlePaymentError = (errorMessage: string) => {
-    setError(errorMessage);
-    toast.error(errorMessage);
+  // Handle checkout completion (called from success page)
+  const handleCheckoutSuccess = async (sessionId: string) => {
+    try {
+      const result = await completeMembershipCheckout(sessionId);
+      if (result.success) {
+        toast.success("🎉 Membership activated successfully!");
+        onSuccess();
+        onClose();
+      } else {
+        throw new Error(result.error || "Failed to complete checkout");
+      }
+    } catch (error) {
+      console.error("Checkout completion error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to complete checkout";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
   };
 
   const formatBillingText = () => {
@@ -182,7 +174,7 @@ export function MembershipPaymentModal({
           </div>
         </DialogHeader>
 
-        {step === "overview" && (
+        {
           <div className="space-y-6">
             {/* Membership Overview */}
             <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl">
@@ -350,56 +342,7 @@ export function MembershipPaymentModal({
               </Button>
             </div>
           </div>
-        )}
-
-        {step === "payment" && clientSecret && subscriptionId && (
-          <div className="space-y-6">
-            {/* Payment Header */}
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <Shield className="w-5 h-5 text-emerald-500" />
-                <h3 className="text-lg font-semibold">Secure Payment</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Complete your {membership.name} membership subscription
-              </p>
-            </div>
-
-            {/* Stripe Elements */}
-            <Elements
-              stripe={stripePromise}
-              options={{
-                clientSecret: clientSecret,
-                appearance: {
-                  theme: "stripe",
-                  variables: {
-                    colorPrimary: "#10b981",
-                  },
-                },
-              }}
-            >
-              <SubscriptionCheckout
-                membershipPrice={membership.price}
-                membershipName={membership.name}
-                billingFrequency={membership.billingFrequency}
-                subscriptionId={subscriptionId}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentError={handlePaymentError}
-              />
-            </Elements>
-
-            {/* Back Button */}
-            <div className="text-center">
-              <Button
-                variant="ghost"
-                onClick={() => setStep("overview")}
-                className="text-sm"
-              >
-                ← Back to overview
-              </Button>
-            </div>
-          </div>
-        )}
+        }
       </DialogContent>
     </Dialog>
   );

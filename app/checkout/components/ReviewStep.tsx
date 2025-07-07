@@ -144,18 +144,14 @@ export default function ReviewStep({
                       {item.product.name}
                     </h5>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-purple-600">
-                        ${item.finalPrice.toFixed(2)} each
-                      </p>
-                      {item.membershipSavings > 0 && (
-                        <Badge className="bg-amber-100 text-amber-700 text-xs">
-                          Save ${item.membershipSavings.toFixed(2)}
-                        </Badge>
-                      )}
-                      {item.freeFromMembership > 0 && (
-                        <Badge className="bg-green-100 text-green-700 text-xs">
-                          {item.freeFromMembership} FREE
-                        </Badge>
+                      {item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0 ? (
+                        <p className="text-xs font-bold text-green-600">
+                          FREE with membership
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-600">
+                          ${(item.finalPrice || item.product.price || 0).toFixed(2)} each
+                        </p>
                       )}
                     </div>
                   </div>
@@ -163,12 +159,13 @@ export default function ReviewStep({
                     <p className="text-sm text-purple-600">
                       Qty: {item.quantity}
                     </p>
-                    <p className="font-semibold text-purple-900">
-                      ${(item.quantity * item.finalPrice).toFixed(2)}
-                    </p>
-                    {item.totalSavings > 0 && (
-                      <p className="text-xs text-green-600">
-                        Total saved: ${item.totalSavings.toFixed(2)}
+                    {item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0 ? (
+                      <p className="font-semibold text-green-600">
+                        $0.00
+                      </p>
+                    ) : (
+                      <p className="font-semibold text-purple-900">
+                        ${(item.quantity * (item.finalPrice || item.product.price || 0)).toFixed(2)}
                       </p>
                     )}
                   </div>
@@ -181,58 +178,84 @@ export default function ReviewStep({
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl sm:hidden">
             <h4 className="font-semibold text-gray-900 mb-3">Order Summary</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${cart?.subtotal?.toFixed(2) || subtotal.toFixed(2)}</span>
-              </div>
-              
-              {cart?.membershipDiscount && cart.membershipDiscount > 0 && (
-                <div className="flex justify-between bg-amber-50 -mx-2 px-2 py-1 rounded">
-                  <span className="text-amber-700 flex items-center">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Membership Savings
-                  </span>
-                  <span className="font-medium text-amber-600">
-                    -${cart.membershipDiscount.toFixed(2)}
-                  </span>
-                </div>
-              )}
-              
-              {cart?.promotionDiscount && cart.promotionDiscount > 0 && (
-                <div className="flex justify-between bg-green-50 -mx-2 px-2 py-1 rounded">
-                  <span className="text-green-700 flex items-center">
-                    <Gift className="w-3 h-3 mr-1" />
-                    Promotion ({cart.promotionCode})
-                  </span>
-                  <span className="font-medium text-green-600">
-                    -${cart.promotionDiscount.toFixed(2)}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Shipping</span>
-                <span className="font-medium text-green-600">
-                  {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Tax</span>
-                <span className="font-medium">${tax.toFixed(2)}</span>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span className="text-orange-600">${total.toFixed(2)}</span>
-              </div>
-              
-              {cart && (cart.membershipDiscount > 0 || cart.promotionDiscount > 0) && (
-                <div className="flex justify-between text-sm bg-green-100 -mx-2 px-2 py-1 rounded">
-                  <span className="text-green-700">Total Savings</span>
-                  <span className="font-bold text-green-600">
-                    ${((cart.membershipDiscount || 0) + (cart.promotionDiscount || 0)).toFixed(2)}
-                  </span>
-                </div>
+              {/* Check if all items are free from membership */}
+              {cart?.items.every(item => item.freeFromMembership > 0 || item.membershipSavings > 0 || item.finalPrice === 0) ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">$0.00</span>
+                  </div>
+                  
+                  <div className="flex justify-between bg-green-50 -mx-2 px-2 py-1 rounded">
+                    <span className="text-green-700 flex items-center">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Membership Benefits
+                    </span>
+                    <span className="font-medium text-green-600">FREE</span>
+                  </div>
+                  
+                  <Separator className="my-2" />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span className="text-green-600">$0.00</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">${cart?.subtotal?.toFixed(2) || subtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  {cart?.membershipDiscount && cart.membershipDiscount > 0 && (
+                    <div className="flex justify-between bg-amber-50 -mx-2 px-2 py-1 rounded">
+                      <span className="text-amber-700 flex items-center">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Membership Savings
+                      </span>
+                      <span className="font-medium text-amber-600">
+                        -${cart.membershipDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {cart?.promotionDiscount && cart.promotionDiscount > 0 && (
+                    <div className="flex justify-between bg-green-50 -mx-2 px-2 py-1 rounded">
+                      <span className="text-green-700 flex items-center">
+                        <Gift className="w-3 h-3 mr-1" />
+                        Promotion ({cart.promotionCode})
+                      </span>
+                      <span className="font-medium text-green-600">
+                        -${cart.promotionDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Shipping</span>
+                    <span className="font-medium text-green-600">
+                      {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tax</span>
+                    <span className="font-medium">${tax.toFixed(2)}</span>
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span className="text-orange-600">${total.toFixed(2)}</span>
+                  </div>
+                  
+                  {cart && (cart.membershipDiscount > 0 || cart.promotionDiscount > 0) && (
+                    <div className="flex justify-between text-sm bg-green-100 -mx-2 px-2 py-1 rounded">
+                      <span className="text-green-700">Total Savings</span>
+                      <span className="font-bold text-green-600">
+                        ${((cart.membershipDiscount || 0) + (cart.promotionDiscount || 0)).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -14,9 +14,30 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMembership } from "../hooks/useMembership";
+import { createBillingPortalSession } from "@/lib/actions/membershipSubscriptionActions";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export function MembershipQuickActions() {
   const { membership, benefits } = useMembership();
+  const [isLoadingBilling, setIsLoadingBilling] = useState(false);
+
+  const handleBillingPortal = async () => {
+    setIsLoadingBilling(true);
+    try {
+      const result = await createBillingPortalSession();
+      if (result.success && result.url) {
+        window.location.href = result.url;
+      } else {
+        toast.error(result.error || "Failed to open billing portal");
+      }
+    } catch (error) {
+      console.error("Error opening billing portal:", error);
+      toast.error("Failed to open billing portal");
+    } finally {
+      setIsLoadingBilling(false);
+    }
+  };
 
   if (!membership || !benefits) return null;
 
@@ -34,10 +55,11 @@ export function MembershipQuickActions() {
       icon: CreditCard,
       label: "Billing & Payment",
       description: "Manage your subscription",
-      href: "/account/billing",
+      onClick: handleBillingPortal,
       color: "bg-blue-500 hover:bg-blue-600",
       iconColor: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
+      loading: isLoadingBilling,
     },
     {
       icon: Settings,
@@ -54,25 +76,39 @@ export function MembershipQuickActions() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {quickActions.map((action, index) => {
         const IconComponent = action.icon;
+        const isClickable = action.onClick;
+        const isLoading = action.loading;
+
+        const cardContent = (
+          <Card className="glass-card border-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${action.bgColor}`}>
+                  <IconComponent className={`w-6 h-6 ${action.iconColor}`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">{action.label}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {isLoading ? "Loading..." : action.description}
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+        if (isClickable) {
+          return (
+            <div key={index} onClick={action.onClick}>
+              {cardContent}
+            </div>
+          );
+        }
 
         return (
-          <Link key={index} href={action.href}>
-            <Card className="glass-card border-0 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${action.bgColor}`}>
-                    <IconComponent className={`w-6 h-6 ${action.iconColor}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{action.label}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {action.description}
-                    </p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
+          <Link key={index} href={action.href || "#"}>
+            {cardContent}
           </Link>
         );
       })}
