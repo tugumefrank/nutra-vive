@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+
 import {
   Package,
   Clock,
@@ -57,28 +57,32 @@ function getStatusConfig(status: string) {
   switch (status) {
     case "delivered":
       return {
-        color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+        color:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
         icon: CheckCircle,
         iconColor: "text-green-600",
         label: "Delivered",
       };
     case "shipped":
       return {
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+        color:
+          "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
         icon: Truck,
         iconColor: "text-blue-600",
         label: "Shipped",
       };
     case "processing":
       return {
-        color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+        color:
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
         icon: Package,
         iconColor: "text-yellow-600",
         label: "Processing",
       };
     case "pending":
       return {
-        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+        color:
+          "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
         icon: Clock,
         iconColor: "text-gray-600",
         label: "Pending",
@@ -92,7 +96,8 @@ function getStatusConfig(status: string) {
       };
     default:
       return {
-        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+        color:
+          "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
         icon: Clock,
         iconColor: "text-gray-600",
         label: status,
@@ -223,26 +228,28 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
           {/* Left Column - Order Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Order Status */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
+            <div>
               <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${statusConfig.color.replace("text-", "bg-").split(" ")[0]}/20`}
                     >
-                      <StatusIcon className={`w-5 h-5 ${statusConfig.iconColor}`} />
+                      <StatusIcon
+                        className={`w-5 h-5 ${statusConfig.iconColor}`}
+                      />
                     </div>
                     Order Status
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
-                    <Badge className={statusConfig.color}>{statusConfig.label}</Badge>
-                    <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                    <Badge className={statusConfig.color}>
+                      {statusConfig.label}
+                    </Badge>
+                    <Badge
+                      className={getPaymentStatusColor(order.paymentStatus)}
+                    >
                       Payment: {order.paymentStatus}
                     </Badge>
                   </div>
@@ -250,20 +257,29 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-4 h-4" />
-                      <span>Ordered: {new Date(order.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        Ordered:{" "}
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
 
                     {order.shippedAt && (
                       <div className="flex items-center space-x-2">
                         <Truck className="w-4 h-4" />
-                        <span>Shipped: {new Date(order.shippedAt).toLocaleDateString()}</span>
+                        <span>
+                          Shipped:{" "}
+                          {new Date(order.shippedAt).toLocaleDateString()}
+                        </span>
                       </div>
                     )}
 
                     {order.deliveredAt && (
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="w-4 h-4" />
-                        <span>Delivered: {new Date(order.deliveredAt).toLocaleDateString()}</span>
+                        <span>
+                          Delivered:{" "}
+                          {new Date(order.deliveredAt).toLocaleDateString()}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -285,7 +301,9 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                           className="border-blue-300 text-blue-700 hover:bg-blue-100"
                           asChild
                         >
-                          <Link href={`/account/tracking?order=${order.orderNumber}`}>
+                          <Link
+                            href={`/account/tracking?order=${order.orderNumber}`}
+                          >
                             Track Package
                           </Link>
                         </Button>
@@ -294,14 +312,10 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
 
             {/* Order Items */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
+            <div>
               <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50">
                 <CardHeader>
                   <CardTitle>Order Items ({order.items.length})</CardTitle>
@@ -349,17 +363,13 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           </div>
 
           {/* Right Column - Summary & Address */}
           <div className="space-y-6">
             {/* Order Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
+            <div>
               <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -370,15 +380,21 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Subtotal:
+                      </span>
                       <span>${order.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Shipping:
+                      </span>
                       <span>${order.shippingAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Tax:</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Tax:
+                      </span>
                       <span>${order.taxAmount.toFixed(2)}</span>
                     </div>
                     {order.discountAmount > 0 && (
@@ -396,14 +412,10 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
 
             {/* Shipping Address */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <div>
               <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -414,7 +426,8 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <p className="font-medium">
-                      {order.shippingAddress.firstName} {order.shippingAddress.lastName}
+                      {order.shippingAddress.firstName}{" "}
+                      {order.shippingAddress.lastName}
                     </p>
                     {order.shippingAddress.company && (
                       <p className="text-gray-600 dark:text-gray-400">
@@ -430,7 +443,9 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                       </p>
                     )}
                     <p className="text-gray-600 dark:text-gray-400">
-                      {order.shippingAddress.city}, {order.shippingAddress.province} {order.shippingAddress.zip}
+                      {order.shippingAddress.city},{" "}
+                      {order.shippingAddress.province}{" "}
+                      {order.shippingAddress.zip}
                     </p>
                     <p className="text-gray-600 dark:text-gray-400">
                       {order.shippingAddress.country}
@@ -446,14 +461,10 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
 
             {/* Contact Information */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
+            <div>
               <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-green-200/50 dark:border-gray-700/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -465,12 +476,14 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      <span className="text-gray-600 dark:text-gray-400">{order.email}</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {order.email}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>
@@ -509,7 +522,9 @@ function OrderDetailSkeleton() {
   );
 }
 
-export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+export default async function OrderDetailPage({
+  params,
+}: OrderDetailPageProps) {
   const { userId } = await auth();
   const { id } = await params;
 

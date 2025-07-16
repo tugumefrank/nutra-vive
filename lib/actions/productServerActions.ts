@@ -432,6 +432,12 @@ export async function createProduct(
 
     revalidatePath("/admin/products");
     revalidatePath("/products");
+    revalidatePath("/shop");
+    
+    // Revalidate cached product data
+    const { revalidateTag } = await import("next/cache");
+    revalidateTag("products");
+    revalidateTag("categories");
 
     // Fetch the created product with populated category
     const createdProduct = await Product.findById(product._id)

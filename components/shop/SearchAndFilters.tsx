@@ -98,7 +98,7 @@ export function SearchAndFilters({
         >
           <option value="All">All Categories</option>
           {categories.map((category) => (
-            <option key={category._id} value={category._id}>
+            <option key={category._id} value={category.slug}>
               {category.name}
             </option>
           ))}

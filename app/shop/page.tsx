@@ -7,9 +7,10 @@ import {
   SearchAndFiltersSkeleton,
 } from "@/components/shop/skeletons/Skeletons";
 
-import { EnhancedProductsGrid } from "@/components/shop/ProductsGrid";
+import { ServerProductsGrid } from "@/components/shop/ServerProductsGrid";
 import { SearchAndFilters } from "@/components/shop/SearchAndFilters";
-import { getCategories } from "@/lib/actions/productServerActions";
+import { getCachedCategories } from "@/lib/actions/cachedProductActions";
+import { ErrorBoundary, ProductsErrorFallback } from "@/components/shop/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Shop - Nutra-Vive Wellness Collection",
@@ -24,10 +25,10 @@ export const metadata: Metadata = {
   },
 };
 
-// Cache categories for 1 hour
+// Cache categories for 1 hour - now using unstable_cache
 async function getCategoriesWithCache() {
   try {
-    const categories = await getCategories();
+    const categories = await getCachedCategories();
     return categories;
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -85,23 +86,27 @@ export default async function ShopPage({
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Search and Filters with Suspense */}
-          <Suspense fallback={<SearchAndFiltersSkeleton />}>
-            <SearchAndFiltersServer
-              initialSearch={search}
-              initialCategory={category}
-              initialSortBy={sortBy}
-            />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<SearchAndFiltersSkeleton />}>
+              <SearchAndFiltersServer
+                initialSearch={search}
+                initialCategory={category}
+                initialSortBy={sortBy}
+              />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* Products Grid with Suspense */}
-          <Suspense fallback={<ProductsGridSkeleton count={6} />}>
-            <EnhancedProductsGrid
-              search={search}
-              category={category}
-              sortBy={sortBy}
-              page={page}
-            />
-          </Suspense>
+          <ErrorBoundary fallback={<ProductsErrorFallback />}>
+            <Suspense fallback={<ProductsGridSkeleton count={6} />}>
+              <ServerProductsGrid
+                search={search}
+                category={category}
+                sortBy={sortBy}
+                page={page}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
     </LandingLayout>
