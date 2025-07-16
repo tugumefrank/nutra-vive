@@ -48,34 +48,15 @@ export interface ProductListResponse {
 // Helper function to get user's active membership
 async function getUserActiveMembership(userId: string) {
   try {
-    console.log("🔍 getUserActiveMembership called for userId:", userId);
-
-    const user = await User.findOne({ clerkId: userId });
+    const user = await User.findOne({ clerkId: userId }).lean();
     if (!user) {
-      console.log("❌ No user found for clerkId:", userId);
       return null;
     }
-
-    console.log("✅ User found:", user._id);
 
     const membership = await UserMembership.findOne({
       user: user._id,
       status: "active",
-    }).populate("membership");
-
-    if (membership) {
-      console.log("✅ Active membership found:");
-      console.log("  - Membership ID:", membership._id);
-      console.log("  - Status:", membership.status);
-      console.log(
-        "  - Product usage array length:",
-        membership.productUsage?.length || 0
-      );
-      console.log("  - Product usage details:", membership.productUsage);
-      console.log("  - Membership tier:", (membership.membership as any)?.tier);
-    } else {
-      console.log("❌ No active membership found for user:", user._id);
-    }
+    }).populate("membership").lean();
 
     return membership;
   } catch (error) {
@@ -134,8 +115,9 @@ export async function getProductsWithMembership(filters?: {
         .sort(sortOptions)
         .skip(skip)
         .limit(limit)
-        .lean(),
-      Product.countDocuments(query),
+        .lean()
+        .exec(),
+      Product.countDocuments(query).exec(),
     ]);
 
     const totalPages = Math.ceil(total / limit);
@@ -148,17 +130,6 @@ export async function getProductsWithMembership(filters?: {
       membership = await getUserActiveMembership(userId);
 
       if (membership) {
-        console.log("🔍 DEBUG - User has active membership:");
-        console.log(
-          "  - Membership tier:",
-          (membership.membership as any).tier
-        );
-        console.log("  - Product usage array:", membership.productUsage);
-        console.log(
-          "  - Product usage count:",
-          membership.productUsage?.length || 0
-        );
-
         // Calculate membership summary
         membershipSummary = {
           tier: (membership.membership as any).tier,
@@ -171,16 +142,7 @@ export async function getProductsWithMembership(filters?: {
           })),
           totalMonthlySavings: 0, // Will calculate below
         };
-
-        console.log(
-          "🔍 DEBUG - Membership summary created:",
-          membershipSummary
-        );
-      } else {
-        console.log("❌ DEBUG - No active membership found for user:", userId);
       }
-    } else {
-      console.log("❌ DEBUG - No userId provided");
     }
 
     // Enhance products with membership info
@@ -225,9 +187,6 @@ export async function getProductsWithMembership(filters?: {
               productCategoryName &&
               usageCategoryName === productCategoryName
             ) {
-              console.log(
-                `✅ Membership match by name: ${product.name} -> ${usageCategoryName}`
-              );
               return true;
             }
 
@@ -244,9 +203,6 @@ export async function getProductsWithMembership(filters?: {
                 variations.includes(usageCategoryName) &&
                 variations.includes(productCategoryName)
               ) {
-                console.log(
-                  `✅ Membership match by variation: ${product.name} -> ${canonical}`
-                );
                 return true;
               }
             }
@@ -280,21 +236,6 @@ export async function getProductsWithMembership(filters?: {
     // Final summary
     const productsWithMembership = enhancedProducts.filter(
       (p) => p.membershipInfo
-    );
-    console.log(
-      `✅ Fetched ${enhancedProducts.length} products with membership context`
-    );
-    console.log(
-      `🎁 Products with FREE membership benefits: ${productsWithMembership.length}`
-    );
-    if (productsWithMembership.length > 0) {
-      console.log(
-        `   - FREE products:`,
-        productsWithMembership.map((p) => p.name)
-      );
-    }
-    console.log(
-      `💰 Total potential savings: $${membershipSummary?.totalMonthlySavings || 0}`
     );
 
     return {
@@ -432,7 +373,6 @@ export async function getFeaturedProductsWithMembership(
       .limit(limit)
       .lean();
 
-    console.log("🔍 Found featured products:", featuredProducts.length);
 
     // Get user context for membership info
     const { userId } = await auth();

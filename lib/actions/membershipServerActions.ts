@@ -574,10 +574,21 @@ export async function getAvailableMemberships(
     const serializedMemberships = memberships.map((membership) => ({
       ...membership,
       _id: membership._id.toString(),
+      createdBy: membership.createdBy ? extractId(membership.createdBy) : null,
+      updatedBy: membership.updatedBy ? extractId(membership.updatedBy) : null,
       productAllocations: membership.productAllocations?.map((allocation: any) => ({
         ...allocation,
+        _id: allocation._id ? extractId(allocation._id) : null,
         categoryId: extractId(allocation.categoryId),
+        allowedProducts: allocation.allowedProducts?.map((productId: any) => extractId(productId)) || [],
       })) || [],
+      customBenefits: membership.customBenefits?.map((benefit: any) => ({
+        ...benefit,
+        _id: benefit._id ? extractId(benefit._id) : null,
+      })) || [],
+      features: membership.features || [],
+      createdAt: membership.createdAt ? membership.createdAt.toISOString() : null,
+      updatedAt: membership.updatedAt ? membership.updatedAt.toISOString() : null,
     }));
 
     return {

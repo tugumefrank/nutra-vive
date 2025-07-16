@@ -148,7 +148,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { UserButton } from "@clerk/nextjs";
+import { ClientOnlyUserButton } from "@/components/ui/ClientOnlyUserButton";
 import Link from "next/link";
 
 const pathNames: Record<string, string> = {
@@ -259,17 +259,7 @@ export function AccountHeader() {
             </DropdownMenu>
 
             {/* Clerk User Profile */}
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                  userButtonPopoverCard:
-                    "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm",
-                  userButtonPopoverActions: "bg-white/50 dark:bg-gray-700/50",
-                },
-              }}
-              afterSignOutUrl="/"
-            />
+            <ClientOnlyUserButton />
           </div>
         </div>
 

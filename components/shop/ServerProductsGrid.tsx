@@ -1,9 +1,9 @@
-import { getCachedProducts } from "@/lib/actions/cachedProductActions";
+import { getCachedProductsWithMembership } from "@/lib/actions/cachedProductsWithMembership";
 import { EnhancedProductCard } from "./ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
-import type { IProduct } from "@/types/product";
+import type { ProductWithMembership } from "@/lib/actions/membershipProductServerActions";
 
 interface ServerProductsGridProps {
   search?: string;
@@ -20,7 +20,7 @@ export async function ServerProductsGrid({
   page = 1,
   limit = 12,
 }: ServerProductsGridProps) {
-  const { products, total, totalPages, currentPage } = await getCachedProducts({
+  const { products, total, totalPages, currentPage } = await getCachedProductsWithMembership({
     search: search || undefined,
     category: category !== "All" ? category : undefined,
     sortBy,
@@ -82,13 +82,11 @@ export async function ServerProductsGrid({
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => {
-          // Convert IProduct to ProductWithMembership for the component
-          const productWithMembership = product as any;
           return (
             <EnhancedProductCard
               key={product._id}
-              product={productWithMembership}
-              showMembershipBenefits={false}
+              product={product}
+              showMembershipBenefits={true}
               variant="default"
             />
           );

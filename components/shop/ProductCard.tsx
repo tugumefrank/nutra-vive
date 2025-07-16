@@ -99,27 +99,18 @@ export function EnhancedProductCard({
     const isEligibleForFree = membershipInfo?.isEligibleForFree || false;
     const remainingAllocation = membershipInfo?.remainingAllocation || 0;
 
-    // Debug log for ProductCard
-    console.log(`🎯 ProductCard DEBUG - ${product.name}:`, {
-      membershipInfo,
-      isEligibleForFree,
-      remainingAllocation,
-      effectivelyFree: isEligibleForFree && remainingAllocation > 0,
-    });
-
     return {
       membershipInfo,
       isEligibleForFree,
       remainingAllocation,
       effectivelyFree: isEligibleForFree && remainingAllocation > 0,
     };
-  }, [product.membershipInfo, product.name]);
+  }, [product.membershipInfo]);
 
   // Memoize favorite state
   const isProductFavorite = useMemo(() => {
     return isSignedIn ? isFavorite(product._id) : false;
   }, [isSignedIn, isFavorite, product._id]);
-
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleSignInRedirect = useCallback(() => {
@@ -502,7 +493,9 @@ export function EnhancedProductCard({
           )}
 
           {/* Category Badge */}
-          {showCategory && product.category && (
+          {showCategory &&
+            product.category &&
+            !membershipData.effectivelyFree && (
               <div className="absolute top-3 left-3">
                 <span className="px-3 py-1 bg-white/90 text-green-600 text-xs font-semibold rounded-full">
                   {typeof product.category === "object" &&
@@ -524,15 +517,20 @@ export function EnhancedProductCard({
           )}
 
           {/* Static Discount Badge - Only show if compareAtPrice exists */}
-          {product.compareAtPrice && 
-           product.compareAtPrice > product.price && 
-           !membershipData.effectivelyFree && (
-            <div className="absolute top-3 right-14">
-              <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                {Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% OFF
-              </span>
-            </div>
-          )}
+          {product.compareAtPrice &&
+            product.compareAtPrice > product.price &&
+            !membershipData.effectivelyFree && (
+              <div className="absolute top-3 right-14">
+                <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                  {Math.round(
+                    ((product.compareAtPrice - product.price) /
+                      product.compareAtPrice) *
+                      100
+                  )}
+                  % OFF
+                </span>
+              </div>
+            )}
 
           {/* Membership Tier Badge */}
           {membershipData.membershipInfo && !membershipData.effectivelyFree && (
@@ -574,7 +572,9 @@ export function EnhancedProductCard({
                   product.category &&
                   "name" in product.category
                     ? (product.category as { name: string }).name
-                    : typeof product.category === "string" ? product.category : ""}
+                    : typeof product.category === "string"
+                      ? product.category
+                      : ""}
                 </span>
               )}
               <div className="flex items-center space-x-1">
@@ -629,7 +629,7 @@ export function EnhancedProductCard({
                   {/* Compact Pricing - Only for non-membership items */}
                   {!membershipData.effectivelyFree ? (
                     <div className="flex-1">
-                      <PromotionPricing 
+                      <PromotionPricing
                         productId={product._id}
                         originalPrice={product.price}
                         compareAtPrice={product.compareAtPrice}
@@ -640,7 +640,9 @@ export function EnhancedProductCard({
                   ) : (
                     <div className="flex-1 flex items-center">
                       <Crown className="w-4 h-4 text-amber-600 mr-2" />
-                      <span className="text-lg font-bold text-amber-600">FREE</span>
+                      <span className="text-lg font-bold text-amber-600">
+                        FREE
+                      </span>
                     </div>
                   )}
 
@@ -670,7 +672,8 @@ export function EnhancedProductCard({
                       min="1"
                       max={
                         membershipData.effectivelyFree
-                          ? membershipData.remainingAllocation + cartData.quantity
+                          ? membershipData.remainingAllocation +
+                            cartData.quantity
                           : 999
                       }
                       value={tempQuantity}
@@ -725,7 +728,7 @@ export function EnhancedProductCard({
               <>
                 {/* Pricing Row - Only for non-membership items */}
                 {!membershipData.effectivelyFree && (
-                  <PromotionPricing 
+                  <PromotionPricing
                     productId={product._id}
                     originalPrice={product.price}
                     compareAtPrice={product.compareAtPrice}

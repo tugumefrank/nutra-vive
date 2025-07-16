@@ -17,8 +17,9 @@ const nextConfig = {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors fix.
     ignoreDuringBuilds: true,
-    ignoreBuildErrors: true,
   },
+  // Disable React StrictMode to prevent double rendering in development
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;

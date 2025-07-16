@@ -234,6 +234,10 @@ export async function cancelMembershipSubscription(
 /**
  * Get user's current membership with fresh Stripe data
  */
+// Simple in-memory cache for getCurrentMembership
+const membershipCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds
+
 export async function getCurrentMembership(): Promise<{
   success: boolean;
   membership?: any;
@@ -241,41 +245,28 @@ export async function getCurrentMembership(): Promise<{
 }> {
   try {
     const { userId } = await auth();
-    console.log("🔍 getCurrentMembership: Starting for userId:", userId);
     
     if (!userId) {
-      console.log("❌ getCurrentMembership: No userId found");
       return { success: false, error: "Authentication required" };
     }
 
-    await connectToDatabase();
-    console.log("✅ getCurrentMembership: Database connected");
+    // Check cache first
+    const cacheKey = `membership_${userId}`;
+    const cached = membershipCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log("🚀 Returning cached membership data");
+      return cached.data;
+    }
 
-    const user = await User.findOne({ clerkId: userId });
-    console.log("🔍 getCurrentMembership: User lookup result:", {
-      found: !!user,
-      userId: user?._id,
-      email: user?.email,
-      stripeCustomerId: user?.stripeCustomerId,
-      clerkId: user?.clerkId
-    });
+    await connectToDatabase();
+
+    const user = await User.findOne({ clerkId: userId }).lean();
     
     if (!user) {
-      console.error("❌ getCurrentMembership: User not found in database for clerkId:", userId);
       return { success: false, error: "User not found. Please try refreshing the page." };
     }
 
-    // Sync latest data from Stripe if customer exists
-    if (user.stripeCustomerId) {
-      console.log("🔄 getCurrentMembership: Syncing Stripe data for customer:", user.stripeCustomerId);
-      await syncStripeDataToDatabase(user.stripeCustomerId);
-      console.log("✅ getCurrentMembership: Stripe sync completed");
-    } else {
-      console.log("⚠️ getCurrentMembership: No stripeCustomerId found for user");
-    }
-
-    // Get current membership
-    console.log("🔍 getCurrentMembership: Querying UserMembership for user:", user._id.toString());
+    // Get current membership (skip Stripe sync for performance)
     const userMembership = await UserMembership.findOne({
       user: user._id,
       status: { $in: ["active", "trialing"] },
@@ -283,30 +274,11 @@ export async function getCurrentMembership(): Promise<{
       .populate("membership")
       .lean();
 
-    console.log("🔍 getCurrentMembership: UserMembership query result:", {
-      found: !!userMembership,
-      membershipId: userMembership?._id,
-      status: userMembership?.status,
-      membershipName: typeof userMembership?.membership === 'object' ? (userMembership.membership as any)?.name : 'Not populated',
-      subscriptionId: userMembership?.subscriptionId
-    });
-
-    // Also check for ANY membership records (not just active ones) for debugging
-    const allUserMemberships = await UserMembership.find({ user: user._id }).lean();
-    console.log("🔍 getCurrentMembership: All memberships for user:", allUserMemberships.map(m => ({
-      id: m._id,
-      status: m.status,
-      subscriptionId: m.subscriptionId,
-      startDate: m.startDate,
-      currentPeriodEnd: m.currentPeriodEnd
-    })));
-
     if (!userMembership) {
-      console.log("❌ getCurrentMembership: No active membership found");
       return { success: true, membership: null };
     }
 
-    return {
+    const result = {
       success: true,
       membership: {
         ...userMembership,
@@ -317,9 +289,40 @@ export async function getCurrentMembership(): Promise<{
           : {
               ...(userMembership.membership as any),
               _id: (userMembership.membership as any)._id.toString(),
+              createdBy: (userMembership.membership as any).createdBy ? (userMembership.membership as any).createdBy.toString() : null,
+              updatedBy: (userMembership.membership as any).updatedBy ? (userMembership.membership as any).updatedBy.toString() : null,
+              productAllocations: (userMembership.membership as any).productAllocations?.map((allocation: any) => ({
+                ...allocation,
+                _id: allocation._id ? allocation._id.toString() : null,
+                categoryId: allocation.categoryId ? allocation.categoryId.toString() : null,
+                allowedProducts: allocation.allowedProducts?.map((productId: any) => productId.toString()) || [],
+              })) || [],
+              customBenefits: (userMembership.membership as any).customBenefits?.map((benefit: any) => ({
+                ...benefit,
+                _id: benefit._id ? benefit._id.toString() : null,
+              })) || [],
+              createdAt: (userMembership.membership as any).createdAt ? (userMembership.membership as any).createdAt.toISOString() : null,
+              updatedAt: (userMembership.membership as any).updatedAt ? (userMembership.membership as any).updatedAt.toISOString() : null,
             },
+        productUsage: userMembership.productUsage?.map((usage: any) => ({
+          ...usage,
+          _id: usage._id ? usage._id.toString() : null,
+          categoryId: usage.categoryId ? usage.categoryId.toString() : null,
+        })) || [],
+        createdAt: userMembership.createdAt ? userMembership.createdAt.toISOString() : null,
+        updatedAt: userMembership.updatedAt ? userMembership.updatedAt.toISOString() : null,
+        currentPeriodStart: userMembership.currentPeriodStart ? userMembership.currentPeriodStart.toISOString() : null,
+        currentPeriodEnd: userMembership.currentPeriodEnd ? userMembership.currentPeriodEnd.toISOString() : null,
+        nextBillingDate: userMembership.nextBillingDate ? userMembership.nextBillingDate.toISOString() : null,
+        startDate: userMembership.startDate ? userMembership.startDate.toISOString() : null,
+        endDate: userMembership.endDate ? userMembership.endDate.toISOString() : null,
       },
     };
+
+    // Cache the result
+    membershipCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    
+    return result;
 
   } catch (error) {
     console.error("❌ Error getting current membership:", error);

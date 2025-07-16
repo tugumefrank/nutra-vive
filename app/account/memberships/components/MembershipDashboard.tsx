@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 
 import {
@@ -85,42 +85,25 @@ export function MembershipDashboard() {
     Membership[]
   >([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Prevent multiple calls during development/strict mode
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    
     async function fetchData() {
       try {
         setLoading(true);
 
-        // Try to sync Stripe data first (optional for users without subscriptions)
-        try {
-          await syncUserStripeData();
-        } catch (error) {
-          // It's okay if sync fails for users without Stripe customers
-          console.log("Stripe sync skipped:", error);
-        }
-
         // Get current user's membership
-        console.log("🔍 MembershipDashboard: Fetching current membership...");
         const membershipResult = await getCurrentMembership();
-        console.log("🔍 MembershipDashboard: getCurrentMembership result:", {
-          success: membershipResult.success,
-          error: membershipResult.error,
-          hasMembership: !!membershipResult.membership,
-          membershipData: membershipResult.membership ? {
-            id: membershipResult.membership._id,
-            status: membershipResult.membership.status,
-            membershipName: membershipResult.membership.membership?.name,
-            membershipTier: membershipResult.membership.membership?.tier
-          } : null
-        });
 
         if (membershipResult.error) {
           console.error("❌ MembershipDashboard: Membership loading error:", membershipResult.error);
-          // Don't return here - still try to load available memberships
         }
         
         setCurrentMembership(membershipResult.success ? membershipResult.membership : null);
-        console.log("✅ MembershipDashboard: Set current membership state:", !!membershipResult.membership);
 
         // Get available memberships
         const availableMembershipsResult = await getAvailableMemberships({
@@ -136,6 +119,7 @@ export function MembershipDashboard() {
         } else {
           setAvailableMemberships(availableMembershipsResult.memberships || []);
         }
+        
       } catch (error) {
         console.error("Error fetching membership data:", error);
         toast.error("Something went wrong loading memberships");
@@ -162,6 +146,7 @@ export function MembershipDashboard() {
   }, []);
 
   const handleRefresh = () => {
+    hasLoadedRef.current = false;
     setRefreshKey((prev) => prev + 1);
   };
 
