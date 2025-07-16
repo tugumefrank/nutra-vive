@@ -381,13 +381,39 @@ export async function getFeaturedProductsWithMembership(
   limit: number = 8
 ): Promise<ProductWithMembership[]> {
   try {
-    const result = await getProductsWithMembership({
-      limit,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    });
+    await connectToDatabase();
 
-    return result.products.filter((product) => product.isFeatured);
+    // Direct query for featured products
+    const featuredProducts = await Product.find({ 
+      isActive: true, 
+      isFeatured: true 
+    })
+      .populate("category", "name slug description imageUrl isActive createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    console.log("🔍 Found featured products:", featuredProducts.length);
+
+    // Get user context for membership info
+    const { userId } = await auth();
+    const userMembership = userId ? await getUserActiveMembership(userId) : null;
+
+    // Add membership context to each product
+    const productsWithMembership = await Promise.all(
+      featuredProducts.map(async (product) => {
+        const membershipInfo = userMembership
+          ? await calculateMembershipBenefits(product, userMembership)
+          : undefined;
+
+        return {
+          ...product,
+          membershipInfo,
+        } as ProductWithMembership;
+      })
+    );
+
+    return productsWithMembership;
   } catch (error) {
     console.error(
       "❌ Error fetching featured products with membership:",

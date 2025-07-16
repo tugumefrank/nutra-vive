@@ -502,9 +502,7 @@ export function EnhancedProductCard({
           )}
 
           {/* Category Badge */}
-          {showCategory &&
-            product.category &&
-            !membershipData.effectivelyFree && (
+          {showCategory && product.category && (
               <div className="absolute top-3 left-3">
                 <span className="px-3 py-1 bg-white/90 text-green-600 text-xs font-semibold rounded-full">
                   {typeof product.category === "object" &&

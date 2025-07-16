@@ -20,7 +20,7 @@ function transformProductDocument(doc: any): IProduct {
     costPrice: doc.costPrice,
     sku: doc.sku,
     barcode: doc.barcode,
-    category: doc.category
+    category: doc.category && doc.category._id
       ? {
           _id: doc.category._id.toString(),
           name: doc.category.name,
@@ -154,82 +154,52 @@ export const getCachedProducts = unstable_cache(
 
       // Special handling for default view (no filters) - show ALL products but with custom sorting
       if (!filters?.search && (!filters?.category || filters.category === "All")) {
-        // Use aggregation for custom sorting - show ALL products, just reorder them
-        const aggregationPipeline = [
-          { $match: query },
-          {
-            $lookup: {
-              from: "categories",
-              localField: "category",
-              foreignField: "_id",
-              as: "category"
-            }
-          },
-          {
-            $unwind: {
-              path: "$category",
-              preserveNullAndEmptyArrays: true
-            }
-          },
-          {
-            $addFields: {
-              sortPriority: {
-                $switch: {
-                  branches: [
-                    // Highest priority: Nutra-Reset specifically
-                    {
-                      case: { 
-                        $regexMatch: { 
-                          input: "$name", 
-                          regex: "Nutra.*Reset|Nutra-Reset", 
-                          options: "i" 
-                        } 
-                      },
-                      then: 1
-                    },
-                    // Second priority: Juice category
-                    {
-                      case: { 
-                        $eq: ["$category.name", "Juice"]
-                      },
-                      then: 2
-                    },
-                    // Third priority: Iced Tea category
-                    {
-                      case: { 
-                        $eq: ["$category.name", "Iced Tea"]
-                      },
-                      then: 3
-                    },
-                    // Fourth priority: Herbal Tea category
-                    {
-                      case: { 
-                        $eq: ["$category.name", "Herbal Tea"]
-                      },
-                      then: 4
-                    },
-                    // Fifth priority: Tea bags category
-                    {
-                      case: { 
-                        $eq: ["$category.name", "Tea bags"]
-                      },
-                      then: 5
-                    }
-                  ],
-                  default: 6 // All other products
-                }
-              }
-            }
-          },
-          { $sort: { sortPriority: 1, name: 1 } },
-          { $skip: skip },
-          { $limit: limit }
-        ];
+        // Get all products first, then sort by priority
+        const allProducts = await Product.find(query)
+          .populate("category", "name slug description imageUrl isActive createdAt updatedAt")
+          .lean();
 
-        [products, total] = await Promise.all([
-          Product.aggregate(aggregationPipeline),
-          Product.countDocuments(query),
-        ]);
+        // Sort products by priority
+        const sortedProducts = allProducts.sort((a, b) => {
+          const getPriority = (product: any) => {
+            // Highest priority: Nutra-Reset specifically
+            if (product.name?.match(/Nutra.*Reset|Nutra-Reset/i)) {
+              return 1;
+            }
+            // Second priority: Juice category
+            if (product.category?.name === "Juice") {
+              return 2;
+            }
+            // Third priority: Iced Tea category
+            if (product.category?.name === "Iced Tea") {
+              return 3;
+            }
+            // Fourth priority: Herbal Tea category
+            if (product.category?.name === "Herbal Tea") {
+              return 4;
+            }
+            // Fifth priority: Tea bags category
+            if (product.category?.name === "Tea bags") {
+              return 5;
+            }
+            // All other products
+            return 6;
+          };
+
+          const priorityA = getPriority(a);
+          const priorityB = getPriority(b);
+
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+          }
+          
+          // If same priority, sort by name
+          return a.name.localeCompare(b.name);
+        });
+
+        // Apply pagination to sorted results
+        products = sortedProducts.slice(skip, skip + limit);
+        total = allProducts.length;
       } else {
         // Regular sorting for filtered views
         [products, total] = await Promise.all([

@@ -114,10 +114,15 @@ export default function PromotionPricing({
   }, [pricing?.appliedPromotion?.endsAt]);
 
   if (loading) {
+    // Show original price immediately instead of skeleton
     return (
-      <div className={cn("animate-pulse space-y-2", className)}>
-        <div className="h-8 bg-gray-200 rounded w-24"></div>
-        <div className="h-4 bg-gray-200 rounded w-16"></div>
+      <div className={cn("space-y-1", className)}>
+        <span className={cn(
+          "font-bold text-gray-900",
+          size === 'sm' ? 'text-lg' : size === 'md' ? 'text-xl' : 'text-2xl'
+        )}>
+          ${originalPrice.toFixed(2)}
+        </span>
       </div>
     );
   }
