@@ -150,7 +150,10 @@ export function ImageCropper({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && onCancel()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CropIcon className="h-5 w-5" />
@@ -163,7 +166,7 @@ export function ImageCropper({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -199,7 +202,11 @@ export function ImageCropper({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleReset}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleReset();
+                }}
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >
@@ -210,7 +217,11 @@ export function ImageCropper({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onCancel}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onCancel();
+                }}
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >
@@ -220,7 +231,11 @@ export function ImageCropper({
               
               <Button
                 type="button"
-                onClick={handleCropComplete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCropComplete();
+                }}
                 disabled={!completedCrop || isProcessing}
                 className="flex items-center gap-2"
               >

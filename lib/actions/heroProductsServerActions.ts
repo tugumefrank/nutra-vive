@@ -71,7 +71,7 @@ export const getHeroProducts = unstable_cache(
             name: categoryInfo.name,
             slug: categoryInfo.slug,
           },
-          isBestSeller: isNutraReset, // Mark Nutra-Reset as best seller
+          isBestSeller: Boolean(isNutraReset), // Mark Nutra-Reset as best seller
         };
       });
 

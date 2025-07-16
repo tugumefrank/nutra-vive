@@ -221,7 +221,10 @@ export function MultiImageCropper({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => !isProcessing && handleCancel()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CropIcon className="h-5 w-5" />
@@ -247,7 +250,7 @@ export function MultiImageCropper({
             <span>Current: {currentFile.file.name}</span>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -283,7 +286,11 @@ export function MultiImageCropper({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleReset}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleReset();
+                }}
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >
@@ -294,7 +301,11 @@ export function MultiImageCropper({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handlePrevious}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handlePrevious();
+                }}
                 disabled={isProcessing || currentImageIndex === 0}
                 className="flex items-center gap-2"
               >
@@ -305,7 +316,11 @@ export function MultiImageCropper({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCancel}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCancel();
+                }}
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >
@@ -315,7 +330,11 @@ export function MultiImageCropper({
               
               <Button
                 type="button"
-                onClick={handleCropNext}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCropNext();
+                }}
                 disabled={!completedCrop || isProcessing}
                 className="flex items-center gap-2"
               >

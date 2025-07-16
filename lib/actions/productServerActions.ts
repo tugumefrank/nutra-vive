@@ -441,8 +441,11 @@ export async function createProduct(
     revalidateTag("categories");
     
     // Revalidate hero products cache if this is a Juice or Iced Tea product
-    if (categoryInfo && (categoryInfo.name === "Juice" || categoryInfo.name === "Iced Tea")) {
-      await revalidateHeroProducts();
+    if (validatedData.category) {
+      const categoryInfo = await Category.findById(validatedData.category);
+      if (categoryInfo && (categoryInfo.name === "Juice" || categoryInfo.name === "Iced Tea")) {
+        await revalidateHeroProducts();
+      }
     }
 
     // Fetch the created product with populated category

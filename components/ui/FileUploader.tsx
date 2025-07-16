@@ -278,23 +278,27 @@ export function FileUploader({
 
       {/* Image Cropper Modal */}
       {enableCropping && cropperOpen && selectedFile && (
-        <ImageCropper
-          src={cropImageUrl}
-          onCropComplete={handleCropComplete}
-          onCancel={handleCropCancel}
-          isOpen={cropperOpen}
-          fileName={selectedFile.name}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <ImageCropper
+            src={cropImageUrl}
+            onCropComplete={handleCropComplete}
+            onCancel={handleCropCancel}
+            isOpen={cropperOpen}
+            fileName={selectedFile.name}
+          />
+        </div>
       )}
 
       {/* Multiple Image Cropper Modal */}
       {enableCropping && multiCropperOpen && selectedFiles.length > 0 && (
-        <MultiImageCropper
-          files={selectedFiles}
-          onCropComplete={handleMultiCropComplete}
-          onCancel={handleMultiCropCancel}
-          isOpen={multiCropperOpen}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <MultiImageCropper
+            files={selectedFiles}
+            onCropComplete={handleMultiCropComplete}
+            onCancel={handleMultiCropCancel}
+            isOpen={multiCropperOpen}
+          />
+        </div>
       )}
     </div>
   );
