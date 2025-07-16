@@ -13,8 +13,11 @@ import {
   ArrowRight,
   Clock,
   CheckCircle,
+  Gift,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 interface ProductAllocationsProps {
   productUsage: Array<{
@@ -51,28 +54,43 @@ export function ProductAllocations({
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.2 }}
+    >
+      {/* Enhanced Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 bg-clip-text text-transparent">
+            <Crown className="inline w-8 h-8 text-amber-500 mr-2" />
             Your Product Allocations
           </h2>
-          <p className="text-muted-foreground">
-            Free products included with your {membership.name} membership
+          <p className="text-muted-foreground text-lg">
+            Free products included with your <span className="font-semibold text-emerald-600 capitalize">{membership.name}</span> membership
           </p>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Badge variant="outline" className="gap-2 py-2">
+        <motion.div 
+          className="flex flex-col sm:flex-row gap-3"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Badge variant="outline" className="gap-2 py-2 px-4 text-sm border-blue-200 hover:bg-blue-50 transition-colors">
             <Clock className="w-4 h-4" />
             {membership.deliveryFrequency} delivery
           </Badge>
-          <Badge className="gap-2 py-2 bg-emerald-500 hover:bg-emerald-600">
-            <Package className="w-4 h-4" />
+          <Badge className="gap-2 py-2 px-4 text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg transition-all duration-200">
+            <Gift className="w-4 h-4" />
             {totalAvailable} available
           </Badge>
-        </div>
+        </motion.div>
       </div>
 
       {/* Overall Progress */}
@@ -231,6 +249,6 @@ export function ProductAllocations({
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

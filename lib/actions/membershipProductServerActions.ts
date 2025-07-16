@@ -48,17 +48,35 @@ export interface ProductListResponse {
 // Helper function to get user's active membership
 async function getUserActiveMembership(userId: string) {
   try {
+    console.log("🔍 getUserActiveMembership called for userId:", userId);
+    
     const user = await User.findOne({ clerkId: userId });
-    if (!user) return null;
+    if (!user) {
+      console.log("❌ No user found for clerkId:", userId);
+      return null;
+    }
+    
+    console.log("✅ User found:", user._id);
 
     const membership = await UserMembership.findOne({
       user: user._id,
       status: "active",
     }).populate("membership");
 
+    if (membership) {
+      console.log("✅ Active membership found:");
+      console.log("  - Membership ID:", membership._id);
+      console.log("  - Status:", membership.status);
+      console.log("  - Product usage array length:", membership.productUsage?.length || 0);
+      console.log("  - Product usage details:", membership.productUsage);
+      console.log("  - Membership tier:", (membership.membership as any)?.tier);
+    } else {
+      console.log("❌ No active membership found for user:", user._id);
+    }
+
     return membership;
   } catch (error) {
-    console.error("Error fetching user membership:", error);
+    console.error("❌ Error fetching user membership:", error);
     return null;
   }
 }
@@ -127,6 +145,11 @@ export async function getProductsWithMembership(filters?: {
       membership = await getUserActiveMembership(userId);
 
       if (membership) {
+        console.log("🔍 DEBUG - User has active membership:");
+        console.log("  - Membership tier:", (membership.membership as any).tier);
+        console.log("  - Product usage array:", membership.productUsage);
+        console.log("  - Product usage count:", membership.productUsage?.length || 0);
+        
         // Calculate membership summary
         membershipSummary = {
           tier: (membership.membership as any).tier,
@@ -139,7 +162,13 @@ export async function getProductsWithMembership(filters?: {
           })),
           totalMonthlySavings: 0, // Will calculate below
         };
+        
+        console.log("🔍 DEBUG - Membership summary created:", membershipSummary);
+      } else {
+        console.log("❌ DEBUG - No active membership found for user:", userId);
       }
+    } else {
+      console.log("❌ DEBUG - No userId provided");
     }
 
     // Enhance products with membership info
@@ -158,9 +187,47 @@ export async function getProductsWithMembership(filters?: {
 
         // Add membership info if user has membership and product is eligible
         if (membership && product.category) {
+          
           const categoryUsage = membership.productUsage.find(
-            (usage: any) =>
-              usage.categoryId.toString() === (product.category as any)._id.toString()
+            (usage: any) => {
+              const usageCategoryId = usage.categoryId?.toString();
+              const productCategoryId = (product.category as any)?._id?.toString();
+              const productCategoryName = (product.category as any)?.name?.toLowerCase();
+              const usageCategoryName = usage.categoryName?.toLowerCase();
+              
+              // Handle potential undefined values
+              if (!usageCategoryId || !productCategoryId) {
+                return false;
+              }
+              
+              // Primary match: by category ID
+              if (usageCategoryId === productCategoryId) {
+                return true;
+              }
+              
+              // Fallback match: by category name (case-insensitive)
+              if (usageCategoryName && productCategoryName && usageCategoryName === productCategoryName) {
+                console.log(`✅ Membership match by name: ${product.name} -> ${usageCategoryName}`);
+                return true;
+              }
+              
+              // Special case mapping for category name variations
+              const nameMapping: { [key: string]: string[] } = {
+                'iced tea': ['iced tea', 'ice tea', 'iced-tea'],
+                'tea bags': ['tea bags', 'tea bag', 'tea-bags', 'teabags'],
+                'juice': ['juice', 'juices'],
+                'herbal tea': ['herbal tea', 'herbal-tea', 'herbal']
+              };
+              
+              for (const [canonical, variations] of Object.entries(nameMapping)) {
+                if (variations.includes(usageCategoryName) && variations.includes(productCategoryName)) {
+                  console.log(`✅ Membership match by variation: ${product.name} -> ${canonical}`);
+                  return true;
+                }
+              }
+              
+              return false;
+            }
           );
 
           if (categoryUsage && categoryUsage.availableQuantity > 0) {
@@ -186,9 +253,14 @@ export async function getProductsWithMembership(filters?: {
       }
     );
 
-    console.log(
-      `✅ Fetched ${enhancedProducts.length} products with membership context`
-    );
+    // Final summary
+    const productsWithMembership = enhancedProducts.filter(p => p.membershipInfo);
+    console.log(`✅ Fetched ${enhancedProducts.length} products with membership context`);
+    console.log(`🎁 Products with FREE membership benefits: ${productsWithMembership.length}`);
+    if (productsWithMembership.length > 0) {
+      console.log(`   - FREE products:`, productsWithMembership.map(p => p.name));
+    }
+    console.log(`💰 Total potential savings: $${membershipSummary?.totalMonthlySavings || 0}`);
 
     return {
       products: enhancedProducts,

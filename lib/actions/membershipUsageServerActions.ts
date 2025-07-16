@@ -170,7 +170,24 @@ export async function deductMembershipUsageOnOrderConfirmation(
 
       // Check if this category is in the user's membership allocations
       const userUsage = userMembership.productUsage.find(
-        (usage) => usage.categoryId.toString() === categoryId
+        (usage) => {
+          const usageCategoryId = usage.categoryId?.toString();
+          const usageCategoryName = usage.categoryName?.toLowerCase();
+          const targetCategoryName = categoryName?.toLowerCase();
+          
+          // Primary match: by category ID
+          if (usageCategoryId === categoryId) {
+            return true;
+          }
+          
+          // Fallback match: by category name (case-insensitive)
+          if (usageCategoryName && targetCategoryName && usageCategoryName === targetCategoryName) {
+            console.log(`🔄 USAGE: Matched by name fallback: ${categoryName}`);
+            return true;
+          }
+          
+          return false;
+        }
       );
 
       if (!userUsage) {
@@ -204,7 +221,24 @@ export async function deductMembershipUsageOnOrderConfirmation(
       try {
         // Find the user's usage for this category
         const usageIndex = userMembership.productUsage.findIndex(
-          (usage) => usage.categoryId.toString() === categoryId
+          (usage) => {
+            const usageCategoryId = usage.categoryId?.toString();
+            const usageCategoryName = usage.categoryName?.toLowerCase();
+            const targetCategoryName = deduction.categoryName?.toLowerCase();
+            
+            // Primary match: by category ID
+            if (usageCategoryId === categoryId) {
+              return true;
+            }
+            
+            // Fallback match: by category name (case-insensitive)
+            if (usageCategoryName && targetCategoryName && usageCategoryName === targetCategoryName) {
+              console.log(`🔄 USAGE DEDUCT: Matched by name fallback: ${deduction.categoryName}`);
+              return true;
+            }
+            
+            return false;
+          }
         );
 
         if (usageIndex === -1) {
@@ -411,7 +445,24 @@ export async function restoreMembershipUsageOnOrderCancellation(
     for (const [categoryId, restoration] of restorationMap) {
       try {
         const usageIndex = userMembership.productUsage.findIndex(
-          (usage) => usage.categoryId.toString() === categoryId
+          (usage) => {
+            const usageCategoryId = usage.categoryId?.toString();
+            const usageCategoryName = usage.categoryName?.toLowerCase();
+            const targetCategoryName = restoration.categoryName?.toLowerCase();
+            
+            // Primary match: by category ID
+            if (usageCategoryId === categoryId) {
+              return true;
+            }
+            
+            // Fallback match: by category name (case-insensitive)
+            if (usageCategoryName && targetCategoryName && usageCategoryName === targetCategoryName) {
+              console.log(`🔄 USAGE RESTORE: Matched by name fallback: ${restoration.categoryName}`);
+              return true;
+            }
+            
+            return false;
+          }
         );
 
         if (usageIndex === -1) {

@@ -19,7 +19,15 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(npm run dev:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 120 npm run build)",
+      "Bash(npm uninstall:*)",
+      "Bash(curl:*)",
+      "Bash(npm run lint)",
+      "Bash(rm:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": []
   }

@@ -14,14 +14,33 @@ import { Separator } from "@/components/ui/separator";
 import { Star, Shield, Truck, RefreshCw, Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { CheckoutLayout } from "@/components/layout/MainLayout";
+import { LandingLayout } from "@/components/layout/MainLayout";
 import { getRelatedProductsForCard } from "@/lib/actions/membershipProductServerActions";
 import {
   getProductBySlug,
   getProducts,
 } from "@/lib/actions/productServerActions";
 
-// Import the transformer utility
+// Simple markdown-to-HTML converter
+function formatDescription(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Convert **bold** to <strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Convert bullet points (• or -) to HTML lists
+    .replace(/^[•-]\s+(.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive list items in <ul>
+    .replace(/(<li>.*?<\/li>\s*)+/g, '<ul>$&</ul>')
+    // Convert line breaks to <br> and paragraphs
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    // Wrap in paragraph tags
+    .replace(/^(.+)$/, '<p>$1</p>')
+    // Fix multiple paragraph tags
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p>(<ul>.*?<\/ul>)<\/p>/g, '$1');
+}
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -69,12 +88,29 @@ export default async function ProductPage({ params }: ProductPageProps) {
   );
 
   return (
-    <CheckoutLayout className="space-x-3">
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pt-8">
+    <LandingLayout>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100">
+        {/* Page Header */}
+        <div className="relative bg-gradient-to-br from-orange-50/90 via-amber-50/90 to-orange-100/90 backdrop-blur-md border-b border-orange-200/50 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 py-16 mt-4">
+            <div className="text-center">
+              <h1 className="text-3xl md:text-6xl font-bold text-gray-800 mb-3 mt-8">
+                {product.name}
+                <span className="block bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent text-lg md:text-2xl mt-2">
+                  Premium Quality Tea
+                </span>
+              </h1>
+              <p className="text-md text-gray-600 max-w-2xl mx-auto">
+                {product.shortDescription}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Floating 3D Elements */}
         <FloatingElements />
 
-        <div className="container mx-auto px-4 py-8 lg:py-16">
+        <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mb-8">
             <a
@@ -230,10 +266,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <div className="p-6">
                 <TabsContent value="description" className="mt-0">
                   <div className="prose prose-green max-w-none dark:prose-invert">
-                    <p className="text-lg leading-relaxed">
-                      {product.description}
-                    </p>
-
+                    <div 
+                      className="formatted-description text-lg leading-relaxed space-y-4"
+                      dangerouslySetInnerHTML={{ 
+                        __html: formatDescription(product.description || "No description available.") 
+                      }}
+                    />
+                    
                     {product.features && product.features.length > 0 && (
                       <div className="mt-8">
                         <h3 className="text-xl font-semibold mb-4">
@@ -299,6 +338,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
         </div>
       </div>
-    </CheckoutLayout>
+    </LandingLayout>
   );
 }

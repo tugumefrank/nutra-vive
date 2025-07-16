@@ -5,6 +5,8 @@ import { useDropzone } from "@uploadthing/react";
 import { generateClientDropzoneAccept } from "uploadthing/client";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { ImageCropper } from "./ImageCropper";
+import { MultiImageCropper } from "./MultiImageCropper";
 import {
   Upload,
   Loader2,
@@ -12,6 +14,7 @@ import {
   Music,
   Video,
   Image as ImageIcon,
+  Crop,
 } from "lucide-react";
 
 // Helper function to convert file to URL
@@ -26,6 +29,8 @@ type FileUploaderProps = {
   uploading: boolean;
   uploadProgress?: number;
   accept?: string; // Optional prop to specify accepted file types
+  enableCropping?: boolean; // Enable image cropping functionality
+  multiple?: boolean; // Allow multiple file selection
 };
 
 export function FileUploader({
@@ -35,28 +40,62 @@ export function FileUploader({
   uploading,
   uploadProgress = 0,
   accept = "image/*",
+  enableCropping = false,
+  multiple = false,
 }: FileUploaderProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropperOpen, setCropperOpen] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cropImageUrl, setCropImageUrl] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<Array<{file: File; url: string}>>([]);
+  const [multiCropperOpen, setMultiCropperOpen] = useState<boolean>(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (uploading) return; // Prevent new uploads while one is in progress
 
       if (acceptedFiles.length > 0) {
-        setFiles(acceptedFiles);
-        const localUrl = convertFileToUrl(acceptedFiles[0]);
-        setPreviewUrl(localUrl);
-        onFieldChange(localUrl); // This will be overwritten when server upload completes
+        // Check if cropping is enabled and this is an image
+        if (enableCropping && accept.includes("image")) {
+          if (multiple && acceptedFiles.length > 1) {
+            // Multiple files with cropping
+            const filesWithUrls = acceptedFiles.map(file => ({
+              file,
+              url: convertFileToUrl(file)
+            }));
+            setSelectedFiles(filesWithUrls);
+            setMultiCropperOpen(true);
+          } else {
+            // Single file with cropping
+            const file = acceptedFiles[0];
+            setSelectedFile(file);
+            const localUrl = convertFileToUrl(file);
+            setCropImageUrl(localUrl);
+            setCropperOpen(true);
+          }
+        } else {
+          // Normal flow without cropping
+          setFiles(acceptedFiles);
+          if (multiple) {
+            // For multiple files, we don't set preview URL since there are many
+            onFieldChange(""); // Clear single image URL
+          } else {
+            const localUrl = convertFileToUrl(acceptedFiles[0]);
+            setPreviewUrl(localUrl);
+            onFieldChange(localUrl); // This will be overwritten when server upload completes
+          }
+        }
       }
     },
-    [onFieldChange, setFiles, uploading]
+    [onFieldChange, setFiles, uploading, enableCropping, accept, multiple]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: generateClientDropzoneAccept([accept]),
-    maxFiles: 1,
+    maxFiles: multiple ? 10 : 1, // Allow up to 10 files for multiple mode
     disabled: uploading,
+    multiple: multiple,
   });
 
   // Determine what icon to show based on the accept type
@@ -79,8 +118,59 @@ export function FileUploader({
   const getFileFormatText = () => {
     if (accept.includes("audio")) return "MP3, WAV, M4A (Max 100MB)";
     if (accept.includes("video")) return "MP4, WebM, MOV (Max 500MB)";
-    return "PNG, JPG, WebP (Max 4MB)";
+    const maxFiles = multiple ? " (Max 10 files)" : "";
+    return `PNG, JPG, WebP (Max 4MB)${maxFiles}`;
   };
+
+  // Handle crop completion
+  const handleCropComplete = useCallback((croppedFile: File): void => {
+    setFiles([croppedFile]);
+    const localUrl = convertFileToUrl(croppedFile);
+    setPreviewUrl(localUrl);
+    onFieldChange(localUrl);
+    setCropperOpen(false);
+    
+    // Clean up URLs
+    if (cropImageUrl) {
+      URL.revokeObjectURL(cropImageUrl);
+      setCropImageUrl("");
+    }
+  }, [setFiles, onFieldChange, cropImageUrl]);
+
+  // Handle crop cancel
+  const handleCropCancel = useCallback((): void => {
+    setCropperOpen(false);
+    setSelectedFile(null);
+    
+    // Clean up URLs
+    if (cropImageUrl) {
+      URL.revokeObjectURL(cropImageUrl);
+      setCropImageUrl("");
+    }
+  }, [cropImageUrl]);
+
+  // Handle multiple crop completion
+  const handleMultiCropComplete = useCallback((croppedFiles: File[]): void => {
+    setFiles(croppedFiles);
+    setMultiCropperOpen(false);
+    
+    // Clean up URLs
+    selectedFiles.forEach(({ url }) => {
+      URL.revokeObjectURL(url);
+    });
+    setSelectedFiles([]);
+  }, [setFiles, selectedFiles]);
+
+  // Handle multiple crop cancel
+  const handleMultiCropCancel = useCallback((): void => {
+    setMultiCropperOpen(false);
+    
+    // Clean up URLs
+    selectedFiles.forEach(({ url }) => {
+      URL.revokeObjectURL(url);
+    });
+    setSelectedFiles([]);
+  }, [selectedFiles]);
 
   // Determines if we should show the final uploaded content or a local preview
   const displayUrl = imageUrl || previewUrl;
@@ -167,8 +257,8 @@ export function FileUploader({
 
           <h3 className="mt-4 text-lg font-medium text-white">
             {isDragActive
-              ? `Drop your ${getMediaTypeName()} here`
-              : `Drag and drop your ${getMediaTypeName()}`}
+              ? `Drop your ${getMediaTypeName()}${multiple ? 's' : ''} here`
+              : `Drag and drop your ${getMediaTypeName()}${multiple ? 's' : ''}`}
           </h3>
 
           <p className="mt-2 text-sm text-gray-400 mb-6">
@@ -185,6 +275,27 @@ export function FileUploader({
           </Button>
         </div>
       )}
+
+      {/* Image Cropper Modal */}
+      {enableCropping && cropperOpen && selectedFile && (
+        <ImageCropper
+          src={cropImageUrl}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+          isOpen={cropperOpen}
+          fileName={selectedFile.name}
+        />
+      )}
+
+      {/* Multiple Image Cropper Modal */}
+      {enableCropping && multiCropperOpen && selectedFiles.length > 0 && (
+        <MultiImageCropper
+          files={selectedFiles}
+          onCropComplete={handleMultiCropComplete}
+          onCancel={handleMultiCropCancel}
+          isOpen={multiCropperOpen}
+        />
+      )}
     </div>
   );
 }
@@ -192,6 +303,11 @@ export function FileUploader({
 // Specialized uploaders
 export function ImageUploader(props: Omit<FileUploaderProps, "accept">) {
   return <FileUploader {...props} accept="image/*" />;
+}
+
+// Product image uploader with cropping enabled by default
+export function ProductImageUploader(props: Omit<FileUploaderProps, "accept" | "enableCropping">) {
+  return <FileUploader {...props} accept="image/*" enableCropping={true} multiple={true} />;
 }
 
 export function AudioUploader(props: Omit<FileUploaderProps, "accept">) {

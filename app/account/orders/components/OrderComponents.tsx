@@ -254,7 +254,7 @@ export function OrderCard({ order }: OrderCardProps) {
 
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link href={`/account/orders/${order.orderNumber}`}>
+                <Link href={`/account/orders/${order._id}`}>
                   <Eye className="w-4 h-4 mr-1" />
                   View Details
                 </Link>

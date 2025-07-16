@@ -63,19 +63,17 @@ npm run build         # Build for production
 npm run start         # Start production server
 npm run lint          # Run ESLint
 
-# Database (Drizzle ORM)
-npm run db:generate   # Generate database migrations
-npm run db:migrate    # Run database migrations
-npm run db:push       # Push schema changes directly to database
-npm run db:studio     # Open Drizzle Studio for database management
+# Database Scripts
+npm run seed:tea-products       # Seed tea bag products to database
+npm run migrate:tea-descriptions # Update tea product descriptions
 ```
 
 ## Architecture
 
 ### Database & ORM
-- **PostgreSQL** with **Drizzle ORM** (not Mongoose despite the connection file)
-- Schema defined in `lib/db/schema.ts` with comprehensive e-commerce tables
-- Database connection handling in `lib/db/index.ts` with MongoDB fallback (legacy)
+- **MongoDB** with **Mongoose** for data persistence
+- Models defined in `lib/db/models.ts` and `lib/db/models/` directory
+- Database connection handling in `lib/db/index.ts`
 - Server actions pattern in `lib/actions/` for database operations
 
 ### Authentication & Authorization
@@ -131,7 +129,7 @@ npm run db:studio     # Open Drizzle Studio for database management
 
 ### Data Flow
 1. UI components trigger server actions
-2. Server actions interact with database via Drizzle
+2. Server actions interact with database via Mongoose
 3. Results flow back to client components
 4. Zustand stores manage client-side state
 5. React Query (`@tanstack/react-query`) handles server state
@@ -151,15 +149,28 @@ npm run db:studio     # Open Drizzle Studio for database management
 
 ### Type Safety
 - Comprehensive TypeScript usage
-- Database types generated from Drizzle schema
-- Zod schemas for validation in `lib/db/schema.ts`
+- Database types defined with Mongoose schemas
+- Zod schemas for validation where needed
 - Custom type definitions in `types/` directory
 
 ### Environment Requirements
-- `MONGODB_URI` - Database connection (despite using PostgreSQL in schema)
+- `MONGODB_URI` - MongoDB database connection string
 - Clerk authentication keys
 - Stripe API keys
 - Resend email API key
 - UploadThing configuration
 
-When working on this codebase, always consider the dual cart system (regular + membership), maintain type safety, and follow the established server action patterns for data mutations.
+## Database Scripts & Utilities
+
+### Tea Products Management
+- `npm run seed:tea-products` - Seeds tea bag products with comprehensive descriptions
+- `npm run migrate:tea-descriptions` - Updates existing tea product descriptions
+- Scripts located in `scripts/` directory use manual environment loading
+
+### Database Patterns
+- Manual environment variable loading in scripts (reads from `.env` file)
+- Mongoose models with explicit schemas
+- Server actions for CRUD operations
+- Connection handling with retry logic and URI cleanup
+
+When working on this codebase, always consider the dual cart system (regular + membership), maintain type safety, and follow the established server action patterns for data mutations using Mongoose.

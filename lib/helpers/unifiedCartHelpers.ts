@@ -118,8 +118,44 @@ export async function checkProductEligibility(
     });
 
     const categoryUsage = context.membership.productUsage.find(
-      (usage: any) =>
-        usage.categoryId.toString() === product.category._id.toString()
+      (usage: any) => {
+        const usageCategoryId = usage.categoryId?.toString();
+        const productCategoryId = product.category._id?.toString();
+        const productCategoryName = product.category?.name?.toLowerCase();
+        const usageCategoryName = usage.categoryName?.toLowerCase();
+        
+        console.log(`🛒 Comparing cart: "${usageCategoryId}" vs "${productCategoryId}"`);
+        console.log(`🛒 Comparing names: "${usageCategoryName}" vs "${productCategoryName}"`);
+        
+        // Primary match: by category ID
+        if (usageCategoryId === productCategoryId) {
+          console.log(`🛒 ✅ CART MATCH BY ID`);
+          return true;
+        }
+        
+        // Fallback match: by category name (case-insensitive)
+        if (usageCategoryName && productCategoryName && usageCategoryName === productCategoryName) {
+          console.log(`🛒 ✅ CART MATCH BY NAME (fallback)`);
+          return true;
+        }
+        
+        // Special case mapping for category name variations
+        const nameMapping: { [key: string]: string[] } = {
+          'iced tea': ['iced tea', 'ice tea', 'iced-tea'],
+          'tea bags': ['tea bags', 'tea bag', 'tea-bags', 'teabags'],
+          'juice': ['juice', 'juices'],
+          'herbal tea': ['herbal tea', 'herbal-tea', 'herbal']
+        };
+        
+        for (const [canonical, variations] of Object.entries(nameMapping)) {
+          if (variations.includes(usageCategoryName) && variations.includes(productCategoryName)) {
+            console.log(`🛒 ✅ CART MATCH BY NAME VARIATION (${canonical})`);
+            return true;
+          }
+        }
+        
+        return false;
+      }
     );
 
     console.log('🔍 Category usage found:', {

@@ -28,8 +28,11 @@ import {
 // Import real UploadThing hook
 import { useUploadThing } from "@/lib/uploadthing";
 
-// Import real ImageUploader component
-import { ImageUploader } from "@/components/ui/FileUploader";
+// Import real ProductImageUploader component with cropping
+import { ProductImageUploader } from "@/components/ui/FileUploader";
+
+// Import RichTextEditor for description
+import RichTextEditor from "@/components/ui/RichTextEditor";
 
 import { generateSKU } from "@/lib/productUtils";
 import {
@@ -151,7 +154,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   // UploadThing hook for multiple images
-  const { startUpload: uploadImages } = useUploadThing("imageUploader", {
+  const { startUpload: uploadImages } = useUploadThing("multiImageUploader", {
     onUploadBegin: () => {
       setIsUploading(true);
       setUploadProgress(0);
@@ -334,7 +337,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
       const processedData = {
         name: formData.name.trim(),
         slug: formData.slug.trim(),
-        description: formData.description?.trim() || undefined,
+        description: formData.description && formData.description.trim() !== "<p><br></p>" && formData.description.trim() !== "" 
+          ? formData.description 
+          : undefined,
         shortDescription: formData.shortDescription?.trim() || undefined,
         price: parseFloat(formData.price),
         compareAtPrice: formData.compareAtPrice
@@ -582,17 +587,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Description
               </label>
-              <textarea
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) =>
+                onChange={(content: string) =>
                   setFormData((prev: any) => ({
                     ...prev,
-                    description: e.target.value,
+                    description: content,
                   }))
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                rows={4}
                 placeholder="Detailed product description with benefits, usage instructions, etc."
+                className="border border-gray-300 rounded-xl overflow-hidden"
               />
             </div>
           </div>
@@ -864,7 +868,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             </div>
 
             {/* Upload Zone */}
-            <ImageUploader
+            <ProductImageUploader
               imageUrl=""
               onFieldChange={handleImageUpload}
               setFiles={setImageFiles}

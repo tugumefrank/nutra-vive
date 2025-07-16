@@ -100,14 +100,27 @@ export function MembershipDashboard() {
         }
 
         // Get current user's membership
+        console.log("🔍 MembershipDashboard: Fetching current membership...");
         const membershipResult = await getCurrentMembership();
+        console.log("🔍 MembershipDashboard: getCurrentMembership result:", {
+          success: membershipResult.success,
+          error: membershipResult.error,
+          hasMembership: !!membershipResult.membership,
+          membershipData: membershipResult.membership ? {
+            id: membershipResult.membership._id,
+            status: membershipResult.membership.status,
+            membershipName: membershipResult.membership.membership?.name,
+            membershipTier: membershipResult.membership.membership?.tier
+          } : null
+        });
 
         if (membershipResult.error) {
-          console.error("Membership loading error:", membershipResult.error);
+          console.error("❌ MembershipDashboard: Membership loading error:", membershipResult.error);
           // Don't return here - still try to load available memberships
         }
         
         setCurrentMembership(membershipResult.success ? membershipResult.membership : null);
+        console.log("✅ MembershipDashboard: Set current membership state:", !!membershipResult.membership);
 
         // Get available memberships
         const availableMembershipsResult = await getAvailableMemberships({
@@ -134,6 +147,20 @@ export function MembershipDashboard() {
     fetchData();
   }, [refreshKey]);
 
+  // Listen for membership update events (e.g., from successful checkout)
+  useEffect(() => {
+    const handleMembershipUpdate = () => {
+      console.log("Received membershipUpdated event, refreshing data...");
+      handleRefresh();
+    };
+
+    window.addEventListener('membershipUpdated', handleMembershipUpdate);
+    
+    return () => {
+      window.removeEventListener('membershipUpdated', handleMembershipUpdate);
+    };
+  }, []);
+
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
   };
@@ -158,26 +185,6 @@ export function MembershipDashboard() {
             membership={currentMembership.membership}
           />
 
-          {/* Upgrade Options */}
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-                Upgrade Your Experience
-              </h2>
-              <p className="text-muted-foreground">
-                Unlock more benefits with our premium memberships
-              </p>
-            </div>
-
-            <AvailableMemberships
-              memberships={availableMemberships.filter(
-                (m) => m.tier !== currentMembership.membership.tier
-              )}
-              currentMembership={currentMembership}
-              onSubscribe={handleRefresh}
-              showUpgradeOnly={true}
-            />
-          </div>
         </>
       ) : (
         <>

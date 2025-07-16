@@ -11,6 +11,7 @@ export function CheckoutSuccessHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processedSessions] = useState(() => new Set<string>());
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -23,10 +24,12 @@ export function CheckoutSuccessHandler() {
       return;
     }
 
-    if (sessionId && !isProcessing) {
+    // Only process if we have a session_id, not currently processing, and haven't processed this session before
+    if (sessionId && !isProcessing && !processedSessions.has(sessionId)) {
+      processedSessions.add(sessionId);
       handleCheckoutSuccess(sessionId);
     }
-  }, [searchParams, router, isProcessing]);
+  }, [searchParams, router, isProcessing, processedSessions]);
 
   const handleCheckoutSuccess = async (sessionId: string) => {
     setIsProcessing(true);
@@ -38,9 +41,17 @@ export function CheckoutSuccessHandler() {
       
       if (result.success) {
         toast.success("🎉 Membership activated successfully!");
-        // Clean up URL and refresh the page to show new membership
+        
+        // Clean up URL - this will trigger MembershipDashboard to refresh via navigation
         router.replace("/account/memberships");
-        window.location.reload();
+        
+        // Small delay to ensure URL change takes effect, then trigger a refresh event
+        setTimeout(() => {
+          // Trigger a custom event that MembershipDashboard can listen for
+          window.dispatchEvent(new CustomEvent('membershipUpdated'));
+        }, 100);
+        
+        // Note: Removed window.location.reload() as it was causing infinite loops
       } else {
         throw new Error(result.error || "Failed to complete checkout");
       }

@@ -127,18 +127,29 @@ export async function completeMembershipCheckout(
 }> {
   try {
     const { userId } = await auth();
+    console.log("🔍 completeMembershipCheckout: Starting for userId:", userId, "sessionId:", sessionId);
+    
     if (!userId) {
+      console.log("❌ completeMembershipCheckout: No userId found");
       return { success: false, error: "Authentication required" };
     }
 
+    console.log("🔄 completeMembershipCheckout: Calling handleCheckoutSuccess");
     const result = await handleCheckoutSuccess(sessionId);
+    console.log("🔍 completeMembershipCheckout: handleCheckoutSuccess result:", {
+      success: result.success,
+      error: result.error,
+      hasMembership: !!result.membership
+    });
     
     if (result.success) {
       // Revalidate pages
       revalidatePath("/account/memberships");
       revalidatePath("/admin/memberships");
       
-      console.log(`✅ Membership checkout completed for user ${userId}`);
+      console.log(`✅ completeMembershipCheckout: Membership checkout completed for user ${userId}`);
+    } else {
+      console.log(`❌ completeMembershipCheckout: Failed for user ${userId}:`, result.error);
     }
 
     return result;
@@ -230,24 +241,41 @@ export async function getCurrentMembership(): Promise<{
 }> {
   try {
     const { userId } = await auth();
+    console.log("🔍 getCurrentMembership: Starting for userId:", userId);
+    
     if (!userId) {
+      console.log("❌ getCurrentMembership: No userId found");
       return { success: false, error: "Authentication required" };
     }
 
     await connectToDatabase();
+    console.log("✅ getCurrentMembership: Database connected");
 
     const user = await User.findOne({ clerkId: userId });
+    console.log("🔍 getCurrentMembership: User lookup result:", {
+      found: !!user,
+      userId: user?._id,
+      email: user?.email,
+      stripeCustomerId: user?.stripeCustomerId,
+      clerkId: user?.clerkId
+    });
+    
     if (!user) {
-      console.error("User not found in database for clerkId:", userId);
+      console.error("❌ getCurrentMembership: User not found in database for clerkId:", userId);
       return { success: false, error: "User not found. Please try refreshing the page." };
     }
 
     // Sync latest data from Stripe if customer exists
     if (user.stripeCustomerId) {
+      console.log("🔄 getCurrentMembership: Syncing Stripe data for customer:", user.stripeCustomerId);
       await syncStripeDataToDatabase(user.stripeCustomerId);
+      console.log("✅ getCurrentMembership: Stripe sync completed");
+    } else {
+      console.log("⚠️ getCurrentMembership: No stripeCustomerId found for user");
     }
 
     // Get current membership
+    console.log("🔍 getCurrentMembership: Querying UserMembership for user:", user._id.toString());
     const userMembership = await UserMembership.findOne({
       user: user._id,
       status: { $in: ["active", "trialing"] },
@@ -255,7 +283,26 @@ export async function getCurrentMembership(): Promise<{
       .populate("membership")
       .lean();
 
+    console.log("🔍 getCurrentMembership: UserMembership query result:", {
+      found: !!userMembership,
+      membershipId: userMembership?._id,
+      status: userMembership?.status,
+      membershipName: typeof userMembership?.membership === 'object' ? (userMembership.membership as any)?.name : 'Not populated',
+      subscriptionId: userMembership?.subscriptionId
+    });
+
+    // Also check for ANY membership records (not just active ones) for debugging
+    const allUserMemberships = await UserMembership.find({ user: user._id }).lean();
+    console.log("🔍 getCurrentMembership: All memberships for user:", allUserMemberships.map(m => ({
+      id: m._id,
+      status: m.status,
+      subscriptionId: m.subscriptionId,
+      startDate: m.startDate,
+      currentPeriodEnd: m.currentPeriodEnd
+    })));
+
     if (!userMembership) {
+      console.log("❌ getCurrentMembership: No active membership found");
       return { success: true, membership: null };
     }
 

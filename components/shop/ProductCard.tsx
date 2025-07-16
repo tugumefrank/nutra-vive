@@ -99,13 +99,21 @@ export function EnhancedProductCard({
     const isEligibleForFree = membershipInfo?.isEligibleForFree || false;
     const remainingAllocation = membershipInfo?.remainingAllocation || 0;
 
+    // Debug log for ProductCard
+    console.log(`🎯 ProductCard DEBUG - ${product.name}:`, {
+      membershipInfo,
+      isEligibleForFree,
+      remainingAllocation,
+      effectivelyFree: isEligibleForFree && remainingAllocation > 0,
+    });
+
     return {
       membershipInfo,
       isEligibleForFree,
       remainingAllocation,
       effectivelyFree: isEligibleForFree && remainingAllocation > 0,
     };
-  }, [product.membershipInfo]);
+  }, [product.membershipInfo, product.name]);
 
   // Memoize favorite state
   const isProductFavorite = useMemo(() => {
