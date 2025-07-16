@@ -14,20 +14,26 @@ export default async function MembershipsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950 dark:via-gray-900 dark:to-teal-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Handle checkout success */}
       <CheckoutSuccessHandler />
       
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-            Your Memberships
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Manage your subscription and explore premium benefits
-          </p>
+      {/* Page Header */}
+      <div className="relative bg-gradient-to-br from-slate-50/90 to-slate-100/90 backdrop-blur-md border-b border-slate-200/50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+          <div className="text-center">
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-2">
+              Your Memberships
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 max-w-xl mx-auto">
+              Manage your subscription and wellness benefits
+            </p>
+          </div>
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <Suspense fallback={<MembershipLoadingSkeleton />}>
           <MembershipDashboard />
         </Suspense>

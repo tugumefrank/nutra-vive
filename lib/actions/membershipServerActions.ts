@@ -332,6 +332,22 @@ export async function createMembership(
 
     console.log("✅ Membership created successfully:", membership.name);
 
+    // Create Stripe product and price automatically
+    try {
+      console.log("🔄 Creating Stripe price for new membership...");
+      const stripeResult = await createStripePriceForMembership(membership._id.toString());
+      
+      if (stripeResult.success) {
+        console.log(`✅ Stripe price created: ${stripeResult.stripePriceId}`);
+      } else {
+        console.warn(`⚠️ Could not create Stripe price: ${stripeResult.error}`);
+        // Don't fail the membership creation if Stripe fails
+      }
+    } catch (stripeError) {
+      console.warn("⚠️ Stripe price creation failed (non-critical):", stripeError);
+      // Continue with membership creation even if Stripe fails
+    }
+
     revalidatePath("/admin/memberships");
 
     // Populate categories for response
@@ -1176,6 +1192,147 @@ export async function getCurrentUserMemberships(): Promise<{
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to fetch memberships",
+    };
+  }
+}
+
+// ============================================================================
+// STRIPE INTEGRATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Create Stripe product and price for a membership
+ */
+export async function createStripePriceForMembership(
+  membershipId: string
+): Promise<{ success: boolean; stripePriceId?: string; error?: string }> {
+  try {
+    const admin = await checkAdminAuth();
+    await connectToDatabase();
+
+    const membership = await Membership.findById(membershipId);
+    if (!membership) {
+      return { success: false, error: "Membership not found" };
+    }
+
+    if (membership.stripePriceId) {
+      return { 
+        success: true, 
+        stripePriceId: membership.stripePriceId,
+        error: "Membership already has a Stripe price configured" 
+      };
+    }
+
+    console.log(`🔄 Creating Stripe product and price for membership: ${membership.name}`);
+
+    // Create Stripe product
+    const product = await stripe.products.create({
+      name: membership.name,
+      description: membership.description || `${membership.tier} tier membership plan`,
+      metadata: {
+        membershipId: membership._id.toString(),
+        tier: membership.tier,
+      },
+    });
+
+    console.log(`✅ Created Stripe product: ${product.id}`);
+
+    // Create Stripe price
+    const price = await stripe.prices.create({
+      product: product.id,
+      unit_amount: Math.round(membership.price * 100), // Convert to cents
+      currency: 'usd',
+      recurring: {
+        interval: membership.billingFrequency === 'yearly' ? 'year' : 
+                 membership.billingFrequency === 'quarterly' ? 'month' : 'month',
+        interval_count: membership.billingFrequency === 'quarterly' ? 3 : 1,
+      },
+      metadata: {
+        membershipId: membership._id.toString(),
+        tier: membership.tier,
+      },
+    });
+
+    console.log(`✅ Created Stripe price: ${price.id}`);
+
+    // Update membership with Stripe price ID (skip validation for existing records)
+    await Membership.findByIdAndUpdate(
+      membership._id,
+      { stripePriceId: price.id },
+      { validateBeforeSave: false }
+    );
+
+    console.log(`✅ Updated membership ${membership.name} with Stripe price ID: ${price.id}`);
+
+    revalidatePath("/admin/memberships");
+
+    return {
+      success: true,
+      stripePriceId: price.id,
+    };
+  } catch (error) {
+    console.error("❌ Error creating Stripe price for membership:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create Stripe price",
+    };
+  }
+}
+
+/**
+ * Sync all memberships with Stripe (create missing prices)
+ */
+export async function syncAllMembershipsWithStripe(): Promise<{
+  success: boolean;
+  results?: Array<{ membershipId: string; name: string; success: boolean; stripePriceId?: string; error?: string }>;
+  error?: string;
+}> {
+  try {
+    const admin = await checkAdminAuth();
+    await connectToDatabase();
+
+    const memberships = await Membership.find({ isActive: true });
+    
+    if (memberships.length === 0) {
+      return { success: true, results: [], error: "No active memberships found" };
+    }
+
+    console.log(`🔄 Syncing ${memberships.length} memberships with Stripe...`);
+
+    const results = [];
+
+    for (const membership of memberships) {
+      try {
+        const result = await createStripePriceForMembership(membership._id.toString());
+        results.push({
+          membershipId: membership._id.toString(),
+          name: membership.name,
+          success: result.success,
+          stripePriceId: result.stripePriceId,
+          error: result.error,
+        });
+      } catch (error) {
+        results.push({
+          membershipId: membership._id.toString(),
+          name: membership.name,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`✅ Stripe sync completed: ${successCount}/${results.length} memberships synced successfully`);
+
+    return {
+      success: true,
+      results,
+    };
+  } catch (error) {
+    console.error("❌ Error syncing memberships with Stripe:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to sync with Stripe",
     };
   }
 }

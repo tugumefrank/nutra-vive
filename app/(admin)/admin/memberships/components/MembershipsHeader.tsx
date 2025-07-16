@@ -2,12 +2,50 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, Crown, Sparkles } from "lucide-react";
+import { Plus, Crown, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMemberships } from "./MembershipsProvider";
+import { useState } from "react";
+import { toast } from "sonner";
+import { syncAllMembershipsWithStripe } from "@/lib/actions/membershipServerActions";
 
 export default function MembershipsHeader() {
   const { setIsCreateDialogOpen } = useMemberships();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleStripeSync = async () => {
+    setIsLoading(true);
+    try {
+      const result = await syncAllMembershipsWithStripe();
+      
+      if (result.success) {
+        const successCount = result.results?.filter(r => r.success).length || 0;
+        const totalCount = result.results?.length || 0;
+        
+        if (successCount === totalCount) {
+          toast.success(`✅ Successfully synced ${successCount} memberships with Stripe`);
+        } else {
+          toast.warning(`⚠️ Synced ${successCount}/${totalCount} memberships. Some had issues.`);
+        }
+        
+        // Log detailed results
+        result.results?.forEach(r => {
+          if (r.success) {
+            console.log(`✅ ${r.name}: ${r.stripePriceId}`);
+          } else {
+            console.error(`❌ ${r.name}: ${r.error}`);
+          }
+        });
+      } else {
+        toast.error(`❌ Sync failed: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error("❌ Failed to sync memberships with Stripe");
+      console.error("Stripe sync error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="border-b bg-background/50 backdrop-blur-sm">
@@ -39,7 +77,7 @@ export default function MembershipsHeader() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.3 }}
-              className="w-full"
+              className="w-full space-y-2"
             >
               <Button
                 onClick={() => setIsCreateDialogOpen(true)}
@@ -49,6 +87,17 @@ export default function MembershipsHeader() {
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 <Plus className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                 Create Membership
+              </Button>
+              
+              <Button
+                onClick={handleStripeSync}
+                disabled={isLoading}
+                size="default"
+                variant="outline"
+                className="w-full relative overflow-hidden group hover:bg-orange-50 hover:border-orange-300 transition-all duration-300"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Syncing...' : 'Sync with Stripe'}
               </Button>
             </motion.div>
           </div>
@@ -77,7 +126,19 @@ export default function MembershipsHeader() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.3 }}
+              className="flex gap-3"
             >
+              <Button
+                onClick={handleStripeSync}
+                disabled={isLoading}
+                size="lg"
+                variant="outline"
+                className="relative overflow-hidden group hover:bg-orange-50 hover:border-orange-300 transition-all duration-300"
+              >
+                <RefreshCw className={`mr-2 h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Syncing...' : 'Sync with Stripe'}
+              </Button>
+              
               <Button
                 onClick={() => setIsCreateDialogOpen(true)}
                 size="lg"

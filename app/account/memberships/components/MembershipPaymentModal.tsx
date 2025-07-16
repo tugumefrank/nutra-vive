@@ -21,10 +21,13 @@ import {
   Check,
   Loader2,
   AlertTriangle,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { createMembershipSubscriptionCheckout, completeMembershipCheckout } from "@/lib/actions/membershipSubscriptionActions";
-
+import {
+  createMembershipSubscriptionCheckout,
+  completeMembershipCheckout,
+} from "@/lib/actions/membershipSubscriptionActions";
 
 interface Membership {
   _id: string;
@@ -108,9 +111,7 @@ export function MembershipPaymentModal({
     } catch (error) {
       console.error("Checkout creation error:", error);
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to create checkout";
+        error instanceof Error ? error.message : "Failed to create checkout";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -132,9 +133,7 @@ export function MembershipPaymentModal({
     } catch (error) {
       console.error("Checkout completion error:", error);
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to complete checkout";
+        error instanceof Error ? error.message : "Failed to complete checkout";
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -152,8 +151,9 @@ export function MembershipPaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-card bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0">
-        <DialogHeader className="space-y-4">
+      <DialogContent className="max-w-2xl max-h-[90vh] glass-card bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 p-0 flex flex-col w-[calc(100vw-1rem)] mx-auto my-4 sm:m-6 sm:w-auto">
+        {/* Header - Fixed */}
+        <DialogHeader className="space-y-4 p-6 pb-0 flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
               <div
@@ -174,8 +174,9 @@ export function MembershipPaymentModal({
           </div>
         </DialogHeader>
 
-        {
-          <div className="space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6">
+          <div className="space-y-6 py-6">
             {/* Membership Overview */}
             <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl">
               <div className="grid md:grid-cols-2 gap-6">
@@ -301,48 +302,50 @@ export function MembershipPaymentModal({
                 </div>
               </div>
             </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <span className="text-red-800 dark:text-red-200 text-sm">
-                    {error}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubscribe}
-                disabled={isLoading}
-                className={`flex-1 bg-gradient-to-r ${config.gradient} hover:shadow-lg transition-all duration-300 text-white border-0`}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Setting up...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Continue to Payment
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
-        }
+        </div>
+
+        {/* Fixed Footer with Action Buttons */}
+        <div className="flex-shrink-0 p-6 pt-0 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <span className="text-sm text-red-700 dark:text-red-300">
+                  {error}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="flex-1 h-12 text-base font-medium"
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubscribe}
+              disabled={isLoading}
+              className={`flex-1 h-12 text-base font-medium bg-gradient-to-r ${config.gradient} hover:shadow-lg transition-all duration-300 text-white border-0`}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Setting up...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Continue to Payment
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -174,28 +174,25 @@ export function MembershipDashboard() {
       ) : (
         <>
           {/* Welcome Section */}
-          <div className="text-center py-12 glass-card border-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 backdrop-blur-xl rounded-2xl">
-            <div className="max-w-2xl mx-auto">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-4">
-                Choose Your Perfect Membership
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Unlock exclusive benefits, free products, and premium perks with
-                our membership plans
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  Free Monthly Products
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                  Priority Support
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  Exclusive Content
-                </div>
+          <div className="text-center py-6 px-4 glass-card border-0 bg-gradient-to-br from-slate-500/10 to-slate-600/10 backdrop-blur-xl rounded-2xl">
+            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-700 bg-clip-text text-transparent mb-2">
+              Choose Your Membership
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground mb-4">
+              Unlock premium benefits and exclusive products
+            </p>
+            <div className="flex flex-wrap justify-center gap-3 text-xs md:text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-slate-500 rounded-full"></div>
+                Free Products
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-slate-600 rounded-full"></div>
+                Priority Support
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                Exclusive Content
               </div>
             </div>
           </div>

@@ -18,11 +18,11 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800">
       {/* Desktop Layout */}
       <div className="hidden md:flex h-screen">
         {/* Sidebar */}
-        <div className="w-64 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-green-200/50 dark:border-gray-700/50">
+        <div className="w-64 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-gray-700/50">
           <AccountSidebar />
         </div>
 
