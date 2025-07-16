@@ -1,5 +1,6 @@
 import { getCachedProductsWithMembership } from "@/lib/actions/cachedProductsWithMembership";
 import { EnhancedProductCard } from "./ProductCard";
+import { MembershipSummaryCard } from "./MembershipSummaryCard";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
@@ -20,13 +21,17 @@ export async function ServerProductsGrid({
   page = 1,
   limit = 12,
 }: ServerProductsGridProps) {
-  const { products, total, totalPages, currentPage } = await getCachedProductsWithMembership({
+  const { products, total, totalPages, currentPage, membershipSummary } = await getCachedProductsWithMembership({
     search: search || undefined,
     category: category !== "All" ? category : undefined,
     sortBy,
     page,
     limit,
   });
+
+  // Calculate membership stats if user has a membership
+  const eligibleProducts = products.filter(p => p.membershipInfo?.isEligibleForFree);
+  const totalPotentialSavings = eligibleProducts.reduce((sum, p) => sum + (p.membershipInfo?.savings || 0), 0);
 
   if (products.length === 0) {
     return (
@@ -56,6 +61,15 @@ export async function ServerProductsGrid({
 
   return (
     <div className="space-y-6">
+      {/* Membership Summary Card */}
+      {membershipSummary && (
+        <MembershipSummaryCard
+          membershipSummary={membershipSummary}
+          eligibleProducts={eligibleProducts}
+          totalPotentialSavings={totalPotentialSavings}
+        />
+      )}
+
       {/* Results Summary */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
