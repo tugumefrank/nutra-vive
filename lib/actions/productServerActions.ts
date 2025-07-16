@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { connectToDatabase } from "../db";
 import { Product, Category } from "../db/models";
+import { revalidateHeroProducts } from "./heroProductsServerActions";
 import mongoose from "mongoose";
 import type {
   IProduct,
@@ -438,6 +439,11 @@ export async function createProduct(
     const { revalidateTag } = await import("next/cache");
     revalidateTag("products");
     revalidateTag("categories");
+    
+    // Revalidate hero products cache if this is a Juice or Iced Tea product
+    if (categoryInfo && (categoryInfo.name === "Juice" || categoryInfo.name === "Iced Tea")) {
+      await revalidateHeroProducts();
+    }
 
     // Fetch the created product with populated category
     const createdProduct = await Product.findById(product._id)
@@ -541,6 +547,20 @@ export async function updateProduct(
 
     revalidatePath("/admin/products");
     revalidatePath("/products");
+    revalidatePath("/shop");
+    
+    // Revalidate cached product data
+    const { revalidateTag } = await import("next/cache");
+    revalidateTag("products");
+    revalidateTag("categories");
+    
+    // Revalidate hero products cache if this is a Juice or Iced Tea product
+    if (updatedProduct?.category && typeof updatedProduct.category === "object") {
+      const categoryName = (updatedProduct.category as any).name;
+      if (categoryName === "Juice" || categoryName === "Iced Tea") {
+        await revalidateHeroProducts();
+      }
+    }
 
     return {
       success: true,
@@ -591,6 +611,21 @@ export async function deleteProduct(
     console.log("✅ Product deleted successfully:", deletedProduct.name);
 
     revalidatePath("/admin/products");
+    revalidatePath("/products");
+    revalidatePath("/shop");
+    
+    // Revalidate cached product data
+    const { revalidateTag } = await import("next/cache");
+    revalidateTag("products");
+    revalidateTag("categories");
+    
+    // Revalidate hero products cache if this was a Juice or Iced Tea product
+    if (deletedProduct.category) {
+      const categoryInfo = await Category.findById(deletedProduct.category);
+      if (categoryInfo && (categoryInfo.name === "Juice" || categoryInfo.name === "Iced Tea")) {
+        await revalidateHeroProducts();
+      }
+    }
 
     return {
       success: true,

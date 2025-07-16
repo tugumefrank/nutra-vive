@@ -15,61 +15,93 @@ import {
   ChevronRight,
   Star,
   Leaf,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { HeroProduct } from "@/lib/actions/heroProductsServerActions";
+import { generateShopUrl } from "@/lib/utils/shopUtils";
 
-const slides = [
-  {
-    id: 1,
-    title: "PURE WELLNESS,",
-    subtitle: "DELIVERED FRESH",
-    description:
-      "Premium cold-pressed juices and herbal teas crafted for your optimal health and vitality.",
-    cta: "Shop Juices",
-    href: "/shop/juices",
-    bgGradient: "from-emerald-500 via-teal-600 to-green-700",
-    productImage: "🥤",
-    productTitle: "Green Detox Blend",
-    productPrice: "$12.99",
-    badge: "BESTSELLER",
-    features: ["100% Organic", "Cold-Pressed", "No Additives"],
-  },
-  {
-    id: 2,
-    title: "HERBAL BLISS,",
-    subtitle: "NATURAL CALM",
-    description:
-      "Handcrafted herbal tea blends that soothe your mind, body and soul with every mindful sip.",
-    cta: "Explore Teas",
-    href: "/shop/teas",
-    bgGradient: "from-purple-500 via-violet-600 to-indigo-700",
-    productImage: "🫖",
-    productTitle: "Chamomile Dreams",
-    productPrice: "$8.99",
-    badge: "CAFFEINE FREE",
-    features: ["Stress Relief", "Sleep Support", "All Natural"],
-  },
-  {
-    id: 3,
-    title: "FRESH PRESSED,",
-    subtitle: "MAXIMUM NUTRITION",
-    description:
-      "Raw, nutrient-dense juices packed with vitamins, minerals and antioxidants for peak performance.",
-    cta: "Try Smoothies",
-    href: "/shop/smoothies",
-    bgGradient: "from-orange-500 via-amber-600 to-yellow-600",
-    productImage: "🍓",
-    productTitle: "Berry Antioxidant",
-    productPrice: "$10.50",
-    badge: "HIGH PROTEIN",
-    features: ["Immune Boost", "Energy Plus", "Raw & Fresh"],
-  },
-];
+interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  cta: string;
+  href: string;
+  bgGradient: string;
+  product: HeroProduct;
+  badge: string;
+}
 
-export default function ModernHeroSlider() {
+interface ModernHeroSliderProps {
+  products: HeroProduct[];
+}
+
+export default function ModernHeroSlider({ products }: ModernHeroSliderProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Generate slides from real product data
+  const generateSlides = (products: HeroProduct[]): HeroSlide[] => {
+    const gradients = [
+      "from-emerald-500 via-teal-600 to-green-700",
+      "from-purple-500 via-violet-600 to-indigo-700", 
+      "from-orange-500 via-amber-600 to-yellow-600",
+      "from-blue-500 via-cyan-600 to-teal-700",
+      "from-pink-500 via-rose-600 to-red-700",
+      "from-indigo-500 via-purple-600 to-violet-700",
+    ];
+
+    return products.map((product, index) => {
+      const isJuice = product.category.name === "Juice";
+      const isIcedTea = product.category.name === "Iced Tea";
+      
+      return {
+        id: product._id,
+        title: isJuice ? "PURE WELLNESS," : "REFRESHING BLISS,",
+        subtitle: isJuice ? "DELIVERED FRESH" : "NATURAL ENERGY",
+        description: product.shortDescription || product.description || 
+          (isJuice 
+            ? "Premium cold-pressed juices crafted for your optimal health and vitality."
+            : "Handcrafted iced tea blends that refresh your mind, body and soul."),
+        cta: isJuice ? "Shop Juices" : "Explore Iced Teas",
+        href: generateShopUrl(product.category.name),
+        bgGradient: gradients[index % gradients.length],
+        product,
+        badge: product.isBestSeller ? "BESTSELLER" : 
+               (isJuice ? "COLD-PRESSED" : "REFRESHING"),
+      };
+    });
+  };
+
+  const slides = generateSlides(products);
+
+  // Fallback slides if no products
+  const fallbackSlides: HeroSlide[] = [
+    {
+      id: "fallback-1",
+      title: "PURE WELLNESS,",
+      subtitle: "DELIVERED FRESH", 
+      description: "Premium cold-pressed juices and herbal teas crafted for your optimal health and vitality.",
+      cta: "Shop Now",
+      href: "/shop",
+      bgGradient: "from-emerald-500 via-teal-600 to-green-700",
+      product: {
+        _id: "1",
+        name: "Premium Wellness Collection",
+        slug: "premium-wellness",
+        price: 12.99,
+        images: [],
+        features: ["100% Organic", "Cold-Pressed", "No Additives"],
+        category: { _id: "1", name: "Juice", slug: "juice" },
+      },
+      badge: "PREMIUM",
+    },
+  ];
+
+  const activeSlides = slides.length > 0 ? slides : fallbackSlides;
 
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -84,19 +116,19 @@ export default function ModernHeroSlider() {
     if (!isAutoPlaying) return;
 
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
+      setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, activeSlides.length]);
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
     setIsAutoPlaying(false);
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
     setIsAutoPlaying(false);
   };
 
@@ -105,7 +137,7 @@ export default function ModernHeroSlider() {
     setIsAutoPlaying(false);
   };
 
-  const currentSlideData = slides[currentSlide];
+  const currentSlideData = activeSlides[currentSlide];
 
   return (
     <section
@@ -219,7 +251,7 @@ export default function ModernHeroSlider() {
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-12 items-center pb-20 lg:pb-0">
           {/* Left Content */}
           <motion.div style={{ y: textY }} className="text-center lg:text-left">
             <AnimatePresence mode="wait">
@@ -237,7 +269,11 @@ export default function ModernHeroSlider() {
                   transition={{ delay: 0.2 }}
                   className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm text-white px-4 lg:px-6 py-2 lg:py-3 rounded-full mb-6 lg:mb-8 shadow-xl font-bold text-xs lg:text-sm border border-white/30"
                 >
-                  <Leaf className="w-4 h-4" />
+                  {currentSlideData.product.isBestSeller ? (
+                    <Crown className="w-4 h-4 text-yellow-300" />
+                  ) : (
+                    <Leaf className="w-4 h-4" />
+                  )}
                   <span>{currentSlideData.badge}</span>
                 </motion.div>
 
@@ -273,7 +309,7 @@ export default function ModernHeroSlider() {
                   transition={{ delay: 0.5 }}
                   className="flex flex-wrap justify-center lg:justify-start gap-3 lg:gap-4 mb-6 lg:mb-8"
                 >
-                  {currentSlideData.features.map((feature, index) => (
+                  {currentSlideData.product.features.slice(0, 3).map((feature, index) => (
                     <Badge
                       key={index}
                       variant="secondary"
@@ -282,6 +318,28 @@ export default function ModernHeroSlider() {
                       {feature}
                     </Badge>
                   ))}
+                  {currentSlideData.product.features.length === 0 && (
+                    <>
+                      <Badge
+                        variant="secondary"
+                        className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm font-semibold"
+                      >
+                        100% Organic
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm font-semibold"
+                      >
+                        Premium Quality
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-3 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm font-semibold"
+                      >
+                        Fresh
+                      </Badge>
+                    </>
+                  )}
                 </motion.div>
 
                 {/* CTA Button */}
@@ -337,7 +395,7 @@ export default function ModernHeroSlider() {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center z-10"
           >
             <AnimatePresence mode="popLayout">
               <motion.div
@@ -361,20 +419,55 @@ export default function ModernHeroSlider() {
                   className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 lg:p-12 shadow-2xl max-w-sm lg:max-w-lg border border-white/50"
                 >
                   <div className="text-center">
-                    <div className="text-6xl lg:text-9xl mb-4 lg:mb-8">
-                      {currentSlideData.productImage}
+                    {/* Product Image */}
+                    <div className="w-24 h-24 lg:w-32 lg:h-32 mx-auto mb-4 lg:mb-8 relative">
+                      {currentSlideData.product.images.length > 0 ? (
+                        <Image
+                          src={currentSlideData.product.images[0]}
+                          alt={currentSlideData.product.name}
+                          fill
+                          className="object-contain rounded-xl"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-green-100 rounded-xl flex items-center justify-center text-4xl lg:text-6xl">
+                          {currentSlideData.product.category.name === "Juice" ? "🥤" : "🧊"}
+                        </div>
+                      )}
                     </div>
+                    
                     <h3 className="text-xl lg:text-3xl font-bold text-gray-800 mb-2 lg:mb-3">
-                      {currentSlideData.productTitle}
+                      {currentSlideData.product.name}
                     </h3>
                     <p className="text-gray-600 mb-3 lg:mb-6 text-sm lg:text-base">
-                      Premium Quality
+                      {currentSlideData.product.category.name}
                     </p>
-                    <div className="text-2xl lg:text-4xl font-black text-emerald-600 mb-4 lg:mb-8">
-                      {currentSlideData.productPrice}
+                    
+                    {/* Price Display */}
+                    <div className="mb-4 lg:mb-8">
+                      {currentSlideData.product.compareAtPrice && currentSlideData.product.compareAtPrice > currentSlideData.product.price ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-lg lg:text-2xl text-gray-500 line-through">
+                            ${currentSlideData.product.compareAtPrice.toFixed(2)}
+                          </span>
+                          <span className="text-2xl lg:text-4xl font-black text-emerald-600">
+                            ${currentSlideData.product.price.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-2xl lg:text-4xl font-black text-emerald-600">
+                          ${currentSlideData.product.price.toFixed(2)}
+                        </div>
+                      )}
                     </div>
-                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 lg:py-4 rounded-xl text-sm lg:text-base">
-                      Add to Cart
+                    
+                    {/* Shop Now Button */}
+                    <Button 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 lg:py-4 rounded-xl text-sm lg:text-base"
+                      asChild
+                    >
+                      <Link href={`/products/${currentSlideData.product.slug}`}>
+                        View Product
+                      </Link>
                     </Button>
                   </div>
                 </motion.div>
@@ -384,9 +477,16 @@ export default function ModernHeroSlider() {
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5, type: "spring" }}
-                  className="absolute -top-3 lg:-top-4 -right-3 lg:-right-4 bg-orange-500 text-white text-xs lg:text-sm font-bold px-3 lg:px-4 py-2 rounded-full shadow-lg"
+                  className={`absolute -top-3 lg:-top-4 -right-3 lg:-right-4 text-white text-xs lg:text-sm font-bold px-3 lg:px-4 py-2 rounded-full shadow-lg flex items-center gap-1 ${
+                    currentSlideData.product.isBestSeller 
+                      ? "bg-gradient-to-r from-yellow-500 to-orange-500" 
+                      : "bg-gradient-to-r from-blue-500 to-purple-500"
+                  }`}
                 >
-                  New!
+                  {currentSlideData.product.isBestSeller && (
+                    <Crown className="w-3 h-3" />
+                  )}
+                  {currentSlideData.product.isBestSeller ? "Best Seller" : "New!"}
                 </motion.div>
               </motion.div>
             </AnimatePresence>
@@ -395,10 +495,10 @@ export default function ModernHeroSlider() {
       </div>
 
       {/* Navigation Controls */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-6">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-6 z-50">
         {/* Slide Indicators */}
         <div className="flex space-x-3">
-          {slides.map((_, index) => (
+          {activeSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
@@ -415,13 +515,13 @@ export default function ModernHeroSlider() {
         <div className="flex space-x-2">
           <button
             onClick={prevSlide}
-            className="p-3 bg-white/20 backdrop-blur-sm text-white rounded-full hover:bg-white/30 transition-all duration-200 border border-white/30"
+            className="p-3 bg-white/20 backdrop-blur-sm text-white rounded-full hover:bg-white/30 transition-all duration-200 border border-white/30 shadow-lg"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={nextSlide}
-            className="p-3 bg-white/20 backdrop-blur-sm text-white rounded-full hover:bg-white/30 transition-all duration-200 border border-white/30"
+            className="p-3 bg-white/20 backdrop-blur-sm text-white rounded-full hover:bg-white/30 transition-all duration-200 border border-white/30 shadow-lg"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
