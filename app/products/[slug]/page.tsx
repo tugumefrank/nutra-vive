@@ -24,23 +24,25 @@ import {
 
 // Simple markdown-to-HTML converter
 function formatDescription(text: string): string {
-  if (!text) return '';
-  
-  return text
-    // Convert **bold** to <strong>
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Convert bullet points (• or -) to HTML lists
-    .replace(/^[•-]\s+(.+)$/gm, '<li>$1</li>')
-    // Wrap consecutive list items in <ul>
-    .replace(/(<li>.*?<\/li>\s*)+/g, '<ul>$&</ul>')
-    // Convert line breaks to <br> and paragraphs
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    // Wrap in paragraph tags
-    .replace(/^(.+)$/, '<p>$1</p>')
-    // Fix multiple paragraph tags
-    .replace(/<p><\/p>/g, '')
-    .replace(/<p>(<ul>.*?<\/ul>)<\/p>/g, '$1');
+  if (!text) return "";
+
+  return (
+    text
+      // Convert **bold** to <strong>
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Convert bullet points (• or -) to HTML lists
+      .replace(/^[•-]\s+(.+)$/gm, "<li>$1</li>")
+      // Wrap consecutive list items in <ul>
+      .replace(/(<li>.*?<\/li>\s*)+/g, "<ul>$&</ul>")
+      // Convert line breaks to <br> and paragraphs
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/\n/g, "<br>")
+      // Wrap in paragraph tags
+      .replace(/^(.+)$/, "<p>$1</p>")
+      // Fix multiple paragraph tags
+      .replace(/<p><\/p>/g, "")
+      .replace(/<p>(<ul>.*?<\/ul>)<\/p>/g, "$1")
+  );
 }
 
 interface ProductPageProps {
@@ -59,8 +61,8 @@ export async function generateMetadata({
     };
   }
 
-  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://nutravive.com'}/products/${slug}`;
-  const productImage = product.images[0] || '/images/default-product.jpg';
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://nutraviveholistic.com"}/products/${slug}`;
+  const productImage = product.images[0] || "/images/default-product.jpg";
 
   return {
     title: `${product.name} | Nutra-Vive`,
@@ -77,14 +79,14 @@ export async function generateMetadata({
           width: 1200,
           height: 630,
           alt: product.name,
-        }
+        },
       ],
       url: productUrl,
-      siteName: 'Nutra-Vive',
-      type: 'website',
+      siteName: "Nutra-Vive",
+      type: "website",
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: `${product.name} | Nutra-Vive`,
       description: product.shortDescription || product.description,
       images: [productImage],
@@ -111,8 +113,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   );
 
   // Share data
-  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://nutravive.com'}/products/${slug}`;
-  const productImage = product.images[0] || '/images/default-product.jpg';
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://nutraviveholistic.com"}/products/${slug}`;
+  const productImage = product.images[0] || "/images/default-product.jpg";
 
   return (
     <LandingLayout>
@@ -304,13 +306,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <div className="p-6">
                 <TabsContent value="description" className="mt-0">
                   <div className="prose prose-green max-w-none dark:prose-invert">
-                    <div 
+                    <div
                       className="formatted-description text-lg leading-relaxed space-y-4"
-                      dangerouslySetInnerHTML={{ 
-                        __html: formatDescription(product.description || "No description available.") 
+                      dangerouslySetInnerHTML={{
+                        __html: formatDescription(
+                          product.description || "No description available."
+                        ),
                       }}
                     />
-                    
+
                     {product.features && product.features.length > 0 && (
                       <div className="mt-8">
                         <h3 className="text-xl font-semibold mb-4">

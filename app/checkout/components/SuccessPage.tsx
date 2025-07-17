@@ -10,7 +10,10 @@ interface SuccessPageProps {
   customerEmail?: string;
 }
 
-export default function SuccessPage({ orderId, customerEmail }: SuccessPageProps) {
+export default function SuccessPage({
+  orderId,
+  customerEmail,
+}: SuccessPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 flex items-center justify-center p-4">
       <motion.div
@@ -134,7 +137,9 @@ export default function SuccessPage({ orderId, customerEmail }: SuccessPageProps
             size="lg"
             asChild
           >
-            <Link href={`/track?order=${orderId}${customerEmail ? `&email=${encodeURIComponent(customerEmail)}` : ''}`}>
+            <Link
+              href={`/track?order=${orderId}${customerEmail ? `&email=${encodeURIComponent(customerEmail)}` : ""}`}
+            >
               Track Your Order
               <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
@@ -157,7 +162,7 @@ export default function SuccessPage({ orderId, customerEmail }: SuccessPageProps
           transition={{ delay: 1.2, duration: 0.5 }}
           className="text-xs text-gray-500"
         >
-          <p>Need help? Contact us at support@nutravive.com</p>
+          <p>Need help? Contact us at support@nutraviveholistic.com</p>
         </motion.div>
       </motion.div>
     </div>

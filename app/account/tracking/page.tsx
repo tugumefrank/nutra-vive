@@ -213,7 +213,7 @@ async function TrackingData() {
 
               <Button className="w-full justify-start" variant="outline">
                 <Mail className="w-4 h-4 mr-2" />
-                Email: support@nutravive.com
+                Email: support@nutraviveholistic.com
               </Button>
 
               <Button
