@@ -237,7 +237,7 @@ export async function submitConsultationForm(
     // 📧 MOCK EMAIL - Send notification to admin (mocked in development)
     try {
       await sendEmail({
-        to: process.env.ADMIN_EMAIL || "admin@nutraviveholistic.com",
+        to: process.env.ADMIN_EMAIL || "orders@nutraviveholistic.com",
         subject: `New Consultation Request - ${consultation.consultationNumber}`,
         template: "admin-consultation-notification",
         data: {
