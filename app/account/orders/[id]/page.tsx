@@ -19,6 +19,7 @@ import {
   Phone,
   Mail,
   XCircle,
+  Search,
 } from "lucide-react";
 
 import { getOrder } from "@/lib/actions/orderServerActions";
@@ -199,6 +200,17 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
 
               {/* Quick Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/20 gap-2"
+                  asChild
+                >
+                  <Link href={`/account/tracking?order=${order.orderNumber}`}>
+                    <Search className="h-4 w-4" />
+                    Track Order
+                  </Link>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

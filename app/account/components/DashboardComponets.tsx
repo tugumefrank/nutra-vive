@@ -175,7 +175,7 @@ export function RecentOrdersCard({ orders }: RecentOrdersCardProps) {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </span>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/account/orders/${order.orderNumber}`}>
+                    <Link href={`/account/orders/${order._id}`}>
                       View Details
                     </Link>
                   </Button>
