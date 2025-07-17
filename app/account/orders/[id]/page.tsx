@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import DownloadInvoiceButton from "@/components/orders/DownloadInvoiceButton";
 import Image from "next/image";
 
 interface OrderDetailPageProps {
@@ -211,14 +212,11 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                     Track Order
                   </Link>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <DownloadInvoiceButton
+                  orderId={order._id}
+                  orderNumber={order.orderNumber}
                   className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-white/20 dark:border-gray-700/20 gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download Invoice
-                </Button>
+                />
                 {order.status === "delivered" && (
                   <Button
                     size="sm"

@@ -15,12 +15,14 @@ import {
   DollarSign,
   Calendar,
   ShoppingCart,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DownloadInvoiceButton from "@/components/orders/DownloadInvoiceButton";
 
 // OrderCard Component
 interface OrderItem {
@@ -254,11 +256,24 @@ export function OrderCard({ order }: OrderCardProps) {
 
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" asChild>
+                <Link href={`/account/tracking?order=${order.orderNumber}`}>
+                  <Search className="w-4 h-4 mr-1" />
+                  Track
+                </Link>
+              </Button>
+
+              <Button variant="ghost" size="sm" asChild>
                 <Link href={`/account/orders/${order._id}`}>
                   <Eye className="w-4 h-4 mr-1" />
                   View Details
                 </Link>
               </Button>
+
+              <DownloadInvoiceButton
+                orderId={order._id}
+                orderNumber={order.orderNumber}
+                className="h-8 px-2 text-sm"
+              />
 
               {order.status === "delivered" && (
                 <Button variant="ghost" size="sm">
@@ -266,11 +281,6 @@ export function OrderCard({ order }: OrderCardProps) {
                   Reorder
                 </Button>
               )}
-
-              <Button variant="ghost" size="sm">
-                <Download className="w-4 h-4 mr-1" />
-                Invoice
-              </Button>
             </div>
           </div>
         </CardContent>
