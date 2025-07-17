@@ -12,6 +12,8 @@ import WelcomeEmail from "./templates/welcome";
 import AdminNewOrderEmail from "./templates/admin-new-order";
 import AdminNewUserEmail from "./templates/admin-new-user";
 import BulkEmail from "./templates/bulk-email";
+import MembershipSubscriptionConfirmationEmail from "./templates/membership-subscription-confirmation";
+import AdminNewMembershipEmail from "./templates/admin-new-membership";
 
 export interface EmailOptions {
   to: string | string[];
@@ -79,6 +81,8 @@ function getEmailTemplate(template: string) {
     "admin-new-user": AdminNewUserEmail,
     "payment-confirmation": PaymentConfirmationEmail,
     "bulk-email": BulkEmail,
+    "membership-subscription-confirmation": MembershipSubscriptionConfirmationEmail,
+    "admin-new-membership": AdminNewMembershipEmail,
     welcome: WelcomeEmail,
   };
 

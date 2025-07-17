@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { connectToDatabase } from "@/lib/db";
 import { User, UserMembership, Membership, Consultation, IUser, IUserMembership, IMembership, IConsultation } from "@/lib/db/models";
 import { syncStripeDataToDatabase } from "@/lib/stripe/sync";
+import { sendEmail } from "@/lib/email";
 
 // Stripe webhook event handlers interface
 interface WebhookHandlers {
@@ -278,6 +279,52 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       });
       
       console.log(`✅ Created new membership for user ${userId}`);
+      
+      // Send email notifications
+      try {
+        // Send confirmation email to customer
+        await sendEmail({
+          to: user.email,
+          subject: `Welcome to your ${membershipTier || membership.tier} membership!`,
+          template: "membership-subscription-confirmation",
+          data: {
+            membershipTier: membershipTier || membership.tier,
+            price: membership.price || 0,
+            nextBillingDate: currentPeriodEnd.toLocaleDateString(),
+            userEmail: user.email,
+            userName: `${user.firstName} ${user.lastName}`,
+            productAllocations: productUsage.map((usage: any) => ({
+              categoryName: usage.categoryName,
+              quantity: usage.allocatedQuantity,
+            })),
+          },
+        });
+        
+        // Send notification to admin
+        await sendEmail({
+          to: "orders@nutraviveholistic.com",
+          subject: `New ${membershipTier || membership.tier} membership subscription`,
+          template: "admin-new-membership",
+          data: {
+            membershipTier: membershipTier || membership.tier,
+            price: membership.price || 0,
+            userEmail: user.email,
+            userName: `${user.firstName} ${user.lastName}`,
+            subscriptionId: subscription.id,
+            startDate: startDate.toLocaleDateString(),
+            nextBillingDate: currentPeriodEnd.toLocaleDateString(),
+            productAllocations: productUsage.map((usage: any) => ({
+              categoryName: usage.categoryName,
+              quantity: usage.allocatedQuantity,
+            })),
+          },
+        });
+        
+        console.log(`✅ Sent membership subscription emails for user ${userId}`);
+      } catch (emailError) {
+        console.error(`❌ Error sending membership subscription emails:`, emailError);
+        // Don't fail the webhook if email sending fails
+      }
     }
     
   } catch (error) {

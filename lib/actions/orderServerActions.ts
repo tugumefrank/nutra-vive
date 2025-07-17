@@ -467,7 +467,7 @@ export async function createCheckoutSession(
       // Send admin notification for free orders
       try {
         await sendAdminNewOrder(
-          process.env.ADMIN_EMAIL || "orders@nutraviveholistic.com",
+          "orders@nutraviveholistic.com",
           {
             orderNumber: order.orderNumber,
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
@@ -731,7 +731,7 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
       // 📧 SEND ADMIN NEW ORDER NOTIFICATION
       try {
         await sendAdminNewOrder(
-          process.env.ADMIN_EMAIL || "orders@nutraviveholistic.com",
+          "orders@nutraviveholistic.com",
           {
             orderNumber: order.orderNumber,
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
