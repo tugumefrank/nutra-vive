@@ -446,6 +446,18 @@ export function EnhancedProductCard({
     }
   );
 
+  // Determine image styling based on category
+  const isTeaBagCategory = useMemo(() => {
+    if (!product.category) return false;
+    
+    const categoryName = typeof product.category === 'object' && product.category !== null
+      ? (product.category as { name: string }).name
+      : product.category;
+    
+    return typeof categoryName === 'string' && 
+           categoryName.toLowerCase().includes('tea bag');
+  }, [product.category]);
+
   // Enhanced card with membership features
   return (
     <div
@@ -468,7 +480,10 @@ export function EnhancedProductCard({
               alt={product.name}
               fill
               className={cn(
-                "object-cover transition-all duration-700 group-hover:scale-110",
+                "transition-all duration-700",
+                isTeaBagCategory 
+                  ? "object-cover group-hover:scale-110" 
+                  : "object-contain",
                 imageLoading ? "blur-sm" : "blur-0"
               )}
               onLoad={handleImageLoad}
