@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import ShareButton from "@/components/ui/ShareButton";
 import { Star, Shield, Truck, RefreshCw, Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,9 @@ export async function generateMetadata({
     };
   }
 
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://nutravive.com'}/products/${slug}`;
+  const productImage = product.images[0] || '/images/default-product.jpg';
+
   return {
     title: `${product.name} | Nutra-Vive`,
     description:
@@ -65,9 +69,28 @@ export async function generateMetadata({
       product.shortDescription ||
       product.description,
     openGraph: {
-      title: product.name,
+      title: `${product.name} | Nutra-Vive`,
       description: product.shortDescription || product.description,
-      images: product.images.map((img) => ({ url: img })),
+      images: [
+        {
+          url: productImage,
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        }
+      ],
+      url: productUrl,
+      siteName: 'Nutra-Vive',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${product.name} | Nutra-Vive`,
+      description: product.shortDescription || product.description,
+      images: [productImage],
+    },
+    alternates: {
+      canonical: productUrl,
     },
   };
 }
@@ -86,6 +109,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     product._id,
     4 // Limit to 4 products
   );
+
+  // Share data
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://nutravive.com'}/products/${slug}`;
+  const productImage = product.images[0] || '/images/default-product.jpg';
 
   return (
     <LandingLayout>
@@ -218,6 +245,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       ${product.compareAtPrice.toFixed(2)}
                     </span>
                   )}
+              </div>
+
+              {/* Share Button */}
+              <div className="flex items-center justify-between pt-4">
+                <ShareButton
+                  url={productUrl}
+                  title={product.name}
+                  description={product.shortDescription || product.description}
+                  image={productImage}
+                  className="ml-auto"
+                />
               </div>
 
               {/* Add to Cart */}
