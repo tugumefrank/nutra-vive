@@ -996,7 +996,59 @@ export async function exportPromotions(
     await checkAdminAuth();
     await connectToDatabase();
 
-    const { promotions } = await getPromotions({ ...filters, limit: 10000 });
+    // For exports, we need to bypass the limit validation
+    // Use a separate query directly without the schema validation
+    const query: any = {};
+    
+    if (filters?.type) {
+      query.type = filters.type;
+    }
+    
+    if (filters?.isActive !== undefined) {
+      query.isActive = filters.isActive;
+    }
+    
+    if (filters?.isScheduled !== undefined) {
+      query.isScheduled = filters.isScheduled;
+    }
+    
+    if (filters?.discountType) {
+      query.discountType = filters.discountType;
+    }
+    
+    if (filters?.search) {
+      query.$or = [
+        { name: { $regex: filters.search, $options: "i" } },
+        { description: { $regex: filters.search, $options: "i" } },
+      ];
+    }
+    
+    if (filters?.dateFrom || filters?.dateTo) {
+      query.createdAt = {};
+      if (filters?.dateFrom) {
+        query.createdAt.$gte = new Date(filters.dateFrom);
+      }
+      if (filters?.dateTo) {
+        query.createdAt.$lte = new Date(filters.dateTo);
+      }
+    }
+    
+    // Get all promotions without limit for export
+    const promotions = await Promotion.find(query)
+      .populate([
+        {
+          path: "applicableProducts",
+          model: "Product",
+          select: "name _id",
+        },
+        {
+          path: "applicableCategories",
+          model: "Category",
+          select: "name _id",
+        },
+      ])
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Convert promotions to CSV format
     const csvHeaders = [
