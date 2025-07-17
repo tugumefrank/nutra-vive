@@ -51,7 +51,7 @@ export function calculateCartTotals(
   const {
     shippingThreshold = 25,
     shippingCost = 9.99,
-    taxRate = 0.08, // 8% tax
+    taxRate = 0, // Tax disabled
     discountAmount = 0,
   } = options;
 

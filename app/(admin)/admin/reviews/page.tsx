@@ -52,6 +52,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Package,
 } from "lucide-react";
 
 // Import server actions
@@ -85,7 +86,7 @@ interface Review {
     name: string;
     slug: string;
     images: string[];
-  };
+  } | null;
 }
 
 interface ReviewStats {
@@ -886,14 +887,27 @@ const ReviewsAdminDashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4 text-sm text-gray-500">
                                 <div className="flex items-center gap-2">
-                                  <img
-                                    src={review.product.images[0]}
-                                    alt={review.product.name}
-                                    className="w-8 h-8 rounded object-cover"
-                                  />
-                                  <span className="font-medium">
-                                    {review.product.name}
-                                  </span>
+                                  {review.product ? (
+                                    <>
+                                      <img
+                                        src={review.product.images?.[0] || '/images/default-product.jpg'}
+                                        alt={review.product.name}
+                                        className="w-8 h-8 rounded object-cover"
+                                      />
+                                      <span className="font-medium">
+                                        {review.product.name}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+                                        <Package className="w-4 h-4 text-gray-400" />
+                                      </div>
+                                      <span className="font-medium text-gray-400">
+                                        Product deleted
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />

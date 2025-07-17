@@ -281,7 +281,7 @@ export function calculateShipping(
  * Calculate tax
  */
 export function calculateTax(amount: number): number {
-  return Math.round(amount * 0.08 * 100) / 100; // 8% tax
+  return 0; // Tax calculation disabled
 }
 
 /**

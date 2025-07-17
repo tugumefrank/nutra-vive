@@ -115,8 +115,7 @@ export default function CheckoutPage() {
   }
 
   function calculateTax(amount: number, isFreeOrder: boolean = false): number {
-    if (isFreeOrder) return 0; // No tax for free membership orders
-    return Math.round(amount * 0.08 * 100) / 100; // 8% tax
+    return 0; // Tax calculation disabled
   }
 
   // Check if this is a free membership order (afterDiscountsTotal is exactly $0)
