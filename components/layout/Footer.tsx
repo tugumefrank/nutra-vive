@@ -246,11 +246,7 @@ interface FooterProps {
 export function Footer({ variant = "default", className }: FooterProps) {
   const footerLinks = {
     company: [
-      { href: "/about", label: "About Us" },
-      { href: "/contact", label: "Contact" },
-      { href: "/careers", label: "Careers" },
-      { href: "/blog", label: "Blog" },
-      { href: "/press", label: "Press" },
+      // Removed non-existent pages: About Us, Contact, Careers, Blog, Press
     ],
     products: [
       { href: "/shop?category=juices", label: "Cold-Pressed Juices" },
@@ -260,17 +256,11 @@ export function Footer({ variant = "default", className }: FooterProps) {
       { href: "/shop?category=tea-bags", label: "Tea Bags" },
     ],
     support: [
-      { href: "/help", label: "Help Center" },
-      { href: "/shipping", label: "Shipping Info" },
-      { href: "/returns", label: "Returns" },
-      { href: "/faq", label: "FAQ" },
-      { href: "/track-order", label: "Track Order" },
+      { href: "/track", label: "Track Order" }, // Fixed: changed from /track-order to /track
+      // Removed non-existent pages: Help Center, Shipping Info, Returns, FAQ
     ],
     legal: [
-      { href: "/privacy", label: "Privacy Policy" },
-      { href: "/terms", label: "Terms of Service" },
-      { href: "/cookies", label: "Cookie Policy" },
-      { href: "/accessibility", label: "Accessibility" },
+      // Removed non-existent pages: Privacy Policy, Terms of Service, Cookie Policy, Accessibility
     ],
   };
 
@@ -303,22 +293,16 @@ export function Footer({ variant = "default", className }: FooterProps) {
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <Link
-                href="/privacy"
+                href="/track"
                 className="hover:text-orange-600 transition-colors"
               >
-                Privacy
+                Track Order
               </Link>
               <Link
-                href="/terms"
+                href="/shop"
                 className="hover:text-orange-600 transition-colors"
               >
-                Terms
-              </Link>
-              <Link
-                href="/contact"
-                className="hover:text-orange-600 transition-colors"
-              >
-                Contact
+                Shop
               </Link>
             </div>
           </div>
@@ -365,9 +349,9 @@ export function Footer({ variant = "default", className }: FooterProps) {
         <div className="border-t border-gray-200 mb-12"></div>
 
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
           {/* Brand Column */}
-          <div className="lg:col-span-1">
+          <div>
             <div className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-white" />
@@ -398,23 +382,7 @@ export function Footer({ variant = "default", className }: FooterProps) {
             </div>
           </div>
 
-          {/* Links Columns */}
-          <div>
-            <h4 className="font-semibold mb-4 text-gray-900">Company</h4>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-gray-600 hover:text-orange-600 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
+          {/* Products Column */}
           <div>
             <h4 className="font-semibold mb-4 text-gray-900">Products</h4>
             <ul className="space-y-2">
@@ -431,26 +399,11 @@ export function Footer({ variant = "default", className }: FooterProps) {
             </ul>
           </div>
 
+          {/* Support & Contact Column */}
           <div>
             <h4 className="font-semibold mb-4 text-gray-900">Support</h4>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-gray-600 hover:text-orange-600 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4 text-gray-900">Legal</h4>
             <ul className="space-y-2 mb-6">
-              {footerLinks.legal.map((link) => (
+              {footerLinks.support.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -463,6 +416,7 @@ export function Footer({ variant = "default", className }: FooterProps) {
             </ul>
 
             {/* Contact Info */}
+            <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Mail className="w-4 h-4" />
