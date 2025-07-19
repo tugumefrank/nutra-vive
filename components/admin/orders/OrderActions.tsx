@@ -41,7 +41,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   MoreHorizontal,
-  Eye,
   Package,
   Truck,
   CheckCircle,
@@ -49,10 +48,12 @@ import {
   RefreshCw,
   DollarSign,
   MessageSquare,
+  Edit,
+  Share,
   Printer,
   Download,
-  Edit,
 } from "lucide-react";
+import { ContactCustomerModal } from "./ContactCustomerModal";
 
 interface OrderActionsProps {
   orderId: string;
@@ -60,6 +61,8 @@ interface OrderActionsProps {
   currentPaymentStatus?: string;
   orderNumber?: string;
   totalAmount?: number;
+  customerEmail?: string;
+  customerName?: string;
   compact?: boolean;
 }
 
@@ -69,6 +72,8 @@ export function OrderActions({
   currentPaymentStatus,
   orderNumber,
   totalAmount,
+  customerEmail = "",
+  customerName = "",
   compact = false,
 }: OrderActionsProps) {
   const router = useRouter();
@@ -151,6 +156,77 @@ export function OrderActions({
     }
   };
 
+  // Quick Actions handlers
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/invoice`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${orderNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        toast.error('Failed to download invoice. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Error downloading invoice. Please try again.');
+    }
+  };
+
+  const handlePrintInvoice = async () => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/invoice`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        toast.error('Failed to generate invoice for printing. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error printing invoice:', error);
+      toast.error('Error printing invoice. Please try again.');
+    }
+  };
+
+  const handleShareOrder = () => {
+    const shareData = {
+      title: `Order ${orderNumber}`,
+      text: `Check out this order: ${orderNumber}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {
+        copyToClipboard();
+      });
+    } else {
+      copyToClipboard();
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      toast.success('Order URL copied to clipboard!');
+    }).catch(() => {
+      toast.error('Failed to copy URL to clipboard.');
+    });
+  };
+
   // Get available actions based on current status
   const getAvailableActions = () => {
     const actions: Array<{
@@ -172,9 +248,9 @@ export function OrderActions({
 
     if (currentStatus === "processing") {
       actions.push({
-        label: "Add Tracking & Ship",
+        label: "Mark as Shipped",
         icon: Truck,
-        action: () => setShowTrackingDialog(true),
+        action: () => handleStatusUpdate("shipped"),
       });
     }
 
@@ -226,19 +302,20 @@ export function OrderActions({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={() => router.push(`/admin/orders/${orderId}`)}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
+            <ContactCustomerModal
+              customerEmail={customerEmail}
+              customerName={customerName}
+              orderNumber={orderNumber || ""}
+              trigger={
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contact Customer
+                </DropdownMenuItem>
+              }
+            />
             <DropdownMenuItem>
               <Edit className="h-4 w-4 mr-2" />
               Edit Order
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Invoice
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {getAvailableActions().map((action, index) => (
@@ -335,29 +412,27 @@ export function OrderActions({
         </div>
       )}
 
-      {/* Utility Actions */}
-      <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push(`/admin/orders/${orderId}`)}
-          className="gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          View Details
-        </Button>
-        <Button variant="ghost" size="sm" className="gap-2">
-          <Printer className="h-4 w-4" />
-          Print Invoice
-        </Button>
-        <Button variant="ghost" size="sm" className="gap-2">
-          <Download className="h-4 w-4" />
-          Download PDF
-        </Button>
-        <Button variant="ghost" size="sm" className="gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Contact Customer
-        </Button>
+      {/* Quick Actions - Utility Functions */}
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handleShareOrder}>
+            <Share className="h-4 w-4" />
+            Share
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handlePrintInvoice}>
+            <Printer className="h-4 w-4" />
+            Print Invoice
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handleDownloadPDF}>
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+          <ContactCustomerModal
+            customerEmail={customerEmail}
+            customerName={customerName}
+            orderNumber={orderNumber || ""}
+          />
+        </div>
       </div>
 
       {/* Dialogs */}

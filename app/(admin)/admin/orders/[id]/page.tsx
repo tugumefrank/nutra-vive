@@ -117,7 +117,15 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                 </div>
               </div>
 
-              <ClientButtons />
+              <ClientButtons 
+                orderId={order._id} 
+                orderNumber={order.orderNumber}
+                currentStatus={order.status}
+                currentPaymentStatus={order.paymentStatus}
+                totalAmount={order.totalAmount}
+                customerEmail={order.email}
+                customerName={`${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`}
+              />
             </div>
           </div>
         </div>
@@ -129,7 +137,7 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
       </div>
 
       {/* Floating Action Button - Mobile */}
-      <FloatingActionButtons />
+      <FloatingActionButtons orderId={order._id} orderNumber={order.orderNumber} />
     </div>
   );
 }

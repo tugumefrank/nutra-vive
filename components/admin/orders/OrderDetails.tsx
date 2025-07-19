@@ -537,48 +537,100 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-4 p-4 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50"
+                      className="p-4 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50"
                     >
-                      <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
-                        <Image
-                          src={item.productImage || "/placeholder-product.jpg"}
-                          alt={item.productName}
-                          fill
-                          className="object-cover"
-                        />
+                      {/* Mobile Layout: Stack vertically */}
+                      <div className="block sm:hidden space-y-3">
+                        {/* Top row: Image + Product info */}
+                        <div className="flex items-start gap-3">
+                          <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-white dark:bg-slate-800 flex-shrink-0">
+                            <Image
+                              src={item.productImage || "/placeholder-product.jpg"}
+                              alt={item.productName}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {productId ? (
+                              <Link
+                                href={`/admin/products/${productId}`}
+                                className="font-medium text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors block"
+                              >
+                                {item.productName}
+                              </Link>
+                            ) : (
+                              <span className="font-medium text-slate-900 dark:text-slate-100 block">
+                                {item.productName}
+                              </span>
+                            )}
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              SKU: {item.productSlug}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom row: Quantity, Price, Total */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                          <div className="text-sm">
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              Qty: {item.quantity}
+                            </span>
+                            <span className="text-slate-500 dark:text-slate-400 ml-3">
+                              ${item.price.toFixed(2)} each
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+                              ${item.totalPrice.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        {productId ? (
-                          <Link
-                            href={`/admin/products/${productId}`}
-                            className="font-medium text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                          >
-                            {item.productName}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-slate-900 dark:text-slate-100">
-                            {item.productName}
-                          </span>
-                        )}
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          SKU: {item.productSlug}
-                        </p>
-                      </div>
+                      {/* Desktop Layout: Keep horizontal */}
+                      <div className="hidden sm:flex items-center gap-4">
+                        <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
+                          <Image
+                            src={item.productImage || "/placeholder-product.jpg"}
+                            alt={item.productName}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
 
-                      <div className="text-center">
-                        <p className="font-medium text-slate-900 dark:text-slate-100">
-                          Qty: {item.quantity}
-                        </p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          ${item.price.toFixed(2)} each
-                        </p>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          {productId ? (
+                            <Link
+                              href={`/admin/products/${productId}`}
+                              className="font-medium text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            >
+                              {item.productName}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {item.productName}
+                            </span>
+                          )}
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            SKU: {item.productSlug}
+                          </p>
+                        </div>
 
-                      <div className="text-right">
-                        <p className="font-semibold text-lg text-slate-900 dark:text-slate-100">
-                          ${item.totalPrice.toFixed(2)}
-                        </p>
+                        <div className="text-center">
+                          <p className="font-medium text-slate-900 dark:text-slate-100">
+                            Qty: {item.quantity}
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            ${item.price.toFixed(2)} each
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+                            ${item.totalPrice.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -781,6 +833,8 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                   currentPaymentStatus={order.paymentStatus}
                   orderNumber={order.orderNumber}
                   totalAmount={order.totalAmount}
+                  customerEmail={order.email}
+                  customerName={`${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`}
                 />
               </CardContent>
             </Card>
