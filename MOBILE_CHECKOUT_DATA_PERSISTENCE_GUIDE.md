@@ -247,305 +247,404 @@ export async function DELETE(request: NextRequest) {
 
 ## 📱 Mobile App Implementation
 
-### 1. First-Time Checkout Flow
+### 1. Integration with Your Existing CheckoutScreen
+
+Based on your current React Native checkout implementation, here's how to add data persistence:
 
 ```typescript
-// CheckoutScreen.tsx
-import React, { useState, useEffect } from 'react';
+// Add these imports to your existing CheckoutScreen.tsx
+import { getUserProfile, saveCheckoutPreferences } from '@/services/userProfileService';
 
+// Add these new state variables to your existing CheckoutScreen component
 const CheckoutScreen = () => {
-  const [checkoutForm, setCheckoutForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    apartment: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'US',
-    deliveryMethod: 'standard',
-    deliveryInstructions: '',
-    marketingOptIn: false
-  });
+  // ... your existing state variables ...
   
+  // Add these new state variables for data persistence
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
   const [saveAddressOption, setSaveAddressOption] = useState(true);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  // Load existing user data on screen mount
+  // Add this useEffect to your existing component (after your current state definitions)
   useEffect(() => {
     loadUserCheckoutData();
   }, []);
 
   const loadUserCheckoutData = async () => {
+    if (!user?.id) return; // Only load if user is authenticated
+    
+    setProfileLoading(true);
     try {
-      const token = await getAuthToken(); // Your auth token method
+      const profile = await getUserProfile(); // Call your user profile service
       
-      const response = await fetch('/api/mobile/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.user.profile) {
-        const profile = result.user.profile;
-        const user = result.user;
+      if (profile && (profile.savedAddresses?.length > 0 || profile.defaultShippingAddress)) {
+        setIsFirstTimeUser(false);
+        setSavedAddresses(profile.savedAddresses || []);
         
-        // Check if user has saved addresses
-        if (profile.savedAddresses?.length > 0 || profile.defaultShippingAddress) {
-          setIsFirstTimeUser(false);
-          
-          // Auto-fill form with saved data
-          setCheckoutForm({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            
-            // Use default shipping address if available
-            address: profile.defaultShippingAddress?.address1 || '',
-            apartment: profile.defaultShippingAddress?.address2 || '',
-            city: profile.defaultShippingAddress?.city || '',
-            state: profile.defaultShippingAddress?.state || '',
-            zipCode: profile.defaultShippingAddress?.zipCode || '',
-            country: profile.defaultShippingAddress?.country || 'US',
-            
-            // Use saved preferences
-            deliveryMethod: profile.preferredDeliveryMethod || 'standard',
-            deliveryInstructions: profile.deliveryInstructions || '',
-            marketingOptIn: profile.marketingOptIn || false
+        // Auto-fill your existing customerInfo state with saved data
+        setCustomerInfo({
+          email: user.emailAddresses?.[0]?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          phone: profile.defaultShippingAddress?.phone || '',
+        });
+        
+        // Auto-fill your existing shippingAddress state with saved data
+        if (profile.defaultShippingAddress) {
+          setShippingAddress({
+            line1: profile.defaultShippingAddress.address1 || '',
+            line2: profile.defaultShippingAddress.address2 || '',
+            city: profile.defaultShippingAddress.city || '',
+            state: profile.defaultShippingAddress.state || '',
+            postal_code: profile.defaultShippingAddress.zipCode || '',
+            country: profile.defaultShippingAddress.country || 'US',
           });
+        }
+        
+        // Auto-fill delivery method if saved
+        if (profile.preferredDeliveryMethod) {
+          setDeliveryMethod(profile.preferredDeliveryMethod);
         }
       }
     } catch (error) {
       console.error('Failed to load user checkout data:', error);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
-  const handleSuccessfulPayment = async (paymentResult) => {
-    // After successful payment, save checkout preferences if it's a new address or first time
-    if (isFirstTimeUser || saveAddressOption) {
-      await saveUserCheckoutData();
-    }
-    
-    // Navigate to success screen
-    navigation.navigate('OrderSuccess', { orderId: paymentResult.orderId });
-  };
+  // Modify your existing handlePayment function to include data saving
+  // Add this function call after successful payment confirmation but before clearing cart
 
   const saveUserCheckoutData = async () => {
+    // Only save if it's first time user or they opted to save address
+    if (!isFirstTimeUser && !saveAddressOption) return;
+    
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch('/api/mobile/auth/user/save-checkout-preferences', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      await saveCheckoutPreferences({
+        address: {
+          firstName: customerInfo.firstName,
+          lastName: customerInfo.lastName,
+          address1: shippingAddress.line1,
+          address2: shippingAddress.line2,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          zipCode: shippingAddress.postal_code,
+          country: shippingAddress.country,
+          phone: customerInfo.phone
         },
-        body: JSON.stringify({
-          address: {
-            firstName: checkoutForm.firstName,
-            lastName: checkoutForm.lastName,
-            address1: checkoutForm.address,
-            address2: checkoutForm.apartment,
-            city: checkoutForm.city,
-            state: checkoutForm.state,
-            zipCode: checkoutForm.zipCode,
-            country: checkoutForm.country,
-            phone: checkoutForm.phone
-          },
-          deliveryMethod: checkoutForm.deliveryMethod,
-          deliveryInstructions: checkoutForm.deliveryInstructions,
-          marketingOptIn: checkoutForm.marketingOptIn,
-          setAsDefault: true,
-          addressLabel: "Home" // or let user choose
-        })
+        deliveryMethod: deliveryMethod,
+        setAsDefault: true,
+        addressLabel: "Home" // or let user choose
       });
       
-      const result = await response.json();
-      if (result.success) {
-        console.log('Checkout preferences saved for future use');
-        // Show success message to user
-        showSuccessMessage('Address saved for faster checkout next time!');
-      }
+      console.log('✅ Checkout preferences saved for future use');
+      // Optionally show a toast message
+      Alert.alert('Success', 'Address saved for faster checkout next time!');
     } catch (error) {
-      console.error('Failed to save checkout preferences:', error);
+      console.error('❌ Failed to save checkout preferences:', error);
     }
   };
 
-  return (
-    <ScrollView>
-      {/* Contact Information Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contact Information</Text>
-        
-        <TextInput
-          placeholder="First Name"
-          value={checkoutForm.firstName}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, firstName: text})}
-          style={styles.input}
-        />
-        
-        <TextInput
-          placeholder="Last Name"
-          value={checkoutForm.lastName}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, lastName: text})}
-          style={styles.input}
-        />
-        
-        <TextInput
-          placeholder="Email"
-          value={checkoutForm.email}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, email: text})}
-          keyboardType="email-address"
-          style={styles.input}
-        />
-        
-        <TextInput
-          placeholder="Phone Number"
-          value={checkoutForm.phone}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, phone: text})}
-          keyboardType="phone-pad"
-          style={styles.input}
-        />
-      </View>
+  // Update your existing handlePayment function - add this call after successful payment
+  // Insert this line after: console.log('✅ Order completed successfully');
+  // and before: clearCart();
+  
+  // await saveUserCheckoutData();
+```
 
-      {/* Shipping Address Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Shipping Address</Text>
-        
-        {!isFirstTimeUser && (
-          <TouchableOpacity 
-            style={styles.changeAddressButton}
-            onPress={() => navigation.navigate('SelectAddress')}
-          >
-            <Text style={styles.changeAddressText}>Change Address</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TextInput
-          placeholder="Street Address"
-          value={checkoutForm.address}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, address: text})}
-          style={styles.input}
-        />
-        
-        <TextInput
-          placeholder="Apartment, Suite, etc. (Optional)"
-          value={checkoutForm.apartment}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, apartment: text})}
-          style={styles.input}
-        />
-        
-        <View style={styles.row}>
-          <TextInput
-            placeholder="City"
-            value={checkoutForm.city}
-            onChangeText={(text) => setCheckoutForm({...checkoutForm, city: text})}
-            style={[styles.input, styles.halfWidth]}
-          />
-          
-          <TextInput
-            placeholder="State"
-            value={checkoutForm.state}
-            onChangeText={(text) => setCheckoutForm({...checkoutForm, state: text})}
-            style={[styles.input, styles.halfWidth]}
-          />
-        </View>
-        
-        <TextInput
-          placeholder="ZIP Code"
-          value={checkoutForm.zipCode}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, zipCode: text})}
-          keyboardType="numeric"
-          style={styles.input}
-        />
-      </View>
+### 2. Required Service File
 
-      {/* Save Address Option for First-Time Users */}
-      {isFirstTimeUser && (
-        <View style={styles.section}>
-          <TouchableOpacity 
-            style={styles.checkboxRow}
-            onPress={() => setSaveAddressOption(!saveAddressOption)}
-          >
-            <View style={[styles.checkbox, saveAddressOption && styles.checkboxChecked]}>
-              {saveAddressOption && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>
-              Save this address for faster checkout next time
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+Create a new service file for handling user profile API calls:
 
-      {/* Delivery Method Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Delivery Method</Text>
-        
-        {['standard', 'express', 'pickup'].map((method) => (
-          <TouchableOpacity
-            key={method}
-            style={[
-              styles.deliveryOption,
-              checkoutForm.deliveryMethod === method && styles.deliveryOptionSelected
-            ]}
-            onPress={() => setCheckoutForm({...checkoutForm, deliveryMethod: method})}
-          >
-            <Text style={styles.deliveryMethodText}>
-              {method.charAt(0).toUpperCase() + method.slice(1)} Delivery
-            </Text>
-          </TouchableOpacity>
-        ))}
-        
-        <TextInput
-          placeholder="Delivery Instructions (Optional)"
-          value={checkoutForm.deliveryInstructions}
-          onChangeText={(text) => setCheckoutForm({...checkoutForm, deliveryInstructions: text})}
-          multiline
-          style={[styles.input, styles.textArea]}
-        />
-      </View>
+```typescript
+// services/userProfileService.ts
+import { useAuth } from '@clerk/clerk-expo';
 
-      {/* Marketing Opt-in */}
-      <View style={styles.section}>
-        <TouchableOpacity 
-          style={styles.checkboxRow}
-          onPress={() => setCheckoutForm({...checkoutForm, marketingOptIn: !checkoutForm.marketingOptIn})}
-        >
-          <View style={[styles.checkbox, checkoutForm.marketingOptIn && styles.checkboxChecked]}>
-            {checkoutForm.marketingOptIn && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            I'd like to receive marketing emails about new products and offers
-          </Text>
-        </TouchableOpacity>
-      </View>
+interface UserProfile {
+  defaultShippingAddress?: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+  };
+  savedAddresses: Array<{
+    id: string;
+    label: string;
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+    isDefault: boolean;
+    createdAt: string;
+  }>;
+  preferredDeliveryMethod: 'standard' | 'express' | 'pickup';
+  deliveryInstructions?: string;
+  marketingOptIn: boolean;
+}
 
-      {/* Payment Button */}
-      <TouchableOpacity 
-        style={styles.paymentButton}
-        onPress={handlePayment}
-      >
-        <Text style={styles.paymentButtonText}>Proceed to Payment</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+export const getUserProfile = async (): Promise<UserProfile | null> => {
+  try {
+    const { getToken } = useAuth();
+    const token = await getToken();
+    
+    const response = await fetch('/api/mobile/auth/user', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch user profile');
+    }
+    
+    const result = await response.json();
+    return result.success ? result.user.profile : null;
+  } catch (error) {
+    console.error('getUserProfile error:', error);
+    return null;
+  }
+};
+
+export const saveCheckoutPreferences = async (data: {
+  address?: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone?: string;
+  };
+  deliveryMethod?: 'standard' | 'express' | 'pickup';
+  deliveryInstructions?: string;
+  marketingOptIn?: boolean;
+  setAsDefault?: boolean;
+  addressLabel?: string;
+}) => {
+  try {
+    const { getToken } = useAuth();
+    const token = await getToken();
+    
+    const response = await fetch('/api/mobile/auth/user/save-checkout-preferences', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save checkout preferences');
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('saveCheckoutPreferences error:', error);
+    throw error;
+  }
 };
 ```
 
-### 2. Address Selection Screen (For Returning Users)
+### 3. UI Components to Add to Your Existing Checkout
+
+Add these components to your existing checkout screen for enhanced user experience:
 
 ```typescript
-// SelectAddressScreen.tsx
-import React, { useState, useEffect } from 'react';
+// Add this component to show "Change Address" button for returning users
+const ChangeAddressButton = ({ onPress, savedAddressesCount }: { onPress: () => void, savedAddressesCount: number }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex-row items-center justify-between"
+  >
+    <View className="flex-row items-center">
+      <Text className="text-orange-500 text-lg mr-2">📍</Text>
+      <View>
+        <Text className="text-orange-700 font-quicksand-semibold text-sm">
+          Change Address
+        </Text>
+        <Text className="text-orange-600 font-quicksand-medium text-xs">
+          You have {savedAddressesCount} saved address{savedAddressesCount !== 1 ? 'es' : ''}
+        </Text>
+      </View>
+    </View>
+    <Text className="text-orange-500 text-xl">→</Text>
+  </TouchableOpacity>
+);
 
-const SelectAddressScreen = ({ navigation }) => {
+// Add this component for first-time users to save their address
+const SaveAddressOption = ({ 
+  saveAddressOption, 
+  onToggle 
+}: { 
+  saveAddressOption: boolean, 
+  onToggle: () => void 
+}) => (
+  <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+    <TouchableOpacity 
+      className="flex-row items-center"
+      onPress={onToggle}
+    >
+      <View className={`w-6 h-6 rounded-md border-2 mr-3 items-center justify-center ${
+        saveAddressOption ? 'bg-orange-500 border-orange-500' : 'border-gray-300'
+      }`}>
+        {saveAddressOption && <Text className="text-white text-sm">✓</Text>}
+      </View>
+      <View className="flex-1">
+        <Text className="text-blue-700 font-quicksand-semibold text-sm">
+          💾 Save this address for faster checkout
+        </Text>
+        <Text className="text-blue-600 font-quicksand-medium text-xs mt-1">
+          Your address will be securely stored for future orders
+        </Text>
+      </View>
+    </TouchableOpacity>
+  </View>
+);
+
+// Add this component to show loading state when fetching saved data
+const LoadingOverlay = () => (
+  <View className="absolute inset-0 bg-black/20 items-center justify-center z-50">
+    <View className="bg-white rounded-2xl p-6 items-center">
+      <Text className="text-orange-500 text-2xl mb-2">⏳</Text>
+      <Text className="text-gray-700 font-quicksand-semibold">Loading saved data...</Text>
+    </View>
+  </View>
+);
+```
+
+### 4. Integration Points in Your Existing Code
+
+Here are the specific places to modify in your current checkout screen:
+
+**A. Add after your existing imports:**
+```typescript
+import { getUserProfile, saveCheckoutPreferences } from '@/services/userProfileService';
+```
+
+**B. Add to your state variables:**
+```typescript
+const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
+const [saveAddressOption, setSaveAddressOption] = useState(true);
+const [savedAddresses, setSavedAddresses] = useState([]);
+const [profileLoading, setProfileLoading] = useState(false);
+```
+
+**C. Add the data loading useEffect:**
+```typescript
+useEffect(() => {
+  loadUserCheckoutData();
+}, []);
+```
+
+**D. Add after your Shipping Address section (inside the white container):**
+```typescript
+{!isFirstTimeUser && savedAddresses.length > 0 && (
+  <ChangeAddressButton 
+    onPress={() => {/* Navigate to address selection screen */}} 
+    savedAddressesCount={savedAddresses.length}
+  />
+)}
+```
+
+**E. Add after your Shipping Address section (as a separate container):**
+```typescript
+{isFirstTimeUser && deliveryMethod !== 'pickup' && (
+  <SaveAddressOption 
+    saveAddressOption={saveAddressOption}
+    onToggle={() => setSaveAddressOption(!saveAddressOption)}
+  />
+)}
+```
+
+**F. Add in your handlePayment function after successful order:**
+```typescript
+// Add this line after: console.log('✅ Order completed successfully');
+// and before: clearCart();
+await saveUserCheckoutData();
+```
+
+**G. Add loading overlay to your main return:**
+```typescript
+return (
+  <SafeAreaView className="flex-1" style={{ backgroundColor: '#F5F5F5' }}>
+    <CustomHeader title="Checkout" />
+    
+    {profileLoading && <LoadingOverlay />}
+    
+    {/* Your existing ScrollView content */}
+  </SafeAreaView>
+);
+```
+
+### 5. Complete handlePayment Function Integration
+
+Here's how to integrate the data saving into your existing `handlePayment` function:
+
+```typescript
+// Add this line after your successful order confirmation
+// Insert it after: console.log('✅ Order completed successfully');
+// and before: clearCart();
+
+try {
+  await saveUserCheckoutData();
+} catch (error) {
+  // Don't block the success flow if saving fails
+  console.error('Failed to save checkout data:', error);
+}
+```
+
+## 🚀 Quick Implementation Checklist
+
+Follow these steps to integrate checkout data persistence into your existing app:
+
+### Step 1: Create the Required API Endpoints
+1. ✅ Create `/app/api/mobile/auth/user/save-checkout-preferences/route.ts`
+2. ✅ Create `/app/api/mobile/auth/user/delete-address/route.ts`
+
+### Step 2: Create the Service File
+1. ✅ Create `/services/userProfileService.ts` with the code provided above
+
+### Step 3: Update Your Checkout Screen
+1. ✅ Add the new imports and state variables
+2. ✅ Add the `loadUserCheckoutData()` function
+3. ✅ Add the `saveUserCheckoutData()` function  
+4. ✅ Add the UI components (ChangeAddressButton, SaveAddressOption, LoadingOverlay)
+5. ✅ Integrate the components into your existing JSX
+6. ✅ Add the data saving call to your `handlePayment` function
+
+### Step 4: Create Address Management Screen (Optional but Recommended)
+
+Create a new screen for users to manage their saved addresses:
+
+```typescript
+// screens/SavedAddressesScreen.tsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import CustomHeader from '@/components/ui/CustomHeader';
+import { getUserProfile, deleteSavedAddress } from '@/services/userProfileService';
+
+export default function SavedAddressesScreen() {
+  const router = useRouter();
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadSavedAddresses();
@@ -553,329 +652,159 @@ const SelectAddressScreen = ({ navigation }) => {
 
   const loadSavedAddresses = async () => {
     try {
-      const token = await getAuthToken();
-      
-      const response = await fetch('/api/mobile/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.user.profile) {
-        setSavedAddresses(result.user.profile.savedAddresses || []);
-        
-        // Find default address
-        const defaultAddress = result.user.profile.savedAddresses?.find(addr => addr.isDefault);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id);
-        }
-      }
+      const profile = await getUserProfile();
+      setSavedAddresses(profile?.savedAddresses || []);
     } catch (error) {
-      console.error('Failed to load saved addresses:', error);
+      console.error('Failed to load addresses:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const selectAddress = (addressId) => {
-    setSelectedAddressId(addressId);
-    const selectedAddress = savedAddresses.find(addr => addr.id === addressId);
-    
-    // Return selected address to checkout screen
-    navigation.navigate('Checkout', { selectedAddress });
+  const handleDeleteAddress = async (addressId: string) => {
+    Alert.alert(
+      'Delete Address',
+      'Are you sure you want to delete this address?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSavedAddress(addressId);
+              loadSavedAddresses(); // Refresh the list
+              Alert.alert('Success', 'Address deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete address');
+            }
+          }
+        }
+      ]
+    );
   };
 
-  const deleteAddress = async (addressId) => {
-    try {
-      const token = await getAuthToken();
+  const AddressCard = ({ address }: { address: any }) => (
+    <View className="bg-white rounded-2xl p-4 mb-4">
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-gray-900 font-quicksand-bold text-base">
+          {address.label}
+        </Text>
+        {address.isDefault && (
+          <View className="bg-orange-100 px-2 py-1 rounded-full">
+            <Text className="text-orange-600 font-quicksand-semibold text-xs">Default</Text>
+          </View>
+        )}
+      </View>
       
-      const response = await fetch('/api/mobile/auth/user/delete-address', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ addressId })
-      });
+      <Text className="text-gray-700 font-quicksand-semibold text-sm">
+        {address.firstName} {address.lastName}
+      </Text>
       
-      if (response.ok) {
-        // Refresh addresses list
-        loadSavedAddresses();
-        showSuccessMessage('Address deleted successfully');
-      }
-    } catch (error) {
-      console.error('Failed to delete address:', error);
-      showErrorMessage('Failed to delete address');
-    }
-  };
-
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Select Shipping Address</Text>
+      <Text className="text-gray-600 font-quicksand-medium text-sm mt-1">
+        {address.address1}
+        {address.address2 && `, ${address.address2}`}
+      </Text>
       
-      {savedAddresses.map((address) => (
+      <Text className="text-gray-600 font-quicksand-medium text-sm">
+        {address.city}, {address.state} {address.zipCode}
+      </Text>
+      
+      <View className="flex-row mt-3 space-x-3">
         <TouchableOpacity
-          key={address.id}
-          style={[
-            styles.addressCard,
-            selectedAddressId === address.id && styles.addressCardSelected
-          ]}
-          onPress={() => selectAddress(address.id)}
+          onPress={() => router.push(`/edit-address/${address.id}`)}
+          className="flex-1 bg-orange-50 border border-orange-200 rounded-xl py-2"
         >
-          <View style={styles.addressHeader}>
-            <Text style={styles.addressLabel}>{address.label}</Text>
-            {address.isDefault && (
-              <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>Default</Text>
-              </View>
-            )}
-          </View>
-          
-          <Text style={styles.addressName}>
-            {address.firstName} {address.lastName}
+          <Text className="text-orange-600 font-quicksand-semibold text-center text-sm">
+            Edit
           </Text>
-          
-          <Text style={styles.addressText}>
-            {address.address1}
-            {address.address2 && `, ${address.address2}`}
-          </Text>
-          
-          <Text style={styles.addressText}>
-            {address.city}, {address.state} {address.zipCode}
-          </Text>
-          
-          <Text style={styles.addressText}>{address.country}</Text>
-          
-          {address.phone && (
-            <Text style={styles.addressText}>{address.phone}</Text>
-          )}
-          
-          <View style={styles.addressActions}>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => navigation.navigate('EditAddress', { address })}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => deleteAddress(address.id)}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
         </TouchableOpacity>
-      ))}
-      
-      <TouchableOpacity
-        style={styles.addNewButton}
-        onPress={() => navigation.navigate('AddNewAddress')}
-      >
-        <Text style={styles.addNewButtonText}>+ Add New Address</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-};
-```
-
-### 3. Profile Screen - Address Management
-
-```typescript
-// ProfileScreen.tsx - Address Management Section
-const AddressManagementSection = () => {
-  const [savedAddresses, setSavedAddresses] = useState([]);
-  const [defaultAddress, setDefaultAddress] = useState(null);
-
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
-    try {
-      const token = await getAuthToken();
-      
-      const response = await fetch('/api/mobile/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.user.profile) {
-        setSavedAddresses(result.user.profile.savedAddresses || []);
-        setDefaultAddress(result.user.profile.defaultShippingAddress);
-      }
-    } catch (error) {
-      console.error('Failed to load user profile:', error);
-    }
-  };
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Saved Addresses</Text>
-      
-      {savedAddresses.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No saved addresses yet</Text>
-          <TouchableOpacity
-            style={styles.addFirstAddressButton}
-            onPress={() => navigation.navigate('AddNewAddress')}
-          >
-            <Text style={styles.addFirstAddressButtonText}>Add Your First Address</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          {savedAddresses.map((address) => (
-            <View key={address.id} style={styles.addressCard}>
-              <View style={styles.addressHeader}>
-                <Text style={styles.addressLabel}>{address.label}</Text>
-                {address.isDefault && (
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>Default</Text>
-                  </View>
-                )}
-              </View>
-              
-              <Text style={styles.addressName}>
-                {address.firstName} {address.lastName}
-              </Text>
-              
-              <Text style={styles.addressText}>
-                {address.address1}
-                {address.address2 && `, ${address.address2}`}
-              </Text>
-              
-              <Text style={styles.addressText}>
-                {address.city}, {address.state} {address.zipCode}
-              </Text>
-              
-              <View style={styles.addressActions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => navigation.navigate('EditAddress', { address })}
-                >
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-                
-                {!address.isDefault && (
-                  <TouchableOpacity
-                    style={styles.setDefaultButton}
-                    onPress={() => setAsDefault(address.id)}
-                  >
-                    <Text style={styles.setDefaultButtonText}>Set as Default</Text>
-                  </TouchableOpacity>
-                )}
-                
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => deleteAddress(address.id)}
-                >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-          
-          <TouchableOpacity
-            style={styles.addNewButton}
-            onPress={() => navigation.navigate('AddNewAddress')}
-          >
-            <Text style={styles.addNewButtonText}>+ Add New Address</Text>
-          </TouchableOpacity>
-        </>
-      )}
+        
+        <TouchableOpacity
+          onPress={() => handleDeleteAddress(address.id)}
+          className="flex-1 bg-red-50 border border-red-200 rounded-xl py-2"
+        >
+          <Text className="text-red-600 font-quicksand-semibold text-center text-sm">
+            Delete
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
-};
+
+  return (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#F5F5F5' }}>
+      <CustomHeader title="Saved Addresses" />
+      
+      <ScrollView className="flex-1 px-6">
+        {loading ? (
+          <View className="flex-1 items-center justify-center py-20">
+            <Text className="text-gray-500 font-quicksand-medium">Loading addresses...</Text>
+          </View>
+        ) : savedAddresses.length === 0 ? (
+          <View className="flex-1 items-center justify-center py-20">
+            <Text className="text-6xl mb-4">📍</Text>
+            <Text className="text-gray-900 font-quicksand-bold text-lg mb-2 text-center">
+              No saved addresses yet
+            </Text>
+            <Text className="text-gray-500 font-quicksand-medium text-center mb-6">
+              Your saved addresses will appear here for faster checkout.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text className="text-gray-700 font-quicksand-medium text-sm mb-6">
+              Manage your saved addresses for faster checkout
+            </Text>
+            
+            {savedAddresses.map((address) => (
+              <AddressCard key={address.id} address={address} />
+            ))}
+          </>
+        )}
+        
+        <TouchableOpacity
+          onPress={() => router.push('/add-address')}
+          className="bg-orange-500 rounded-2xl py-4 mb-6"
+        >
+          <Text className="text-white font-quicksand-bold text-center text-base">
+            + Add New Address
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 ```
 
-## 🎨 UI/UX Recommendations
+## 🎯 Key Benefits After Implementation
 
-### Visual Design
-- **Address Cards**: Use cards with clear visual hierarchy
-- **Default Badge**: Prominent green badge for default addresses
-- **Edit/Delete Actions**: Use icon buttons or action sheets
-- **Form Auto-fill**: Smooth animations when form fields populate
-- **Success Feedback**: Toast messages for successful saves/deletes
+1. **Faster Checkout**: Returning users see pre-filled forms
+2. **Better UX**: Smooth address selection for multiple saved addresses  
+3. **User Retention**: Reduced friction in the purchase process
+4. **Data Insights**: Track user preferences and behavior
+5. **Cross-platform Sync**: Addresses saved on web are available on mobile
 
-### User Experience
-- **One-Tap Selection**: Easy address switching during checkout
-- **Address Validation**: Real-time validation with error states
-- **Loading States**: Skeleton loaders while fetching data
-- **Empty States**: Helpful messaging when no addresses exist
-- **Confirmation Dialogs**: Before deleting addresses
+## 🔧 Testing Your Implementation
 
-### Accessibility
-- Use semantic labels for screen readers
-- Proper color contrast for badges and buttons
-- Touch targets minimum 44pt
-- Clear focus indicators
+1. **First-Time User Flow**:
+   - Complete checkout with new address
+   - Verify "save address" option appears
+   - Confirm address is saved after successful payment
 
-## 🔄 Data Flow Summary
+2. **Returning User Flow**:
+   - Login and go to checkout
+   - Verify form auto-fills with saved data
+   - Test "Change Address" functionality
 
-1. **First Checkout**: User enters info → Payment succeeds → Auto-save preferences
-2. **Subsequent Checkouts**: Load saved data → Auto-fill form → Allow changes → Update if needed
-3. **Profile Management**: View all addresses → Edit/Delete → Set defaults → Add new ones
+3. **Address Management**:
+   - Navigate to saved addresses screen
+   - Test edit/delete functionality
+   - Verify default address handling
 
-## 🚨 Error Handling
+4. **Error Handling**:
+   - Test with poor network conditions
+   - Verify graceful fallbacks when API fails
+   - Ensure checkout still works if data saving fails
 
-```typescript
-const handleApiError = (error, operation) => {
-  console.error(`${operation} failed:`, error);
-  
-  // Show user-friendly error messages
-  switch (error.status) {
-    case 401:
-      showErrorMessage('Please log in again');
-      // Redirect to login
-      break;
-    case 400:
-      showErrorMessage('Invalid data provided');
-      break;
-    case 500:
-      showErrorMessage('Something went wrong. Please try again.');
-      break;
-    default:
-      showErrorMessage('Network error. Check your connection.');
-  }
-};
-```
-
-## ✅ Testing Checklist
-
-- [ ] First-time user can complete checkout and save address
-- [ ] Returning user sees auto-filled checkout form
-- [ ] User can switch between saved addresses
-- [ ] User can add/edit/delete addresses in profile
-- [ ] Default address logic works correctly
-- [ ] Address validation prevents invalid data
-- [ ] Error handling works for network failures
-- [ ] Loading states display appropriately
-- [ ] Success messages appear after actions
-
-## 📊 Analytics Events to Track
-
-```typescript
-// Track these events for insights
-analytics.track('checkout_data_loaded', {
-  has_saved_addresses: savedAddresses.length > 0,
-  has_default_address: !!defaultAddress,
-  user_type: isFirstTimeUser ? 'new' : 'returning'
-});
-
-analytics.track('address_saved', {
-  address_label: addressLabel,
-  set_as_default: setAsDefault,
-  total_saved_addresses: savedAddresses.length + 1
-});
-
-analytics.track('address_selected', {
-  address_type: address.isDefault ? 'default' : 'alternative',
-  address_label: address.label
-});
-```
-
-This implementation will provide a seamless checkout experience that matches the web application's functionality while optimizing for mobile usage patterns.
+This implementation will provide the same seamless checkout experience as your web application while maintaining the native mobile feel and performance.

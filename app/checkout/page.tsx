@@ -563,7 +563,6 @@ export default function CheckoutPage() {
         phone: formData.phone,
         deliveryMethod: formData.deliveryMethod as
           | "standard"
-          | "express"
           | "pickup",
         notes: formData.notes,
         marketingOptIn: formData.marketingOptIn,
@@ -679,7 +678,6 @@ export default function CheckoutPage() {
         address: addressData,
         deliveryMethod: formData.deliveryMethod as
           | "standard"
-          | "express"
           | "pickup",
         marketingOptIn: formData.marketingOptIn,
         setAsDefault: true, // Always save as default for first-time users

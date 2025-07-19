@@ -272,9 +272,8 @@ export function calculateShipping(
   membershipHasFreeShipping: boolean = false,
   deliveryMethod: string = "standard"
 ): number {
-  if (membershipHasFreeShipping || deliveryMethod === "pickup") return 0;
-  if (subtotal >= 25) return 0; // Free shipping over $25
-  return deliveryMethod === "express" ? 9.99 : 5.99;
+  // Always return 0 - shipping is now free for all orders
+  return 0;
 }
 
 /**

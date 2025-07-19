@@ -74,7 +74,7 @@ export interface IUserProfile extends Document {
   }[];
 
   // Delivery Preferences
-  preferredDeliveryMethod: "standard" | "express" | "pickup";
+  preferredDeliveryMethod: "standard" | "pickup";
   deliveryInstructions?: string;
 
   // Communication Preferences
@@ -554,7 +554,7 @@ const userProfileSchema = new Schema<IUserProfile>(
     // Delivery preferences
     preferredDeliveryMethod: {
       type: String,
-      enum: ["standard", "express", "pickup"],
+      enum: ["standard", "pickup"],
       default: "standard",
     },
     deliveryInstructions: String,

@@ -348,7 +348,7 @@ const checkoutSchema = z.object({
   notes: z.string().optional(),
 
   // **REQUIRED FIELD**
-  deliveryMethod: z.enum(["standard", "express", "pickup"]),
+  deliveryMethod: z.enum(["standard", "pickup"]),
 });
 
 type CheckoutRequest = z.infer<typeof checkoutSchema>;
@@ -398,7 +398,7 @@ export async function POST(request: NextRequest) {
       console.warn(
         "⚠️ deliveryMethod missing in request body. Manually adding for testing."
       );
-      body.deliveryMethod = "standard"; // Or "express", "pickup" as needed for your test
+      body.deliveryMethod = "standard"; // Or "pickup" as needed for your test
     }
     // 🚀 END MANUAL ADDITION 🚀
 

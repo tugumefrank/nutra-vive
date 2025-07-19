@@ -54,6 +54,59 @@ npm run prebuild
 - `noFallthroughCasesInSwitch` for safe switch statements
 - `noUncheckedIndexedAccess` for array/object access safety
 
+## **🔗 Next.js 15 API Route Parameters (CRITICAL)**
+
+**In Next.js 15 with App Router, dynamic route parameters MUST be awaited:**
+
+```typescript
+// ❌ WRONG - Will cause TypeScript build errors
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const productId = params.id; // Type error!
+}
+
+// ✅ CORRECT - Always await params in Next.js 15
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
+  const productId = params.id; // Works correctly!
+}
+```
+
+**Examples for different dynamic routes:**
+
+```typescript
+// Single parameter [id]
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+}
+
+// Multiple parameters [category]/[id]
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ category: string; id: string }> }
+) {
+  const { category, id } = await context.params;
+}
+
+// Optional parameters [[...slug]]
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ slug?: string[] }> }
+) {
+  const { slug } = await context.params;
+}
+```
+
+**This applies to ALL HTTP methods (GET, POST, PUT, DELETE, PATCH) in dynamic API routes.**
+
 ## Development Commands
 
 ```bash

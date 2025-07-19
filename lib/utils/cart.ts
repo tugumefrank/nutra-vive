@@ -50,7 +50,7 @@ export function calculateCartTotals(
 ) {
   const {
     shippingThreshold = 25,
-    shippingCost = 9.99,
+    shippingCost = 0, // Shipping disabled - set to 0
     taxRate = 0, // Tax disabled
     discountAmount = 0,
   } = options;
@@ -59,7 +59,7 @@ export function calculateCartTotals(
     (total, item) => total + item.price * item.quantity,
     0
   );
-  const shipping = subtotal >= shippingThreshold ? 0 : shippingCost;
+  const shipping = 0; // Always free shipping
   const discountedSubtotal = Math.max(0, subtotal - discountAmount);
   const tax = discountedSubtotal * taxRate;
   const total = discountedSubtotal + shipping + tax;

@@ -13,9 +13,8 @@ interface DeliveryMethodStepProps extends StepProps {
 
 // Helper function to calculate shipping
 function calculateShipping(amount: number, method: string): number {
-  if (method === "pickup") return 0; // Always free for pickup
-  if (amount >= 25) return 0; // Free shipping over $25 after all discounts
-  return method === "express" ? 9.99 : 5.99;
+  // Always return 0 - shipping is now free for all orders
+  return 0;
 }
 
 export default function DeliveryMethodStep({
@@ -79,7 +78,8 @@ export default function DeliveryMethodStep({
             </Badge>
           </Label>
 
-          {/* Express Delivery */}
+          {/* Express Delivery - COMMENTED OUT FOR FUTURE IMPLEMENTATION */}
+          {/* 
           <Label
             htmlFor="express"
             className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
@@ -111,6 +111,7 @@ export default function DeliveryMethodStep({
                 : `$${calculateShipping(afterDiscountsTotal, "express").toFixed(2)}`}
             </Badge>
           </Label>
+          */}
 
           {/* Store Pickup */}
           <Label
@@ -146,26 +147,7 @@ export default function DeliveryMethodStep({
           <p className="text-red-500 text-sm mt-3">{errors.deliveryMethod}</p>
         )}
 
-        {/* Free shipping notice */}
-        {afterDiscountsTotal < 25 && (
-          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-sm text-orange-700">
-              💡 <strong>Free shipping</strong> on orders over $25! Add{" "}
-              <strong>${(25 - afterDiscountsTotal).toFixed(2)} more</strong> to
-              qualify for free shipping.
-            </p>
-          </div>
-        )}
-
-        {/* Free shipping achieved notice */}
-        {afterDiscountsTotal >= 25 && formData.deliveryMethod !== "pickup" && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700">
-              🎉 <strong>Congratulations!</strong> You qualify for free
-              shipping!
-            </p>
-          </div>
-        )}
+        {/* All shipping is now free - no conditional notices needed */}
 
         {/* Store pickup details */}
         {formData.deliveryMethod === "pickup" && (

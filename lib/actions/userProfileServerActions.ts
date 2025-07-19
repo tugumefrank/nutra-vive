@@ -110,7 +110,7 @@ export async function saveCheckoutPreferences(data: {
     country: string;
     phone?: string;
   };
-  deliveryMethod?: "standard" | "express" | "pickup";
+  deliveryMethod?: "standard" | "pickup";
   deliveryInstructions?: string;
   marketingOptIn?: boolean;
   setAsDefault?: boolean;

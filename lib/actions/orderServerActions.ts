@@ -130,7 +130,7 @@ const createCheckoutSchema = (deliveryMethod?: string) => {
     phone: z.string().optional(),
 
     // Delivery Options
-    deliveryMethod: z.enum(["standard", "express", "pickup"]),
+    deliveryMethod: z.enum(["standard", "pickup"]),
 
     // Additional Options
     notes: z.string().optional(),
@@ -158,11 +158,8 @@ function calculateShipping(
   subtotal: number,
   isFreeOrder: boolean = false
 ): number {
-  if (isFreeOrder) return 0; // No shipping for free membership orders
-  if (deliveryMethod === "pickup") return 0; // Always free for pickup
-  if (subtotal >= 25) return 0; // Free shipping over $25
-  if (deliveryMethod === "express") return 9.99;
-  return 5.99; // Standard shipping
+  // Always return 0 - shipping is now free for all orders
+  return 0;
 }
 
 // Calculate tax (simplified - 8% tax rate)
