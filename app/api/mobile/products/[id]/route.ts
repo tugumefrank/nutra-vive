@@ -7,7 +7,7 @@ import { getProduct } from "@/lib/actions/productServerActions";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   console.log("🔵 Mobile API: GET /api/mobile/products/[id] called");
   
@@ -23,6 +23,7 @@ export async function GET(
       );
     }
 
+    const params = await context.params;
     const productId = params.id;
     console.log("🔍 Requested product ID:", productId);
     
