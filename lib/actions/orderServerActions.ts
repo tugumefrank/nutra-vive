@@ -842,7 +842,16 @@ export async function getOrder(orderId: string): Promise<{
 
     // Verify user has access to this order
     const user = await User.findOne({ clerkId: userId });
-    if (order.user && user && order.user.toString() !== user._id.toString()) {
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    // Admin users can access any order, regular users can only access their own orders
+    const isAdmin = user.role === "admin";
+    if (!isAdmin && order.user && order.user.toString() !== user._id.toString()) {
       return {
         success: false,
         error: "Unauthorized access to order",
