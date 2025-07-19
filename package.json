@@ -15,7 +15,8 @@
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "migrate:tea-descriptions": "node scripts/update-tea-descriptions.js",
-    "seed:tea-products": "node scripts/seed-tea-products.js"
+    "seed:tea-products": "node scripts/seed-tea-products.js",
+    "fix:stripe-prices": "node scripts/fix-stripe-prices.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.20.2",

@@ -26,9 +26,11 @@ export default function DeliveryMethodStep({
   afterDiscountsTotal,
 }: DeliveryMethodStepProps) {
   const hasErrors = Object.keys(errors).length > 0;
-  
+
   return (
-    <Card className={`glass ${hasErrors ? 'border-red-200 bg-red-50/30' : 'border-white/20'}`}>
+    <Card
+      className={`glass ${hasErrors ? "border-red-200 bg-red-50/30" : "border-white/20"}`}
+    >
       <CardHeader>
         <CardTitle className="flex items-center text-xl">
           <Truck className="w-5 h-5 mr-2 text-orange-600" />
@@ -48,8 +50,8 @@ export default function DeliveryMethodStep({
           <Label
             htmlFor="standard"
             className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
-              formData.deliveryMethod === "standard" 
-                ? "border-orange-500 bg-orange-50" 
+              formData.deliveryMethod === "standard"
+                ? "border-orange-500 bg-orange-50"
                 : "border-gray-200"
             }`}
           >
@@ -71,8 +73,8 @@ export default function DeliveryMethodStep({
                   : "bg-gray-100 text-gray-700 font-medium"
               }
             >
-              {calculateShipping(afterDiscountsTotal, "standard") === 0 
-                ? "FREE" 
+              {calculateShipping(afterDiscountsTotal, "standard") === 0
+                ? "FREE"
                 : `$${calculateShipping(afterDiscountsTotal, "standard").toFixed(2)}`}
             </Badge>
           </Label>
@@ -81,8 +83,8 @@ export default function DeliveryMethodStep({
           <Label
             htmlFor="express"
             className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
-              formData.deliveryMethod === "express" 
-                ? "border-orange-500 bg-orange-50" 
+              formData.deliveryMethod === "express"
+                ? "border-orange-500 bg-orange-50"
                 : "border-gray-200"
             }`}
           >
@@ -97,15 +99,15 @@ export default function DeliveryMethodStep({
               </div>
             </div>
             <Badge
-              variant="outline" 
+              variant="outline"
               className={
                 calculateShipping(afterDiscountsTotal, "express") === 0
                   ? "bg-green-100 text-green-700 border-green-200 font-medium"
                   : "font-medium"
               }
             >
-              {calculateShipping(afterDiscountsTotal, "express") === 0 
-                ? "FREE" 
+              {calculateShipping(afterDiscountsTotal, "express") === 0
+                ? "FREE"
                 : `$${calculateShipping(afterDiscountsTotal, "express").toFixed(2)}`}
             </Badge>
           </Label>
@@ -114,8 +116,8 @@ export default function DeliveryMethodStep({
           <Label
             htmlFor="pickup"
             className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-orange-50 transition-colors group ${
-              formData.deliveryMethod === "pickup" 
-                ? "border-orange-500 bg-orange-50" 
+              formData.deliveryMethod === "pickup"
+                ? "border-orange-500 bg-orange-50"
                 : "border-gray-200"
             }`}
           >
@@ -149,7 +151,8 @@ export default function DeliveryMethodStep({
           <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-sm text-orange-700">
               💡 <strong>Free shipping</strong> on orders over $25! Add{" "}
-              <strong>${(25 - afterDiscountsTotal).toFixed(2)} more</strong> to qualify for free shipping.
+              <strong>${(25 - afterDiscountsTotal).toFixed(2)} more</strong> to
+              qualify for free shipping.
             </p>
           </div>
         )}
@@ -158,7 +161,8 @@ export default function DeliveryMethodStep({
         {afterDiscountsTotal >= 25 && formData.deliveryMethod !== "pickup" && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-700">
-              🎉 <strong>Congratulations!</strong> You qualify for free shipping!
+              🎉 <strong>Congratulations!</strong> You qualify for free
+              shipping!
             </p>
           </div>
         )}
@@ -168,15 +172,18 @@ export default function DeliveryMethodStep({
           <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <h4 className="font-medium text-green-900 mb-2">Pickup Location</h4>
             <div className="text-sm text-green-800">
-              <p className="font-medium">Nutra-Vive Store</p>
-              <p>123 Wellness Street</p>
-              <p>Health City, CA 90210</p>
+              <p className="font-medium">Nutra-Vive Store pick up</p>
+              <p>50 Park Place</p>
+              <p>, Newark, NJ USA</p>
               <p className="mt-2">
-                <strong>Hours:</strong> Mon-Sat 9:00 AM - 7:00 PM
+                <strong>Hours:</strong> Mon-Fri 9:00 AM - 5:00 PM
+              </p>
+              <p className="mt-2">
+                <strong>Hours:</strong> sat 9:00 AM - 12:30 PM
               </p>
               <p className="mt-2 text-xs">
-                We'll send you a notification when your order is ready for
-                pickup.
+                We'll send you a notification via email when your order is ready
+                for pickup.
               </p>
             </div>
           </div>

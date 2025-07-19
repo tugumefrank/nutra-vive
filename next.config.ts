@@ -20,6 +20,14 @@ const nextConfig = {
   },
   // Disable React StrictMode to prevent double rendering in development
   reactStrictMode: false,
+  
+  // Configure experimental features for dev tunnels
+  experimental: {
+    // Allow server actions to work with dev tunnels
+    serverActions: {
+      allowedOrigins: ["localhost:3000", "*.devtunnels.ms"],
+    },
+  },
 };
 
 module.exports = nextConfig;
