@@ -224,10 +224,11 @@ import Link from "next/link";
 import { getOrder } from "@/lib/actions/orderServerActions";
 import { OrderDetails } from "@/components/admin/orders/OrderDetails";
 import { LoadingSpinner } from "@/components/admin/orders/loading-spinner";
+import { ClientButtons, TryAgainButton, FloatingActionButtons } from "@/components/admin/orders/ClientButtons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Download, Printer, Share, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -275,9 +276,7 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                     Back to Orders
                   </Link>
                 </Button>
-                <Button onClick={() => window.location.reload()}>
-                  Try Again
-                </Button>
+                <TryAgainButton />
               </div>
             </CardContent>
           </Card>
@@ -331,32 +330,7 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-white/20 dark:border-slate-700/20 gap-2"
-                >
-                  <Share className="h-4 w-4" />
-                  Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-white/20 dark:border-slate-700/20 gap-2"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print Invoice
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
+              <ClientButtons />
             </div>
           </div>
         </div>
@@ -368,23 +342,7 @@ async function OrderDetailContent({ orderId }: { orderId: string }) {
       </div>
 
       {/* Floating Action Button - Mobile */}
-      <div className="fixed bottom-20 right-4 lg:hidden">
-        <div className="flex flex-col gap-2">
-          <Button
-            size="sm"
-            className="rounded-full h-12 w-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg"
-          >
-            <Download className="h-5 w-5" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-full h-12 w-12 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-white/20 dark:border-slate-700/20 shadow-lg"
-          >
-            <Printer className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <FloatingActionButtons />
     </div>
   );
 }
