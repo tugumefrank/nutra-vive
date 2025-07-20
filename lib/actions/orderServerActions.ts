@@ -795,14 +795,24 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
   }
 }
 
-// Get user's orders (keep existing, just updated serialization)
-export async function getUserOrders(): Promise<{
+// Get user's orders with optional pagination and filtering
+export async function getUserOrders(
+  providedUserId?: string,
+  options?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }
+): Promise<{
   success: boolean;
   orders?: any[];
+  total?: number;
   error?: string;
 }> {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return {
         success: false,
@@ -813,16 +823,38 @@ export async function getUserOrders(): Promise<{
     await connectToDatabase();
 
     let orders: any[] = [];
+    let total = 0;
 
     try {
       const user = await User.findOne({ clerkId: userId });
       if (user) {
-        orders = await Order.find({ user: user._id })
+        // Build query
+        const query: any = { user: user._id };
+        if (options?.status) {
+          query.status = options.status;
+        }
+
+        // Build sort object
+        const sortField = options?.sortBy || "createdAt";
+        const sortDirection = options?.sortOrder === "asc" ? 1 : -1;
+        const sort: Record<string, 1 | -1> = { [sortField]: sortDirection };
+
+        // Get total count for pagination
+        total = await Order.countDocuments(query);
+
+        // Apply pagination
+        const page = options?.page || 1;
+        const limit = options?.limit || 20;
+        const skip = (page - 1) * limit;
+
+        orders = await Order.find(query)
           .populate({
             path: "items.product",
             select: "name slug images",
           })
-          .sort({ createdAt: -1 })
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
           .lean();
       }
     } catch (error) {
@@ -832,6 +864,7 @@ export async function getUserOrders(): Promise<{
     return {
       success: true,
       orders: orders.map((order) => serializeOrder(order)),
+      total,
     };
   } catch (error) {
     console.error("❌ Error getting user orders:", error);

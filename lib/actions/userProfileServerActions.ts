@@ -6,9 +6,9 @@ import { UserProfile, User } from "@/lib/db/models";
 import { revalidatePath } from "next/cache";
 
 // Get user profile with saved addresses and preferences
-export async function getUserProfile() {
+export async function getUserProfile(providedUserId?: string) {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
@@ -21,23 +21,15 @@ export async function getUserProfile() {
       return { success: false, error: "User not found" };
     }
 
-    // Get or create user profile
-    let userProfile = await UserProfile.findOne({ user: user._id });
+    // Get user profile (don't create if it doesn't exist)
+    const userProfile = await UserProfile.findOne({ user: user._id });
     
     if (!userProfile) {
-      // Create default profile if it doesn't exist
-      userProfile = new UserProfile({
-        user: user._id,
-        savedAddresses: [],
-        preferredDeliveryMethod: "standard",
-        marketingOptIn: false,
-        smsNotifications: true,
-        emailNotifications: true,
-        totalOrders: 0,
-        totalSpent: 0,
-        averageOrderValue: 0,
-      });
-      await userProfile.save();
+      return { 
+        success: false, 
+        error: "User profile not found",
+        statusCode: 404 
+      };
     }
 
     // Safely serialize the profile data to avoid circular references
@@ -115,9 +107,9 @@ export async function saveCheckoutPreferences(data: {
   marketingOptIn?: boolean;
   setAsDefault?: boolean;
   addressLabel?: string;
-}) {
+}, providedUserId?: string) {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
@@ -196,9 +188,9 @@ export async function updateUserInfo(data: {
   firstName?: string;
   lastName?: string;
   phone?: string;
-}) {
+}, providedUserId?: string) {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
@@ -229,9 +221,9 @@ export async function updateUserInfo(data: {
 }
 
 // Delete saved address
-export async function deleteSavedAddress(addressId: string) {
+export async function deleteSavedAddress(addressId: string, providedUserId?: string) {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }
@@ -266,9 +258,9 @@ export async function deleteSavedAddress(addressId: string) {
 export async function updateOrderStats(orderData: {
   totalAmount: number;
   orderDate: Date;
-}) {
+}, providedUserId?: string) {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return { success: false, error: "User not authenticated" };
     }

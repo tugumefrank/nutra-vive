@@ -135,6 +135,29 @@ npm run migrate:tea-descriptions # Update tea product descriptions
 - Middleware in `middleware.ts` handles auth routing
 - Admin routes protected under `/admin` directory
 
+#### **Mobile API Authentication Pattern**
+Mobile API endpoints (`/api/mobile/`) use **JWT token validation** instead of web session auth:
+
+- **Mobile endpoints**: Extract JWT from `Authorization: Bearer <token>` header
+- **Web app**: Uses `auth()` from `@clerk/nextjs/server` for session-based auth
+- **Shared server actions**: Modified to accept optional `userId` parameter for dual compatibility
+
+```typescript
+// Mobile API pattern
+const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+const { userId } = await verifyToken(token); // Clerk JWT validation
+await serverAction(data, userId); // Pass userId to server action
+
+// Server action pattern for dual compatibility
+async function serverAction(data: DataType, providedUserId?: string) {
+  const userId = providedUserId || (await auth()).userId;
+  if (!userId) return { error: "Not authenticated" };
+  // ... rest of server action logic
+}
+```
+
+**Important**: When adding new server actions that mobile endpoints will use, always implement the dual auth pattern with optional `userId` parameter to support both mobile JWT and web session authentication.
+
 ### State Management
 - **Zustand** stores in `store/` directory:
   - `cartStore.ts` - Shopping cart state
@@ -193,6 +216,29 @@ npm run migrate:tea-descriptions # Update tea product descriptions
 - Located in `lib/actions/` organized by domain
 - Handle database operations and business logic
 - Return serializable data only
+
+#### **Order Cleanup System**
+Automated cleanup system for removing stale pending orders:
+
+- **Cleanup Function**: `orderCleanupServerActions.ts` - Removes orders with `paymentStatus: "pending"` older than 24 hours
+- **Admin API**: `/api/admin/cleanup/pending-orders` - Manual cleanup with authentication
+- **Cron Job**: `/api/cron/cleanup-pending-orders` - Automated cleanup every 6 hours
+- **Vercel Cron**: Configured in `vercel.json` with schedule `"0 */6 * * *"`
+
+**Environment Variables Required:**
+- `CLEANUP_API_KEY` - API key for admin cleanup endpoint
+- `CRON_SECRET` - Secret for Vercel cron authentication
+
+**Usage:**
+```bash
+# Manual cleanup (requires admin auth or API key)
+curl -X POST https://your-domain.com/api/admin/cleanup/pending-orders \
+  -H "x-api-key: your-cleanup-api-key"
+
+# Check pending orders count
+curl https://your-domain.com/api/admin/cleanup/pending-orders \
+  -H "x-api-key: your-cleanup-api-key"
+```
 
 ### Component Organization
 - Domain-specific components in feature directories

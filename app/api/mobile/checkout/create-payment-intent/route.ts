@@ -253,7 +253,7 @@
 //   }
 // }
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { verifyToken } from "@clerk/backend";
 import { z } from "zod";
 import Stripe from "stripe";
 import { connectToDatabase } from "@/lib/db"; // Assuming your db connection path
@@ -378,14 +378,34 @@ export async function POST(request: NextRequest) {
   );
 
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      console.log("❌ Unauthorized access attempt");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Extract JWT token from Authorization header
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("❌ Missing or invalid Authorization header");
+      return NextResponse.json(
+        { error: "Missing Authorization header" }, 
+        { status: 401 }
+      );
     }
 
-    console.log("👤 User ID:", userId);
+    const token = authHeader.replace("Bearer ", "");
+    console.log("🔑 Token extracted, verifying...");
+
+    // Verify JWT token with Clerk
+    const verifiedToken = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    });
+    
+    const userId = verifiedToken.sub;
+    console.log("✅ Token verified, userId:", userId);
+
+    if (!userId) {
+      console.log("❌ No userId found in verified token");
+      return NextResponse.json(
+        { error: "Invalid token" }, 
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
     console.log(
@@ -648,6 +668,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("❌ Create payment intent error:", error);
+
+    // Handle specific Clerk token errors
+    if (error instanceof Error && error.message.includes('token')) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
