@@ -10,7 +10,7 @@ interface EmailData {
   [key: string]: any;
 }
 
-// Helper function to generate HTML email template
+// Helper  function to generate HTML email template.
 const createEmailTemplate = (content: string, title: string) => `
   <!DOCTYPE html>
   <html lang="en">
