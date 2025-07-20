@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { IOrder } from "@/lib/db/models";
-import { updateOrderStatus } from "@/lib/actions/orderServerActions";
+import { updateOrderStatus, deleteOrder } from "@/lib/actions/orderServerActions";
 import {
   Table,
   TableBody,
@@ -25,6 +25,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Pagination } from "@/components/admin/orders/pagination";
 import { OrderStatusBadge, PaymentStatusBadge } from "./OrderStatusBadge";
@@ -40,6 +50,9 @@ import {
   ArrowUpDown,
   Search,
   Calendar,
+  Trash2,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface OrdersListProps {
@@ -57,6 +70,8 @@ interface OrdersListProps {
 export function OrdersList({ orders, pagination, error }: OrdersListProps) {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
   const handleSelectOrder = (orderId: string, checked: boolean) => {
     if (checked) {
@@ -97,6 +112,54 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
       toast.error("Failed to update order status");
     } finally {
       setIsUpdating(null);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    if (selectedOrders.length === 0) return;
+    setShowDeleteAlert(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    setShowDeleteAlert(false);
+
+    try {
+      const deletePromises = selectedOrders.map(orderId => deleteOrder(orderId));
+      const results = await Promise.all(deletePromises);
+      
+      const successCount = results.filter(result => result.success).length;
+      const failureCount = results.filter(result => !result.success).length;
+      
+      if (successCount > 0) {
+        toast.success(
+          `🗑️ Successfully deleted ${successCount} order${successCount > 1 ? 's' : ''}`,
+          {
+            description: "The selected orders have been permanently removed.",
+            duration: 4000,
+          }
+        );
+        setSelectedOrders([]);
+        // Force page refresh to update the list
+        window.location.reload();
+      }
+      
+      if (failureCount > 0) {
+        toast.error(
+          `❌ Failed to delete ${failureCount} order${failureCount > 1 ? 's' : ''}`,
+          {
+            description: "Some orders could not be deleted. Please try again.",
+            duration: 4000,
+          }
+        );
+      }
+    } catch (error) {
+      toast.error("❌ Failed to delete orders", {
+        description: "An unexpected error occurred. Please try again.",
+        duration: 4000,
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -154,20 +217,42 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
                   {selectedOrders.length > 1 ? "s" : ""} selected
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline">
-                  Mark as Processing
-                </Button>
-                <Button size="sm" variant="outline">
-                  Mark as Shipped
-                </Button>
-                <Button size="sm" variant="outline">
-                  Export Selected
-                </Button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Mark as Processing
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Mark as Shipped
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs">
+                    Export Selected
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    className="text-xs"
+                    onClick={handleDeleteClick}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete Selected
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setSelectedOrders([])}
+                  className="text-xs"
                 >
                   Clear Selection
                 </Button>
@@ -302,7 +387,7 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 p-0"
                           disabled={isUpdating === order._id}
                         >
                           <MoreHorizontal className="h-4 w-4" />
@@ -357,7 +442,7 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
       </div>
 
       {/* Orders Cards - Mobile */}
-      <div className="lg:hidden space-y-4">
+      <div className="lg:hidden space-y-3 sm:space-y-4">
         {orders.map((order, index) => (
           <motion.div
             key={order._id}
@@ -367,10 +452,10 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
           >
             <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
               <CardContent className="p-0">
-                <div className="p-4 space-y-4">
+                <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                   {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                       <Checkbox
                         checked={selectedOrders.includes(order._id)}
                         onCheckedChange={(checked) =>
@@ -379,68 +464,75 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
                       />
                       <Link
                         href={`/admin/orders/${order._id}`}
-                        className="font-semibold text-emerald-600 dark:text-emerald-400"
+                        className="font-semibold text-emerald-600 dark:text-emerald-400 truncate"
                       >
                         {order.orderNumber}
                       </Link>
                     </div>
-                    <OrderActions
-                      orderId={order._id}
-                      currentStatus={order.status}
-                    />
+                    <div className="flex-shrink-0">
+                      <OrderActions
+                        orderId={order._id}
+                        currentStatus={order.status}
+                        compact={true}
+                      />
+                    </div>
                   </div>
 
                   {/* Customer Info */}
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-400 text-white">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-400 text-white text-xs sm:text-sm">
                         {order.shippingAddress.firstName[0]}
                         {order.shippingAddress.lastName[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <p className="font-medium">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-sm sm:text-base">
                         {order.shippingAddress.firstName}{" "}
                         {order.shippingAddress.lastName}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
                         {order.email}
                       </p>
                     </div>
                   </div>
 
                   {/* Order Details */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                         Status
                       </p>
-                      <OrderStatusBadge status={order.status} />
+                      <div className="mt-1">
+                        <OrderStatusBadge status={order.status} />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                         Payment
                       </p>
-                      <PaymentStatusBadge status={order.paymentStatus} />
+                      <div className="mt-1">
+                        <PaymentStatusBadge status={order.paymentStatus} />
+                      </div>
                     </div>
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
-                    <div>
+                  <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-slate-200/50 dark:border-slate-700/50 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-lg font-semibold">
                         ${order.totalAmount.toFixed(2)}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                         {order.items.length} item
                         {order.items.length > 1 ? "s" : ""}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
+                    <div className="text-right min-w-0 flex-shrink-0">
+                      <p className="text-xs sm:text-sm font-medium">
                         {format(new Date(order.createdAt), "MMM dd, yyyy")}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                         {format(new Date(order.createdAt), "h:mm a")}
                       </p>
                     </div>
@@ -461,6 +553,63 @@ export function OrdersList({ orders, pagination, error }: OrdersListProps) {
           hasPrevPage={pagination.hasPrevPage}
         />
       </div>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Delete Orders
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-red-600 dark:text-red-400">
+                {selectedOrders.length} order{selectedOrders.length > 1 ? "s" : ""}
+              </span>
+              ? This will permanently remove {selectedOrders.length > 1 ? "these orders" : "this order"} from the system.
+            </p>
+          </div>
+
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="border-gray-300 dark:border-gray-600"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete {selectedOrders.length > 1 ? "Orders" : "Order"}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

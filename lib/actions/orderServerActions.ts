@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import Stripe from "stripe";
@@ -39,7 +39,7 @@ const orderFiltersSchema = z.object({
   sortBy: z.string().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  limit: z.number().int().min(1).max(2000).default(20),
 });
 
 // Serialization helper for orders
@@ -179,6 +179,7 @@ export async function createCheckoutSession(
   success: boolean;
   clientSecret?: string;
   orderId?: string;
+  orderNumber?: string;
   error?: string;
 }> {
   try {
@@ -468,8 +469,25 @@ export async function createCheckoutSession(
           {
             orderNumber: order.orderNumber,
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+            customerEmail: order.email,
+            orderId: order._id.toString(),
+            items: order.items.map((item: any) => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              totalPrice: item.totalPrice,
+              productImage: item.productImage,
+            })),
+            subtotal: order.subtotal,
+            shipping: order.shippingAmount,
+            tax: order.taxAmount,
             total: order.totalAmount,
-            itemCount: order.items.length,
+            // Membership-specific data for admin
+            isMembershipOrder: cart.hasMembershipApplied,
+            membershipTier: cart.membershipInfo?.tier || "Premium",
+            membershipDiscount: membershipDiscount,
+            promotionDiscount: promotionDiscount,
+            totalSavings: membershipDiscount + promotionDiscount,
           }
         );
 
@@ -482,6 +500,7 @@ export async function createCheckoutSession(
       return {
         success: true,
         orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
         // No clientSecret for free orders
       };
     } else {
@@ -509,6 +528,7 @@ export async function createCheckoutSession(
         success: true,
         clientSecret: paymentIntent.client_secret!,
         orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
       };
     }
   } catch (error) {
@@ -732,8 +752,19 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
           {
             orderNumber: order.orderNumber,
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+            customerEmail: order.email,
+            orderId: order._id.toString(),
+            items: order.items.map((item: any) => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              totalPrice: item.totalPrice,
+              productImage: item.productImage,
+            })),
+            subtotal: order.subtotal,
+            shipping: order.shippingAmount,
+            tax: order.taxAmount,
             total: order.totalAmount,
-            itemCount: order.items.length,
           }
         );
 
@@ -748,6 +779,8 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
 
     revalidatePath("/orders");
     revalidatePath("/cart");
+    revalidateTag("orders");
+    revalidateTag("stats");
 
     return {
       success: true,
@@ -964,6 +997,8 @@ export async function updateOrderStatus(
     }
 
     revalidatePath("/admin/orders");
+    revalidateTag("orders");
+    revalidateTag("stats");
 
     return {
       success: true,
@@ -1078,6 +1113,8 @@ export async function cancelOrder(
     console.log(`✅ Order ${order.orderNumber} cancelled successfully`);
 
     revalidatePath("/admin/orders");
+    revalidateTag("orders");
+    revalidateTag("stats");
 
     return {
       success: true,
@@ -1160,6 +1197,8 @@ export async function processRefund(
     );
 
     revalidatePath("/admin/orders");
+    revalidateTag("orders");
+    revalidateTag("stats");
 
     return {
       success: true,
@@ -1602,6 +1641,8 @@ export async function bulkUpdateOrders(
     console.log(`✅ Bulk updated ${result.modifiedCount} orders`);
 
     revalidatePath("/admin/orders");
+    revalidateTag("orders");
+    revalidateTag("stats");
 
     return {
       success: true,
@@ -1614,6 +1655,42 @@ export async function bulkUpdateOrders(
       updated: 0,
       error:
         error instanceof Error ? error.message : "Failed to bulk update orders",
+    };
+  }
+}
+
+export async function deleteOrder(orderId: string) {
+  try {
+    await connectToDatabase();
+
+    // Find the order first to check if it exists
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Delete the order
+    await Order.findByIdAndDelete(orderId);
+
+    console.log(`✅ Deleted order: ${orderId}`);
+
+    // Revalidate cache
+    revalidatePath("/admin/orders");
+    revalidateTag("orders");
+    revalidateTag("stats");
+
+    return {
+      success: true,
+      message: "Order deleted successfully",
+    };
+  } catch (error) {
+    console.error("❌ Error deleting order:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete order",
     };
   }
 }

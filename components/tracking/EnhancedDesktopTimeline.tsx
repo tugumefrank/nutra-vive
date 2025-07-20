@@ -42,6 +42,7 @@ import {
   Copy,
   ExternalLink,
 } from "lucide-react";
+import ContactSupportDialog from "@/components/tracking/ContactSupportDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -726,22 +727,10 @@ export default function EnhancedDesktopTimeline({
               </div>
 
               <div className="flex items-center space-x-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700"
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Support
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Live Chat
-                </Button>
+                <ContactSupportDialog
+                  orderNumber={orderNumber}
+                  customerEmail={order?.email}
+                />
                 {trackingInfo?.trackingNumber && (
                   <Button
                     variant="outline"

@@ -25,10 +25,10 @@ export default async function DashLayout({
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden">
         <DesktopSidebar />
-        <div className="flex flex-col flex-1 transition-all duration-500">
+        <div className="flex flex-col flex-1 min-w-0 transition-all duration-500">
           <Navbar />
-          <main className="flex-1 overflow-y-auto bg-[#E2E8F0] dark:bg-[#0D1224]">
-            <div className="pt-0">{children}</div>
+          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#E2E8F0] dark:bg-[#0D1224]">
+            <div className="pt-0 w-full min-w-0">{children}</div>
           </main>
         </div>
       </div>

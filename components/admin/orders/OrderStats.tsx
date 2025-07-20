@@ -148,19 +148,19 @@ const StatCard = ({
           className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${colorClasses[color].bg} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`}
         />
 
-        <CardContent className="p-6 relative">
+        <CardContent className="p-3 sm:p-4 lg:p-6 relative">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <div
-                  className={`p-2.5 rounded-xl ${colorClasses[color].accent} group-hover:scale-110 transition-transform duration-300`}
+                  className={`p-1.5 sm:p-2.5 rounded-xl ${colorClasses[color].accent} group-hover:scale-110 transition-transform duration-300`}
                 >
                   <Icon
-                    className={`h-6 w-6 ${colorClasses[color].icon} group-hover:rotate-12 transition-transform duration-300`}
+                    className={`h-4 w-4 sm:h-6 sm:w-6 ${colorClasses[color].icon} group-hover:rotate-12 transition-transform duration-300`}
                   />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide truncate">
                     {title}
                   </p>
                   {trend && trendValue && (
@@ -177,7 +177,7 @@ const StatCard = ({
               </div>
 
               <div className="space-y-1">
-                <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                   {value}
                 </p>
                 {children}
@@ -217,7 +217,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
       transition={{ duration: 0.6 }}
       className="w-full"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-6">
         {/* Total Orders */}
         <StatCard
           title="Total Orders"
@@ -228,7 +228,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
           color="emerald"
           delay={0}
         >
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-slate-500 dark:text-slate-400">
               This month
             </span>
@@ -252,7 +252,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
           delay={1}
         >
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-slate-500 dark:text-slate-400">
                 Avg. Order
               </span>
@@ -280,7 +280,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
               }
               className="h-2"
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               Needs processing
             </p>
           </div>
@@ -302,7 +302,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
                 <div className="font-medium text-purple-600 dark:text-purple-400">
                   {stats.processingOrders}
                 </div>
-                <div className="text-slate-500 dark:text-slate-400">
+                <div className="text-slate-500 dark:text-slate-400 truncate">
                   Processing
                 </div>
               </div>
@@ -310,7 +310,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
                 <div className="font-medium text-blue-600 dark:text-blue-400">
                   {stats.shippedOrders}
                 </div>
-                <div className="text-slate-500 dark:text-slate-400">
+                <div className="text-slate-500 dark:text-slate-400 truncate">
                   Shipped
                 </div>
               </div>
@@ -318,7 +318,7 @@ export function OrderStats({ stats }: OrderStatsProps) {
                 <div className="font-medium text-green-600 dark:text-green-400">
                   {stats.deliveredOrders}
                 </div>
-                <div className="text-slate-500 dark:text-slate-400">
+                <div className="text-slate-500 dark:text-slate-400 truncate">
                   Delivered
                 </div>
               </div>

@@ -431,7 +431,7 @@ export default function OrderConfirmationEmail({
           <br />
           2. You'll receive a shipping confirmation with tracking info
           <br />
-          3. Your wellness products will arrive in 3-5 business days
+          3. Your wellness products will arrive in 5-7 business days (excluding weekends and public holidays)
           <br />
           4. Start your journey to better health with our organic products
         </Text>

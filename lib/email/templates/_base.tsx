@@ -292,9 +292,9 @@ export default function BaseEmail({
             <Row>
               <Column>
                 <Img
-                  src={`${companyUrl}/logo-email.png`}
-                  width="150"
-                  height="50"
+                  src="https://ypkhbi098h.ufs.sh/f/qs9WOJrHxTNMmLpdNuesO1F0WZA4bKM3p8EVSroeDuzq7nNg"
+                  width="120"
+                  height="120"
                   alt={companyName}
                   style={logo}
                 />

@@ -19,9 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import TrackingForm from "@/components/tracking/TrackingForm";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
 import EnhancedDesktopTimeline from "@/components/tracking/EnhancedDesktopTimeline";
-import OrderDetailsCard from "@/components/tracking/OrderDetailsCard";
 import MobileTrackingView from "@/components/tracking/MobileTrackingView";
 import EnhancedMobileTimeline from "@/components/tracking/EnhancedMobileTimeline";
+import RelatedProducts from "@/components/tracking/RelatedProducts";
+import WhileYouWaitProducts from "@/components/tracking/WhileYouWaitProducts";
 import { trackOrder } from "@/lib/actions/orderTrackingServerActions";
 import Link from "next/link";
 
@@ -203,44 +204,7 @@ export default function OrderTrackingPage({
                       Discover more organic wellness products to enhance your
                       healthy lifestyle
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
-                      >
-                        <Star className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          Premium Quality
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Organic, cold-pressed juices made fresh daily
-                        </p>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
-                      >
-                        <Heart className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          Wellness First
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Carefully crafted for your health and vitality
-                        </p>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl"
-                      >
-                        <Package className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          Fast Delivery
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Fresh products delivered to your door quickly
-                        </p>
-                      </motion.div>
-                    </div>
+                    <WhileYouWaitProducts categoryName="juice" limit={3} />
                     <div className="mt-6">
                       <Link href="/shop">
                         <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
@@ -417,13 +381,6 @@ export default function OrderTrackingPage({
                     />
                   )}
 
-                  {/* Order Details */}
-                  {order && trackingInfo && (
-                    <OrderDetailsCard
-                      order={order}
-                      trackingInfo={trackingInfo}
-                    />
-                  )}
                 </>
               )}
 
@@ -438,54 +395,7 @@ export default function OrderTrackingPage({
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 text-center">
                       Loved your order? Explore more wellness products
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Placeholder for product recommendations */}
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl cursor-pointer"
-                      >
-                        <div className="w-full h-32 bg-green-200 dark:bg-green-800 rounded-lg mb-3"></div>
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                          Green Detox Juice
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Cleanse & energize
-                        </p>
-                        <p className="text-lg font-bold text-green-600">
-                          $8.99
-                        </p>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl cursor-pointer"
-                      >
-                        <div className="w-full h-32 bg-purple-200 dark:bg-purple-800 rounded-lg mb-3"></div>
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                          Berry Antioxidant
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Rich in vitamins
-                        </p>
-                        <p className="text-lg font-bold text-purple-600">
-                          $9.99
-                        </p>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl cursor-pointer"
-                      >
-                        <div className="w-full h-32 bg-orange-200 dark:bg-orange-800 rounded-lg mb-3"></div>
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-1">
-                          Citrus Immunity
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Boost your health
-                        </p>
-                        <p className="text-lg font-bold text-orange-600">
-                          $7.99
-                        </p>
-                      </motion.div>
-                    </div>
+                    <RelatedProducts orderNumber={trackingInfo.orderNumber} />
                     <div className="text-center mt-6">
                       <Link href="/shop">
                         <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">

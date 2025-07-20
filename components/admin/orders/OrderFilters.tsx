@@ -547,7 +547,6 @@ import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -561,22 +560,21 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   Search,
   X,
   Calendar as CalendarIcon,
-  SlidersHorizontal,
+  Filter,
   RotateCcw,
 } from "lucide-react";
 
@@ -622,7 +620,6 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState({
     search: currentFilters.search || "",
     status: currentFilters.status || "all",
@@ -665,9 +662,10 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
     });
 
     // Reset page when filters change
-    params.delete("page");
+    params.set("page", "1");
 
-    router.push(`?${params.toString()}`);
+    // Use replace to avoid navigation and closing modals
+    router.replace(`?${params.toString()}`);
   };
 
   const handleFilterChange = (key: string, value: string) => {
@@ -677,6 +675,8 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
     // Apply immediately for non-search filters
     if (key !== "search") {
       applyFilters(newFilters);
+      // Keep advanced filters open for desktop/mobile
+      // The replace navigation shouldn't close the sheet
     }
   };
 
@@ -844,52 +844,31 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
         </Popover>
       </div>
 
-      {/* Advanced Filters - Mobile Sheet, Desktop Popover */}
-      <div className="sm:hidden">
-        <Sheet open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="relative p-2">
-              <SlidersHorizontal className="h-4 w-4" />
-              {getActiveFilterCount() > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="absolute -top-2 -right-2 h-4 w-4 rounded-full p-0 text-xs bg-emerald-500 text-white flex items-center justify-center"
-                >
-                  {getActiveFilterCount()}
-                </Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[350px] sm:w-[400px]">
-            <SheetHeader>
-              <SheetTitle>Filter Orders</SheetTitle>
-              <SheetDescription>
-                Refine your order search with advanced filters
-              </SheetDescription>
-            </SheetHeader>
-            <AdvancedFiltersContent
-              localFilters={localFilters}
-              handleFilterChange={handleFilterChange}
-              clearAllFilters={clearAllFilters}
-              getActiveFilterCount={getActiveFilterCount}
-              statusOptions={statusOptions}
-              paymentStatusOptions={paymentStatusOptions}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-              handleDateRangeChange={handleDateRangeChange}
-              handleDatePreset={handleDatePreset}
-            />
-          </SheetContent>
-        </Sheet>
+      {/* Payment Status Filter - Simple Dropdown */}
+      <div className="hidden sm:block">
+        <Select
+          value={localFilters.paymentStatus}
+          onValueChange={(value) => handleFilterChange("paymentStatus", value)}
+        >
+          <SelectTrigger className="w-[130px] lg:w-[150px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50 text-sm">
+            <SelectValue placeholder="Payment" />
+          </SelectTrigger>
+          <SelectContent>
+            {paymentStatusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Advanced Filters - Desktop Popover */}
-      <div className="hidden sm:block">
-        <Popover open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="relative">
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              <span className="hidden lg:inline">Advanced</span>
+      {/* More Filters - Mobile Dropdown */}
+      <div className="sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="relative p-2">
+              <Filter className="h-4 w-4" />
               {getActiveFilterCount() > 0 && (
                 <Badge
                   variant="secondary"
@@ -899,25 +878,25 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
                 </Badge>
               )}
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm"
-            align="end"
-          >
-            <AdvancedFiltersContent
-              localFilters={localFilters}
-              handleFilterChange={handleFilterChange}
-              clearAllFilters={clearAllFilters}
-              getActiveFilterCount={getActiveFilterCount}
-              statusOptions={statusOptions}
-              paymentStatusOptions={paymentStatusOptions}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-              handleDateRangeChange={handleDateRangeChange}
-              handleDatePreset={handleDatePreset}
-            />
-          </PopoverContent>
-        </Popover>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Payment Status</DropdownMenuLabel>
+            {paymentStatusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => handleFilterChange("paymentStatus", option.value)}
+                className={localFilters.paymentStatus === option.value ? "bg-accent" : ""}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={clearAllFilters}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Clear All Filters
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Clear Filters Button */}
@@ -946,203 +925,3 @@ export function OrderFilters({ currentFilters }: OrderFiltersProps) {
   );
 }
 
-function AdvancedFiltersContent({
-  localFilters,
-  handleFilterChange,
-  clearAllFilters,
-  getActiveFilterCount,
-  statusOptions,
-  paymentStatusOptions,
-  dateRange,
-  setDateRange,
-  handleDateRangeChange,
-  handleDatePreset,
-}: {
-  localFilters: any;
-  handleFilterChange: (key: string, value: string) => void;
-  clearAllFilters: () => void;
-  getActiveFilterCount: () => number;
-  statusOptions: Array<{ value: string; label: string }>;
-  paymentStatusOptions: Array<{ value: string; label: string }>;
-  dateRange: DateRange | undefined;
-  setDateRange: (range: DateRange | undefined) => void;
-  handleDateRangeChange: (range: DateRange | undefined) => void;
-  handleDatePreset: (preset: string) => void;
-}) {
-  const formatDateRange = () => {
-    if (!dateRange?.from) return "Select dates";
-    if (!dateRange.to) return format(dateRange.from, "MMM dd, yyyy");
-    if (dateRange.from.getTime() === dateRange.to.getTime()) {
-      return format(dateRange.from, "MMM dd, yyyy");
-    }
-    return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`;
-  };
-
-  return (
-    <div className="space-y-6 pt-6">
-      {/* Status Filter - Mobile only */}
-      <div className="space-y-2 sm:hidden">
-        <Label htmlFor="status" className="text-sm font-medium">
-          Order Status
-        </Label>
-        <Select
-          value={localFilters.status}
-          onValueChange={(value) => handleFilterChange("status", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Payment Status */}
-      <div className="space-y-2">
-        <Label htmlFor="paymentStatus" className="text-sm font-medium">
-          Payment Status
-        </Label>
-        <Select
-          value={localFilters.paymentStatus}
-          onValueChange={(value) => handleFilterChange("paymentStatus", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All payment statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            {paymentStatusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Date Range - Mobile only */}
-      <div className="space-y-2 md:hidden">
-        <Label className="text-sm font-medium">Date Range</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !dateRange?.from && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formatDateRange()}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <div className="p-3 border-b">
-              <div className="grid grid-cols-1 gap-2">
-                {datePresets.map((preset) => (
-                  <Button
-                    key={preset.value}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDatePreset(preset.value)}
-                    className="justify-start text-xs"
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
-              onSelect={handleDateRangeChange}
-              numberOfMonths={1}
-              className="rounded-md border-0"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <Separator />
-
-      {/* Active Filters Summary */}
-      {getActiveFilterCount() > 0 && (
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Active Filters</Label>
-          <div className="flex flex-wrap gap-2">
-            {localFilters.status && localFilters.status !== "all" && (
-              <Badge variant="secondary" className="gap-1">
-                Status:{" "}
-                {
-                  statusOptions.find((s) => s.value === localFilters.status)
-                    ?.label
-                }
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => handleFilterChange("status", "all")}
-                />
-              </Badge>
-            )}
-            {localFilters.paymentStatus &&
-              localFilters.paymentStatus !== "all" && (
-                <Badge variant="secondary" className="gap-1">
-                  Payment:{" "}
-                  {
-                    paymentStatusOptions.find(
-                      (s) => s.value === localFilters.paymentStatus
-                    )?.label
-                  }
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => handleFilterChange("paymentStatus", "all")}
-                  />
-                </Badge>
-              )}
-            {localFilters.search && (
-              <Badge variant="secondary" className="gap-1">
-                Search: "{localFilters.search}"
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => handleFilterChange("search", "")}
-                />
-              </Badge>
-            )}
-            {(localFilters.dateFrom || localFilters.dateTo) && (
-              <Badge variant="secondary" className="gap-1">
-                Date Range
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => {
-                    handleFilterChange("dateFrom", "");
-                    handleFilterChange("dateTo", "");
-                    setDateRange(undefined);
-                  }}
-                />
-              </Badge>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-4 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={clearAllFilters}
-          disabled={getActiveFilterCount() === 0}
-          className="flex-1"
-        >
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Clear All
-        </Button>
-      </div>
-    </div>
-  );
-}

@@ -4,29 +4,16 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
-  ChevronUp,
   Package,
-  MapPin,
-  CreditCard,
-  Calendar,
-  Truck,
-  User,
-  Mail,
-  Phone,
-  Copy,
-  ExternalLink,
   Star,
   Heart,
-  ShoppingBag,
   Gift,
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { format } from "date-fns";
 import Image from "next/image";
+import ContactSupportDialog from "@/components/tracking/ContactSupportDialog";
 
 interface MobileOrderDetailsProps {
   order: any;
@@ -174,101 +161,15 @@ export default function MobileOrderDetails({
     }).format(price);
   };
 
-  const copyTrackingNumber = async () => {
-    if (trackingInfo.trackingNumber) {
-      try {
-        await navigator.clipboard.writeText(trackingInfo.trackingNumber);
-        toast("Tracking number copied! 📋");
-      } catch (err) {
-        toast("Failed to copy tracking number");
-      }
-    }
-  };
-
-  const openCarrierTracking = () => {
-    if (trackingInfo.trackingNumber && trackingInfo.shippingCarrier) {
-      // This would open the carrier's tracking page
-      toast("Opening carrier tracking...");
-    }
-  };
 
   return (
     <div className="space-y-4">
-      {/* Order Summary Card */}
-      <SectionCard
-        title="Order Summary"
-        icon={ShoppingBag}
-        gradient="from-emerald-500 to-green-600"
-        defaultExpanded={true}
-      >
-        <div className="space-y-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {order.items.length}
-              </div>
-              <div className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
-                Items
-              </div>
-            </div>
-            
-            <div className="text-center p-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {formatPrice(order.totalAmount)}
-              </div>
-              <div className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
-                Total
-              </div>
-            </div>
-          </div>
-
-          {/* Order Metadata */}
-          <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Order Date</span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                {format(new Date(order.createdAt), "MMM dd, yyyy")}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Payment Status</span>
-              <Badge 
-                variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}
-                className={order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : ''}
-              >
-                {order.paymentStatus}
-              </Badge>
-            </div>
-
-            {trackingInfo.trackingNumber && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Tracking #</span>
-                <div className="flex items-center space-x-2">
-                  <code className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded font-mono">
-                    {trackingInfo.trackingNumber}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copyTrackingNumber}
-                    className="h-6 w-6 p-0"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SectionCard>
-
       {/* Order Items */}
       <SectionCard
         title={`Items (${order.items.length})`}
         icon={Package}
         gradient="from-purple-500 to-pink-600"
+        defaultExpanded={true}
       >
         <div className="space-y-3">
           {order.items.map((item: any, index: number) => (
@@ -284,67 +185,6 @@ export default function MobileOrderDetails({
         </div>
       </SectionCard>
 
-      {/* Delivery Information */}
-      <SectionCard
-        title="Delivery Details"
-        icon={MapPin}
-        gradient="from-orange-500 to-red-600"
-      >
-        <div className="space-y-4">
-          {/* Address */}
-          <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-100 dark:border-orange-800/30">
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-                </h4>
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <div>{order.shippingAddress.address1}</div>
-                  {order.shippingAddress.address2 && (
-                    <div>{order.shippingAddress.address2}</div>
-                  )}
-                  <div>
-                    {order.shippingAddress.city}, {order.shippingAddress.province} {order.shippingAddress.zip}
-                  </div>
-                  {order.shippingAddress.phone && (
-                    <div className="flex items-center space-x-1 mt-2">
-                      <Phone className="w-3 h-3" />
-                      <span>{order.shippingAddress.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Shipping Method */}
-          {trackingInfo.shippingCarrier && (
-            <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border">
-              <div className="flex items-center space-x-2">
-                <Truck className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {trackingInfo.shippingCarrier}
-                </span>
-              </div>
-              {trackingInfo.trackingNumber && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openCarrierTracking}
-                  className="h-8"
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  Track
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </SectionCard>
-
       {/* Support Section */}
       <SectionCard
         title="Need Help?"
@@ -356,23 +196,11 @@ export default function MobileOrderDetails({
             Our wellness support team is here to help with your order.
           </p>
           
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-pink-200 dark:border-pink-800"
-            >
-              <Phone className="w-4 h-4 mr-2" />
-              Call
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Email
-            </Button>
+          <div className="flex justify-center">
+            <ContactSupportDialog
+              orderNumber={trackingInfo?.orderNumber}
+              customerEmail={order?.email}
+            />
           </div>
         </div>
       </SectionCard>

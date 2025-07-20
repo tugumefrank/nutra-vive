@@ -6,12 +6,12 @@ import { Check, ArrowRight, Mail, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SuccessPageProps {
-  orderId: string;
+  orderId: string; // This is actually the order number (e.g., NV-003)
   customerEmail?: string;
 }
 
 export default function SuccessPage({
-  orderId,
+  orderId, // This is actually the order number
   customerEmail,
 }: SuccessPageProps) {
   return (

@@ -68,6 +68,7 @@ export default function CheckoutPage() {
   const [orderComplete, setOrderComplete] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [stepErrors, setStepErrors] = useState<StepErrors>({});
@@ -392,6 +393,7 @@ export default function CheckoutPage() {
     if (currentStep === 5 && (clientSecret || orderId)) {
       setClientSecret(null);
       setOrderId(null);
+      setOrderNumber(null);
       setPaymentError(null);
       setCreatingOrder(false);
     }
@@ -478,6 +480,7 @@ export default function CheckoutPage() {
     if (clientSecret) {
       setClientSecret(null);
       setOrderId(null);
+      setOrderNumber(null);
       setPaymentError(null);
     }
   };
@@ -617,9 +620,10 @@ export default function CheckoutPage() {
 
         console.log("📝 Free order creation result:", result);
 
-        if (result.success && result.orderId) {
+        if (result.success && result.orderId && result.orderNumber) {
           setOrderId(result.orderId);
-          console.log("✅ Free order created with ID:", result.orderId);
+          setOrderNumber(result.orderNumber);
+          console.log("✅ Free order created with ID:", result.orderId, "Number:", result.orderNumber);
 
           // For free orders, no need to confirm payment - order is already complete
           setOrderComplete(true);
@@ -640,8 +644,9 @@ export default function CheckoutPage() {
           timeoutPromise
         ]) as any;
 
-        if (result.success && result.clientSecret && result.orderId) {
+        if (result.success && result.clientSecret && result.orderId && result.orderNumber) {
           setOrderId(result.orderId);
+          setOrderNumber(result.orderNumber);
           setClientSecret(result.clientSecret);
           toast.success("Order created! Complete payment to confirm.");
         } else {
@@ -732,8 +737,8 @@ export default function CheckoutPage() {
     );
   }
 
-  if (orderComplete && orderId) {
-    return <SuccessPage orderId={orderId} />;
+  if (orderComplete && orderNumber) {
+    return <SuccessPage orderId={orderNumber} customerEmail={formData.email} />;
   }
 
   const renderStepContent = () => {

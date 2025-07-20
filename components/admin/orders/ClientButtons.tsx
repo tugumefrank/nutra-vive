@@ -54,6 +54,8 @@ export function ClientButtons({
   const [isLoading, setIsLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{status: string, label: string} | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [refundAmount, setRefundAmount] = useState(totalAmount || 0);
   const [refundReason, setRefundReason] = useState("");
@@ -140,6 +142,20 @@ export function ClientButtons({
     });
   };
 
+  // Status change confirmation handler
+  const handleStatusChangeRequest = (newStatus: string, label: string) => {
+    setPendingStatusChange({ status: newStatus, label });
+    setShowStatusConfirmDialog(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    
+    setShowStatusConfirmDialog(false);
+    await handleStatusUpdate(pendingStatusChange.status);
+    setPendingStatusChange(null);
+  };
+
   // Order action handlers
   const handleStatusUpdate = async (newStatus: string, tracking?: string) => {
     setIsLoading(true);
@@ -214,7 +230,7 @@ export function ClientButtons({
     if (currentStatus === "pending") {
       actions.push({
         label: "Mark as Processing",
-        action: () => handleStatusUpdate("processing"),
+        action: () => handleStatusChangeRequest("processing", "Processing"),
         icon: "📦"
       });
     }
@@ -222,7 +238,7 @@ export function ClientButtons({
     if (currentStatus === "processing") {
       actions.push({
         label: "Mark as Shipped", 
-        action: () => handleStatusUpdate("shipped"),
+        action: () => handleStatusChangeRequest("shipped", "Shipped"),
         icon: "🚚"
       });
     }
@@ -230,7 +246,7 @@ export function ClientButtons({
     if (currentStatus === "shipped") {
       actions.push({
         label: "Mark as Delivered",
-        action: () => handleStatusUpdate("delivered"), 
+        action: () => handleStatusChangeRequest("delivered", "Delivered"), 
         icon: "✅"
       });
     }
@@ -287,6 +303,36 @@ export function ClientButtons({
       </div>
 
       {/* Dialogs */}
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={showStatusConfirmDialog} onOpenChange={setShowStatusConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingStatusChange && (
+                <>
+                  You are about to change order {orderNumber} status to <strong>{pendingStatusChange.label}</strong>.
+                  <br /><br />
+                  <strong>⚠️ Important:</strong> The customer ({customerName}) will automatically receive an email notification about this status change.
+                  <br /><br />
+                  Do you want to proceed?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              disabled={isLoading}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {isLoading ? "Updating..." : "Yes, Update Status"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Cancel Order Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

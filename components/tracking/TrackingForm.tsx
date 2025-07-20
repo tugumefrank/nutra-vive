@@ -202,7 +202,7 @@ export default function TrackingForm({
             </h3>
             <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
               <li>• Order numbers start with "NV-" (e.g., NV-000123)</li>
-              <li>• Tracking numbers are provided when your order ships</li>
+              <li>• Our tracking number is sent in the order confirmation email</li>
               <li>
                 • Check your email for order confirmations and shipping updates
               </li>

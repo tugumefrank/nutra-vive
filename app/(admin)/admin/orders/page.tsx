@@ -2,31 +2,56 @@ import { Suspense } from "react";
 import { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
+import Link from "next/link";
 
 import { getOrders, getOrderStats } from "@/lib/actions/orderServerActions";
 import { OrdersList } from "@/components/admin/orders/OrdersList";
 import { OrderStats } from "@/components/admin/orders/OrderStats";
 import { OrderFilters } from "@/components/admin/orders/OrderFilters";
-import { OrderExport } from "@/components/admin/orders/OrderExport";
-import { PageHeader } from "@/components/admin/orders/PageHeader";
-import { LoadingSpinner } from "@/components/admin/orders/loading-spinner";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/admin/orders/PageHeader";
+import { OrderExport } from "@/components/admin/orders/OrderExport";
+import { LoadingSpinner } from "@/components/admin/orders/loading-spinner";
+import { Button } from "@/components/ui/button";
 import {
   Package,
-  TrendingUp,
-  Filter,
-  Download,
   RefreshCw,
   Plus,
+  Filter,
 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Order Management | Nutra-Vive Admin",
   description: "Manage customer orders, track shipments, and process payments",
 };
+
+// Cached version of getOrders - cache all orders for 60 seconds
+const getCachedOrders = unstable_cache(
+  async (filters: any) => {
+    // Fetch all orders without status filter and without pagination for caching
+    const { status, page, ...filtersWithoutStatusAndPage } = filters;
+    return getOrders({ ...filtersWithoutStatusAndPage, limit: 1000 }); // Get more orders for client-side filtering
+  },
+  ["all-orders"],
+  {
+    revalidate: 60, // Cache for 60 seconds
+    tags: ["orders"], // Tag for revalidation
+  }
+);
+
+// Cached version of getOrderStats
+const getCachedOrderStats = unstable_cache(
+  async () => {
+    return getOrderStats();
+  },
+  ["order-stats"],
+  {
+    revalidate: 300, // Cache for 5 minutes
+    tags: ["orders", "stats"],
+  }
+);
 
 interface OrdersPageProps {
   searchParams: Promise<{
@@ -41,23 +66,45 @@ interface OrdersPageProps {
 }
 
 async function OrdersContent({ searchParams }: OrdersPageProps) {
-  // Get filters from search params
+  const activeTab = (await searchParams).tab || "all";
+  const currentPage = parseInt((await searchParams).page ?? "1");
+  const itemsPerPage = 20;
+  
+  // Get filters from search params (excluding status for caching)
   const filters = {
-    status: (await searchParams).status,
     paymentStatus: (await searchParams).paymentStatus,
     search: (await searchParams).search,
     dateFrom: (await searchParams).dateFrom,
     dateTo: (await searchParams).dateTo,
-    page: parseInt((await searchParams).page ?? "1"),
+    page: currentPage,
   };
 
-  // Fetch orders and stats in parallel
+  // Fetch cached data in parallel
   const [ordersResult, statsResult] = await Promise.all([
-    getOrders(filters),
-    getOrderStats(),
+    getCachedOrders(filters),
+    getCachedOrderStats(),
   ]);
 
-  const activeTab = (await searchParams).tab || "all";
+  // Filter orders client-side based on active tab
+  const filteredOrders = activeTab === "all" 
+    ? ordersResult.orders 
+    : ordersResult.orders.filter((order) => order.status === activeTab);
+
+  // Implement client-side pagination
+  const totalFilteredOrders = filteredOrders.length;
+  const totalPages = Math.ceil(totalFilteredOrders / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Create pagination object for the filtered results
+  const paginationInfo = {
+    total: totalFilteredOrders,
+    totalPages,
+    currentPage,
+    hasNextPage: currentPage < totalPages,
+    hasPrevPage: currentPage > 1,
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -72,19 +119,21 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
               <Package className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             }
           >
-            <div className="flex flex-col sm:flex-row gap-3">
-              <OrderExport />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="order-2 sm:order-1">
+                <OrderExport />
+              </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-white/20 dark:border-slate-700/20"
+                className="backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-white/20 dark:border-slate-700/20 order-3 sm:order-2"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
               <Button
                 size="sm"
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg"
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg order-1 sm:order-3"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Order
@@ -94,7 +143,7 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Statistics Cards with 3D Effect */}
         <div className="w-full">
           <OrderStats stats={statsResult} />
@@ -103,15 +152,18 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
         {/* Main Content Area */}
         <Card className="border-0 shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <CardContent className="p-0">
-            <Tabs value={activeTab} className="w-full">
               {/* Tab Navigation with Modern Design */}
               <div className="border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-white/50 dark:from-slate-800/50 dark:to-slate-900/50 backdrop-blur-sm">
-                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between p-4 lg:p-6 gap-4">
-                  <div className="overflow-x-auto">
-                    <TabsList className="grid w-full min-w-max grid-cols-5 gap-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm p-1">
-                      <TabsTrigger
-                        value="all"
-                        className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-white whitespace-nowrap"
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-3 lg:p-6 gap-3 lg:gap-4">
+                  <div className="overflow-x-auto scrollbar-hide">
+                    <div className="grid w-full min-w-max grid-cols-5 gap-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm p-1 rounded-md">
+                      <Link
+                        href="/admin/orders?tab=all&page=1"
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                          activeTab === "all" 
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
                       >
                         <span className="hidden sm:inline">All Orders</span>
                         <span className="sm:hidden">All</span>
@@ -121,10 +173,14 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
                         >
                           {statsResult.totalOrders}
                         </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="pending"
-                        className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-white whitespace-nowrap"
+                      </Link>
+                      <Link
+                        href="/admin/orders?tab=pending&page=1"
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                          activeTab === "pending" 
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
                       >
                         <span className="hidden sm:inline">Pending</span>
                         <span className="sm:hidden">Pend</span>
@@ -134,10 +190,14 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
                         >
                           {statsResult.pendingOrders}
                         </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="processing"
-                        className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-white whitespace-nowrap"
+                      </Link>
+                      <Link
+                        href="/admin/orders?tab=processing&page=1"
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                          activeTab === "processing" 
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
                       >
                         <span className="hidden sm:inline">Processing</span>
                         <span className="sm:hidden">Proc</span>
@@ -147,10 +207,14 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
                         >
                           {statsResult.processingOrders}
                         </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="shipped"
-                        className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-white whitespace-nowrap"
+                      </Link>
+                      <Link
+                        href="/admin/orders?tab=shipped&page=1"
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                          activeTab === "shipped" 
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
                       >
                         <span className="hidden sm:inline">Shipped</span>
                         <span className="sm:hidden">Ship</span>
@@ -160,10 +224,14 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
                         >
                           {statsResult.shippedOrders}
                         </Badge>
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="delivered"
-                        className="data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700 dark:data-[state=active]:text-white whitespace-nowrap"
+                      </Link>
+                      <Link
+                        href="/admin/orders?tab=delivered&page=1"
+                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                          activeTab === "delivered" 
+                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
                       >
                         <span className="hidden sm:inline">Delivered</span>
                         <span className="sm:hidden">Del</span>
@@ -173,83 +241,41 @@ async function OrdersContent({ searchParams }: OrdersPageProps) {
                         >
                           {statsResult.deliveredOrders}
                         </Badge>
-                      </TabsTrigger>
-                    </TabsList>
+                      </Link>
+                    </div>
                   </div>
 
                   {/* Filters */}
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
                     <div className="flex-1 min-w-0">
                       <OrderFilters currentFilters={filters} />
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="hidden lg:flex"
+                      className="hidden sm:flex whitespace-nowrap"
                     >
-                      <Filter className="h-4 w-4 mr-2" />
-                      More Filters
+                      <Filter className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden md:inline">More Filters</span>
+                      <span className="md:hidden">Filters</span>
                     </Button>
                   </div>
                 </div>
               </div>
 
               {/* Tab Content */}
-              <div className="p-4 lg:p-6">
-                <TabsContent value="all" className="mt-0">
-                  <OrdersList
-                    orders={ordersResult.orders}
-                    pagination={ordersResult.pagination}
-                    error={ordersResult.error}
-                  />
-                </TabsContent>
-
-                <TabsContent value="pending" className="mt-0">
-                  <OrdersList
-                    orders={ordersResult.orders.filter(
-                      (order) => order.status === "pending"
-                    )}
-                    pagination={ordersResult.pagination}
-                    error={ordersResult.error}
-                  />
-                </TabsContent>
-
-                <TabsContent value="processing" className="mt-0">
-                  <OrdersList
-                    orders={ordersResult.orders.filter(
-                      (order) => order.status === "processing"
-                    )}
-                    pagination={ordersResult.pagination}
-                    error={ordersResult.error}
-                  />
-                </TabsContent>
-
-                <TabsContent value="shipped" className="mt-0">
-                  <OrdersList
-                    orders={ordersResult.orders.filter(
-                      (order) => order.status === "shipped"
-                    )}
-                    pagination={ordersResult.pagination}
-                    error={ordersResult.error}
-                  />
-                </TabsContent>
-
-                <TabsContent value="delivered" className="mt-0">
-                  <OrdersList
-                    orders={ordersResult.orders.filter(
-                      (order) => order.status === "delivered"
-                    )}
-                    pagination={ordersResult.pagination}
-                    error={ordersResult.error}
-                  />
-                </TabsContent>
+              <div className="p-3 sm:p-4 lg:p-6">
+                <OrdersList
+                  orders={paginatedOrders}
+                  pagination={paginationInfo}
+                  error={ordersResult.error}
+                />
               </div>
-            </Tabs>
           </CardContent>
         </Card>
 
         {/* Quick Actions Floating Panel - Mobile */}
-        <div className="fixed bottom-20 right-4 lg:hidden z-50">
+        <div className="fixed bottom-20 right-3 sm:right-4 lg:hidden z-50">
           <div className="flex flex-col gap-2">
             <Button
               size="sm"
