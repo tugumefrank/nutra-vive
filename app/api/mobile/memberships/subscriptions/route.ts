@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         checkoutUrl: result.checkoutUrl,
-        checkoutSessionId: result.checkoutSessionId,
         message: "Subscription checkout session created",
       });
     }
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
             id: subscription.id,
             status: subscription.status,
             cancel_at_period_end: subscription.cancel_at_period_end,
-            current_period_end: subscription.current_period_end,
+            current_period_end: (subscription as any).current_period_end,
           },
         };
         break;
@@ -301,9 +300,9 @@ export async function GET(request: NextRequest) {
     const { getAvailableMemberships } = await import("@/lib/actions/membershipServerActions");
     const result = await getAvailableMemberships();
 
-    if (!result.success) {
+    if (!result || !result.memberships) {
       return NextResponse.json(
-        { error: result.error || "Failed to fetch membership plans" },
+        { error: "Failed to fetch membership plans" },
         { status: 500 }
       );
     }
@@ -345,7 +344,7 @@ export async function GET(request: NextRequest) {
       plans: mobilePlans,
       summary: {
         totalPlans: mobilePlans.length,
-        tiers: [...new Set(mobilePlans.map(p => p.tier))],
+        tiers: Array.from(new Set(mobilePlans.map(p => p.tier))),
         priceRange: {
           min: Math.min(...mobilePlans.map(p => p.price)),
           max: Math.max(...mobilePlans.map(p => p.price)),

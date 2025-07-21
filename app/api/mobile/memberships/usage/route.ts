@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("👤 Active membership found:", activeMembership.membership.name);
+    console.log("👤 Active membership found:", (activeMembership.membership as any)?.name || "Unknown");
 
     // Verify the order exists and belongs to the user
     const order = await Order.findOne({
@@ -149,7 +149,14 @@ export async function POST(request: NextRequest) {
     await activeMembership.save();
 
     // Calculate overall usage statistics
-    const overallStats = {
+    const overallStats: {
+      totalCategories: number;
+      categoriesWithUsage: number;
+      totalAllocated: number;
+      totalUsed: number;
+      totalRemaining: number;
+      usagePercentage?: number;
+    } = {
       totalCategories: activeMembership.productUsage.length,
       categoriesWithUsage: activeMembership.productUsage.filter((u: any) => u.usedQuantity > 0).length,
       totalAllocated: activeMembership.productUsage.reduce((sum: number, u: any) => sum + u.allocatedQuantity, 0),
@@ -285,8 +292,8 @@ export async function GET(request: NextRequest) {
       // Calculate detailed analytics
       const analytics = {
         membershipId: membership._id,
-        membershipName: membership.membership.name,
-        membershipTier: membership.membership.tier,
+        membershipName: (membership.membership as any)?.name || "Unknown",
+        membershipTier: (membership.membership as any)?.tier || "basic",
         status: membership.status,
         currentPeriod: {
           start: membership.currentPeriodStart,
