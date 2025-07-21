@@ -12,6 +12,16 @@ interface SendCustomerSupportEmailParams {
   subject: string;
   message: string;
   orderNumber?: string;
+  mobileContext?: {
+    userId?: string;
+    deviceInfo?: {
+      platform?: string;
+      version?: string;
+      model?: string;
+    };
+    timestamp?: string;
+    source?: string;
+  };
 }
 
 export async function sendCustomerSupportEmail({
@@ -20,6 +30,7 @@ export async function sendCustomerSupportEmail({
   subject,
   message,
   orderNumber,
+  mobileContext,
 }: SendCustomerSupportEmailParams): Promise<{
   success: boolean;
   error?: string;
@@ -62,6 +73,7 @@ export async function sendCustomerSupportEmail({
         orderNumber,
         companyName: "Nutra-Vive",
         companyUrl: "https://nutraviveholistic.com",
+        mobileContext,
       }),
     });
 
@@ -78,6 +90,8 @@ export async function sendCustomerSupportEmail({
       customerEmail,
       subject,
       orderNumber,
+      source: mobileContext?.source || "web",
+      userId: mobileContext?.userId,
     });
 
     return { success: true };

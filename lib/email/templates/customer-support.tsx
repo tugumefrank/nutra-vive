@@ -16,6 +16,16 @@ interface CustomerSupportProps {
   orderNumber?: string;
   companyName?: string;
   companyUrl?: string;
+  mobileContext?: {
+    userId?: string;
+    deviceInfo?: {
+      platform?: string;
+      version?: string;
+      model?: string;
+    };
+    timestamp?: string;
+    source?: string;
+  };
 }
 
 export default function CustomerSupportEmail({
@@ -26,6 +36,7 @@ export default function CustomerSupportEmail({
   orderNumber,
   companyName = "Nutra-Vive",
   companyUrl = "https://nutraviveholistic.com",
+  mobileContext,
 }: CustomerSupportProps) {
   return (
     <BaseEmail
@@ -99,6 +110,42 @@ export default function CustomerSupportEmail({
             </Text>
           </Column>
         </Row>
+
+        {mobileContext?.source && (
+          <Row style={sharedStyles.detailRow}>
+            <Column style={sharedStyles.labelCol}>
+              <Text style={sharedStyles.label}>Source:</Text>
+            </Column>
+            <Column>
+              <Text style={{
+                ...sharedStyles.value,
+                fontWeight: "600",
+                color: "#8b5cf6",
+              }}>
+                📱 {mobileContext.source === "mobile_app" ? "Mobile App" : mobileContext.source}
+              </Text>
+            </Column>
+          </Row>
+        )}
+
+        {mobileContext?.deviceInfo && (
+          <Row style={sharedStyles.detailRow}>
+            <Column style={sharedStyles.labelCol}>
+              <Text style={sharedStyles.label}>Device:</Text>
+            </Column>
+            <Column>
+              <Text style={{
+                ...sharedStyles.value,
+                fontSize: "14px",
+                color: "#6b7280",
+              }}>
+                {mobileContext.deviceInfo.platform && `${mobileContext.deviceInfo.platform} `}
+                {mobileContext.deviceInfo.model && `${mobileContext.deviceInfo.model} `}
+                {mobileContext.deviceInfo.version && `(v${mobileContext.deviceInfo.version})`}
+              </Text>
+            </Column>
+          </Row>
+        )}
       </Section>
 
       <Section style={sharedStyles.consultationSection}>

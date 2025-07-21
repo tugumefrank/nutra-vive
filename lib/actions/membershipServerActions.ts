@@ -1141,14 +1141,14 @@ export async function getCategories(): Promise<{
 }
 // Add this function to your membershipServerActions.ts file
 
-// Get Current User's Memberships (for account page)
-export async function getCurrentUserMemberships(): Promise<{
+// Get Current User's Memberships (for account page and mobile)
+export async function getCurrentUserMemberships(providedUserId?: string): Promise<{
   success: boolean;
   userMemberships?: any[];
   error?: string;
 }> {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return {
         success: false,
