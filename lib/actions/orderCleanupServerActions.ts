@@ -4,9 +4,8 @@ import { connectToDatabase } from "@/lib/db";
 import { Order } from "@/lib/db/models";
 
 /**
- * Clean up pending orders older than specified time
- * TEMP: Currently set to 5 minutes for testing (normally 24 hours)
- * This function removes orders that have paymentStatus 'pending' and were created more than the specified time ago
+ * Clean up pending orders older than 20 hours
+ * This function removes orders that have paymentStatus 'pending' and were created more than 20 hours ago
  */
 export async function cleanupPendingOrders(): Promise<{
   success: boolean;
@@ -14,19 +13,19 @@ export async function cleanupPendingOrders(): Promise<{
   error?: string;
 }> {
   try {
-    console.log("🧹 TESTING MODE: Starting cleanup of pending orders older than 5 minutes...");
+    console.log("🧹 Starting cleanup of pending orders older than 20 hours...");
     
     await connectToDatabase();
 
-    // TEMP: Calculate 5 minutes ago (normally 24 hours)
+    // Calculate 20 hours ago
     const cutoffTime = new Date();
-    cutoffTime.setMinutes(cutoffTime.getMinutes() - 5);
+    cutoffTime.setHours(cutoffTime.getHours() - 20);
 
-    console.log("📅 TESTING: Cleaning up orders created before:", cutoffTime.toISOString());
+    console.log("📅 Cleaning up orders created before:", cutoffTime.toISOString());
 
     // Find and delete orders that are:
     // 1. paymentStatus is 'pending'
-    // 2. createdAt is older than 5 minutes (TEMP - normally 24 hours)
+    // 2. createdAt is older than 20 hours
     const deleteResult = await Order.deleteMany({
       paymentStatus: "pending",
       createdAt: { $lt: cutoffTime }
@@ -51,8 +50,7 @@ export async function cleanupPendingOrders(): Promise<{
 
 /**
  * Get count of pending orders that would be cleaned up
- * TEMP: Currently set to 5 minutes for testing (normally 24 hours)
- * Useful for monitoring and reporting
+ * Set to 20 hours - useful for monitoring and reporting
  */
 export async function getPendingOrdersToCleanupCount(): Promise<{
   success: boolean;
@@ -62,9 +60,9 @@ export async function getPendingOrdersToCleanupCount(): Promise<{
   try {
     await connectToDatabase();
 
-    // TEMP: Calculate 5 minutes ago (normally 24 hours)
+    // Calculate 20 hours ago
     const cutoffTime = new Date();
-    cutoffTime.setMinutes(cutoffTime.getMinutes() - 5);
+    cutoffTime.setHours(cutoffTime.getHours() - 20);
 
     // Count orders that would be deleted
     const count = await Order.countDocuments({
@@ -87,11 +85,10 @@ export async function getPendingOrdersToCleanupCount(): Promise<{
 }
 
 /**
- * Get detailed info about pending orders older than specified minutes
- * TEMP: Default changed to 5 minutes for testing (normally 24 hours = 1440 minutes)
- * Useful for debugging and monitoring
+ * Get detailed info about pending orders older than specified hours
+ * Default set to 20 hours - useful for debugging and monitoring
  */
-export async function getPendingOrdersInfo(minutesOld: number = 5): Promise<{
+export async function getPendingOrdersInfo(hoursOld: number = 20): Promise<{
   success: boolean;
   orders?: Array<{
     _id: string;
@@ -107,7 +104,7 @@ export async function getPendingOrdersInfo(minutesOld: number = 5): Promise<{
     await connectToDatabase();
 
     const cutoffTime = new Date();
-    cutoffTime.setMinutes(cutoffTime.getMinutes() - minutesOld);
+    cutoffTime.setHours(cutoffTime.getHours() - hoursOld);
 
     const orders = await Order.find({
       paymentStatus: "pending",

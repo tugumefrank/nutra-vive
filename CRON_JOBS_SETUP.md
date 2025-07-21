@@ -97,7 +97,7 @@ Click "Advanced" and configure:
 - Ensure the cleanup function isn't timing out
 
 ### No Orders Being Deleted:
-- Check if you have pending orders older than 24 hours (or 5 minutes during testing)
+- Check if you have pending orders older than 20 hours
 - Verify the cleanup logic is working by checking function logs
 
 ## 🔄 Switching from Vercel Cron

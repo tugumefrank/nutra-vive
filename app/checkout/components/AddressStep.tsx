@@ -38,15 +38,18 @@ export default function AddressStep({
             </p>
             <div className="p-6 bg-green-50 border border-green-200 rounded-xl max-w-sm mx-auto">
               <p className="font-semibold text-green-900 mb-1">
-                Nutra-Vive Store
+                Nutra-Vive Store Pickup
               </p>
-              <p className="text-sm text-green-800">123 Wellness Street</p>
-              <p className="text-sm text-green-800">Health City, CA 90210</p>
+              <p className="text-sm text-green-800">50 Park Place</p>
+              <p className="text-sm text-green-800">Newark, NJ USA</p>
               <p className="text-sm text-green-800 mt-2">
-                <strong>Hours:</strong> Mon-Sat 9:00 AM - 7:00 PM
+                <strong>Hours:</strong> Mon-Fri 9:00 AM - 5:00 PM
+              </p>
+              <p className="text-sm text-green-800">
+                <strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong> Sat 9:00 AM - 12:30 PM
               </p>
               <p className="text-sm text-green-800 mt-2">
-                <strong>Phone:</strong> (555) 123-4567
+                <strong>Phone:</strong> 1-800-NUTRA-01
               </p>
             </div>
           </div>

@@ -420,7 +420,7 @@ export function Footer({ variant = "default", className }: FooterProps) {
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Mail className="w-4 h-4" />
-                <span>hello@nutraviveholistic.com</span>
+                <span>support@nutraviveholistic.com</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Phone className="w-4 h-4" />
@@ -428,7 +428,7 @@ export function Footer({ variant = "default", className }: FooterProps) {
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4" />
-                <span>Wellness Valley, CA</span>
+                <span>Newark, NJ USA</span>
               </div>
             </div>
           </div>

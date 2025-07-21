@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cleanupPendingOrders } from "@/lib/actions/orderCleanupServerActions";
 
 /**
- * Cron Job: Cleanup pending orders older than 24 hours
+ * Cron Job: Cleanup pending orders older than 20 hours
  * GET /api/cron/cleanup-pending-orders
  *
  * This endpoint can be called by external cron services like cron-jobs.org
@@ -16,13 +16,6 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
     const cronToken = process.env.CRON_SECRET_TOKEN;
     
-    // Debug logging
-    console.log("🔍 Debug info:");
-    console.log("- Auth header received:", authHeader ? "Present" : "Missing");
-    console.log("- Auth header value:", authHeader ? `"${authHeader}"` : "null");
-    console.log("- Expected token configured:", cronToken ? "Yes" : "No");
-    console.log("- Expected format:", cronToken ? `"Bearer ${cronToken}"` : "No token set");
-    
     if (!cronToken) {
       console.log("❌ CRON_SECRET_TOKEN not configured");
       return NextResponse.json(
@@ -33,11 +26,6 @@ export async function GET(request: NextRequest) {
     
     if (!authHeader || authHeader !== `Bearer ${cronToken}`) {
       console.log("❌ Unauthorized cron request - invalid or missing token");
-      console.log("- Comparison failed:", {
-        received: authHeader,
-        expected: `Bearer ${cronToken}`,
-        match: authHeader === `Bearer ${cronToken}`
-      });
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
