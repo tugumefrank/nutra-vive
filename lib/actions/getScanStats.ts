@@ -1,11 +1,12 @@
 "use server";
 
-import { ScanLog } from "@/lib/db/models/ScanLog";
+import { IScanLog, ScanLog } from "@/lib/db/models/ScanLog";
 import { connectToDatabase } from "../db";
 
 export async function getScanStats(): Promise<{
   total: number;
   today: number;
+  recentScans: IScanLog[];
 }> {
   try {
     await connectToDatabase();
@@ -21,10 +22,18 @@ export async function getScanStats(): Promise<{
     const today = await ScanLog.countDocuments({
       timestamp: { $gte: startOfToday },
     });
+    const recentScans = await ScanLog.find()
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .lean(); // Get last 10 scans
 
-    return { total, today };
+    return {
+      total,
+      today,
+      recentScans: JSON.parse(JSON.stringify(recentScans)),
+    }; // Important for passing Mongoose docs to client components
   } catch (error) {
     console.error("Error fetching scan stats:", error);
-    return { total: 0, today: 0 };
+    return { total: 0, today: 0, recentScans: [] };
   }
 }
