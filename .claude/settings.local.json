@@ -27,7 +27,8 @@
       "Bash(npm run lint)",
       "Bash(rm:*)",
       "Bash(node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }

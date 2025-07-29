@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { verifyToken } from "@clerk/nextjs/server";
 import { z } from "zod";
 import Stripe from "stripe";
 
@@ -21,14 +21,25 @@ export async function POST(request: NextRequest) {
   console.log("🔵 Mobile API: POST /api/mobile/checkout/confirm-order called");
 
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      console.log("❌ Unauthorized access attempt");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Extract JWT token from Authorization header
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      console.log("❌ No authorization token provided");
+      return NextResponse.json({ error: "Authorization token required" }, { status: 401 });
     }
 
-    console.log("👤 User ID:", userId);
+    // Verify JWT token and get user ID
+    const { userId } = await verifyToken(token, { 
+      secretKey: process.env.CLERK_SECRET_KEY! 
+    });
+
+    if (!userId) {
+      console.log("❌ Invalid or expired token");
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    }
+
+    console.log("👤 User ID from JWT:", userId);
 
     const body = await request.json();
     console.log("📋 Order confirmation request:", body);
@@ -89,7 +100,7 @@ export async function POST(request: NextRequest) {
         "@/lib/actions/orderServerActions"
       );
 
-      const orderResult = await confirmPayment(validatedData.paymentIntentId);
+      const orderResult = await confirmPayment(validatedData.paymentIntentId, userId);
 
       if (!orderResult.success) {
         console.log("❌ Order confirmation failed:", orderResult.error);

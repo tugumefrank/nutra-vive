@@ -561,14 +561,6 @@ export default function MembershipCard({
                   delivery
                 </span>
               </div>
-              {membership.features
-                ?.slice(0, 2)
-                .map((feature: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
-                    <span className="truncate">{feature}</span>
-                  </div>
-                ))}
             </div>
           </div>
 

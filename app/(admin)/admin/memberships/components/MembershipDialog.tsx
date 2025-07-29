@@ -31,12 +31,16 @@ import {
   ChevronUp,
   Check,
   Eye,
+  Clock,
+  Users,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -94,20 +98,7 @@ const membershipSchema = z.object({
     )
     .min(1, "At least one product allocation is required"),
 
-  // Custom Benefits
-  customBenefits: z
-    .array(
-      z.object({
-        title: z.string().min(1, "Benefit title is required"),
-        description: z.string().min(1, "Benefit description is required"),
-        type: z.enum(["webinar", "content", "discount", "service", "other"]),
-        value: z.string().optional(),
-      })
-    )
-    .default([]),
-
-  // Features
-  features: z.array(z.string()).default([]),
+  // Custom Benefits and features removed - using only core toggleable features below
 
   // Configuration
   maxProductsPerMonth: z.number().int().min(0).optional(),
@@ -192,7 +183,7 @@ const tabFieldMapping = {
   ],
   pricing: ["price", "billingFrequency", "currency"],
   products: ["productAllocations", "maxProductsPerMonth"],
-  benefits: ["customBenefits", "features"],
+  benefits: [], // customBenefits and features removed
   settings: ["deliveryFrequency", "freeDelivery", "prioritySupport"],
 };
 
@@ -251,10 +242,7 @@ const prepareFormData = (
     billingFrequency: membership.billingFrequency || "monthly",
     currency: membership.currency || "USD",
     productAllocations: allocations,
-    customBenefits: Array.isArray(membership.customBenefits)
-      ? membership.customBenefits
-      : [],
-    features: Array.isArray(membership.features) ? membership.features : [],
+    // customBenefits and features removed
     deliveryFrequency: membership.deliveryFrequency || "monthly",
     freeDelivery: membership.freeDelivery || false,
     prioritySupport: membership.prioritySupport || false,
@@ -279,6 +267,7 @@ export default function MembershipDialog() {
   } = useMemberships();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [showPreview, setShowPreview] = useState(false);
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
@@ -296,8 +285,7 @@ export default function MembershipDialog() {
       billingFrequency: "monthly",
       currency: "USD",
       productAllocations: [],
-      customBenefits: [],
-      features: [],
+      // customBenefits and features removed
       deliveryFrequency: "monthly",
       freeDelivery: false,
       prioritySupport: false,
@@ -319,14 +307,7 @@ export default function MembershipDialog() {
     name: "productAllocations",
   });
 
-  const {
-    fields: benefitFields,
-    append: appendBenefit,
-    remove: removeBenefit,
-  } = useFieldArray({
-    control: form.control,
-    name: "customBenefits",
-  });
+  // useFieldArray for customBenefits removed
 
   // Single useEffect to handle form reset and category population
   useEffect(() => {
@@ -383,8 +364,7 @@ export default function MembershipDialog() {
         billingFrequency: "monthly",
         currency: "USD",
         productAllocations: [],
-        customBenefits: [],
-        features: [],
+        // customBenefits and features removed
         deliveryFrequency: "monthly",
         freeDelivery: false,
         prioritySupport: false,
@@ -489,7 +469,7 @@ export default function MembershipDialog() {
   };
 
   const onSubmit = async (data: MembershipForm) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const submitData = {
         ...data,
@@ -538,7 +518,7 @@ export default function MembershipDialog() {
         toast.error("Please fix the validation errors before submitting");
       }
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -595,42 +575,7 @@ export default function MembershipDialog() {
     });
   };
 
-  const addBenefit = () => {
-    appendBenefit({
-      title: "",
-      description: "",
-      type: "other",
-      value: "",
-    });
-  };
-
-  const handleAddFeatureInput = (
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (event.key === "Enter" && event.currentTarget.value.trim()) {
-      addFeature(event.currentTarget.value.trim());
-      event.currentTarget.value = "";
-    }
-  };
-
-  const addFeature = (feature: string) => {
-    if (feature.trim()) {
-      form.setValue(
-        "features",
-        [...form.getValues("features"), feature.trim()],
-        { shouldValidate: true, shouldDirty: true }
-      );
-    }
-  };
-
-  const removeFeature = (index: number): void => {
-    const features = form.getValues("features");
-    const updated = [...features.slice(0, index), ...features.slice(index + 1)];
-    form.setValue("features", updated, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
-  };
+  // addBenefit, addFeature, removeFeature functions removed
 
   const selectedTier = form.watch("tier");
   const selectedTierOption = tierOptions.find(
@@ -947,20 +892,6 @@ export default function MembershipDialog() {
                         <div className="text-xs text-muted-foreground">
                           {form.watch("description") || "No description provided"}
                         </div>
-                        {form.watch("features")?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 justify-center">
-                            {form.watch("features")?.slice(0, 3).map((feature, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {feature}
-                              </Badge>
-                            ))}
-                            {form.watch("features")?.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{form.watch("features")?.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1603,7 +1534,7 @@ export default function MembershipDialog() {
                     </div>
                   )}
 
-                  {/* Custom Benefits Tab */}
+                  {/* Benefits Tab - Custom Benefits and Features removed */}
                   {activeTab === "benefits" && (
                     <div className="space-y-6 mt-0">
                     <motion.div
@@ -1615,191 +1546,17 @@ export default function MembershipDialog() {
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
                             <Gift className="h-5 w-5" />
-                            Custom Benefits
+                            Membership Benefits
                           </CardTitle>
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            Define unique advantages for this membership tier.
+                            Custom benefits and features have been simplified. Core benefits are now managed in the Settings tab.
                           </p>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <AnimatePresence>
-                            {benefitFields.map((field, index) => (
-                              <motion.div
-                                key={field.id}
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="p-4 border rounded-lg space-y-4"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <h4 className="font-medium">
-                                    Benefit {index + 1}
-                                  </h4>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeBenefit(index)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name={`customBenefits.${index}.title`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Title</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            placeholder="e.g., Exclusive Webinar Access"
-                                            {...field}
-                                          />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name={`customBenefits.${index}.type`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Type</FormLabel>
-                                        <Select
-                                          onValueChange={field.onChange}
-                                          value={field.value}
-                                        >
-                                          <FormControl>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent>
-                                            {benefitTypes.map((type) => (
-                                              <SelectItem
-                                                key={type.value}
-                                                value={type.value}
-                                              >
-                                                <div className="flex items-center gap-2">
-                                                  <type.icon className="h-4 w-4" />
-                                                  {type.label}
-                                                </div>
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <FormField
-                                  control={form.control}
-                                  name={`customBenefits.${index}.description`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Description</FormLabel>
-                                      <FormControl>
-                                        <Textarea
-                                          placeholder="Detailed explanation of the benefit..."
-                                          className="resize-none"
-                                          {...field}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <FormField
-                                  control={form.control}
-                                  name={`customBenefits.${index}.value`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Value (Optional)</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          placeholder="e.g., 20% OFF, Q1 2024"
-                                          {...field}
-                                          value={field.value || ""}
-                                        />
-                                      </FormControl>
-                                      <FormDescription>
-                                        Additional context or value for the
-                                        benefit.
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={addBenefit}
-                          >
-                            <Plus className="h-4 w-4 mr-2" /> Add Custom Benefit
-                          </Button>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <Star className="h-5 w-5" />
-                            Key Features
-                          </CardTitle>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            List main features or selling points of this
-                            membership.
+                        <CardContent className="text-center py-8">
+                          <p className="text-muted-foreground">
+                            Benefits configuration has been moved to the Settings tab. 
+                            Use the toggles for Free Delivery and Priority Support.
                           </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="features"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Add Feature</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="Type a feature and press Enter"
-                                    onKeyDown={handleAddFeatureInput}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  <AnimatePresence>
-                                    {field.value?.map((feature, index) => (
-                                      <motion.div
-                                        key={feature + index}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        transition={{ duration: 0.2 }}
-                                      >
-                                        <Badge
-                                          variant="secondary"
-                                          className="flex items-center gap-1 pr-1 cursor-pointer"
-                                          onClick={() => removeFeature(index)}
-                                        >
-                                          {feature}
-                                          <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                        </Badge>
-                                      </motion.div>
-                                    ))}
-                                  </AnimatePresence>
-                                </div>
-                                <FormDescription>
-                                  Press Enter to add. Click a tag to remove.
-                                </FormDescription>
-                              </FormItem>
-                            )}
-                          />
                         </CardContent>
                       </Card>
                     </motion.div>
@@ -1831,34 +1588,21 @@ export default function MembershipDialog() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="flex items-center gap-2">
-                                  <Truck className="h-4 w-4" />
+                                  <Clock className="h-4 w-4" />
                                   Delivery Frequency
                                 </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                >
+                                <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Select delivery frequency" />
+                                      <SelectValue placeholder="Select frequency" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="weekly">
-                                      Weekly
-                                    </SelectItem>
-                                    <SelectItem value="bi-weekly">
-                                      Bi-Weekly
-                                    </SelectItem>
-                                    <SelectItem value="monthly">
-                                      Monthly
-                                    </SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
                                   </SelectContent>
                                 </Select>
-                                <FormDescription>
-                                  How often products are delivered or access is
-                                  refreshed.
-                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -1895,11 +1639,11 @@ export default function MembershipDialog() {
                               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 sm:p-4">
                                 <div className="space-y-0.5">
                                   <FormLabel className="text-sm sm:text-base flex items-center gap-1">
-                                    <Headphones className="h-4 w-4" />
+                                    <Users className="h-4 w-4" />
                                     Priority Support
                                   </FormLabel>
                                   <FormDescription className="text-xs sm:text-sm">
-                                    Members get expedited customer support.
+                                    Members get priority customer support.
                                   </FormDescription>
                                 </div>
                                 <FormControl>
@@ -1916,47 +1660,39 @@ export default function MembershipDialog() {
                     </motion.div>
                     </div>
                   )}
+
+                  {/* Dialog Actions */}
+                  <DialogFooter className="flex-col sm:flex-row gap-2 px-4 sm:px-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleClose}
+                      className="w-full sm:w-auto"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !form.formState.isValid}
+                      className="w-full sm:w-auto"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {isEditMode ? "Updating..." : "Creating..."}
+                        </>
+                      ) : (
+                        <>
+                          {isEditMode ? "Update Membership" : "Create Membership"}
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
                 </div>
               </ScrollArea>
-
-              {/* Dialog Footer with Save Button */}
-              <div className="flex justify-end p-4 sm:p-6 border-t pt-4">
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <span className="flex items-center">
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Saving...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isEditMode ? "Save Changes" : "Create Membership"}
-                    </span>
-                  )}
-                </Button>
-              </div>
-          </form>
-        </Form>
-      </DialogContent>
+            </form>
+          </Form>
+        </DialogContent>
     </Dialog>
   );
 }

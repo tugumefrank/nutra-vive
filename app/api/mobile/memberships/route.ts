@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         freeDelivery: membership.membership.freeDelivery,
         prioritySupport: membership.membership.prioritySupport,
         maxProductsPerMonth: membership.membership.maxProductsPerMonth,
-        features: membership.membership.features,
+        // features array removed
         color: membership.membership.color,
         icon: membership.membership.icon,
         isPopular: membership.membership.isPopular,
@@ -131,8 +131,7 @@ export async function GET(request: NextRequest) {
           : 0,
       })) || [],
 
-      // Custom benefits used
-      customBenefitsUsed: membership.customBenefitsUsed || [],
+      // customBenefitsUsed removed
 
       // Calculate overall usage stats
       usageStats: {

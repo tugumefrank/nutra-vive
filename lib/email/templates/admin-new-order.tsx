@@ -14,6 +14,11 @@ interface AdminNewOrderProps {
     price: number;
     totalPrice: number;
     productImage?: string;
+    // Membership-specific item data
+    isCoveredByMembership?: boolean;
+    membershipCoveredQuantity?: number; // How many items are covered by membership
+    paidQuantity?: number; // How many items customer pays for
+    originalPrice?: number; // Price before any discounts
   }>;
   subtotal: number;
   shipping: number;
@@ -156,7 +161,35 @@ export default function AdminNewOrderEmail({
                   fontSize: "14px",
                 }}
               >
-                Qty: {item.quantity} × ${item.price.toFixed(2)}
+                {/* Show membership benefits for admin view */}
+                {item.isCoveredByMembership && item.membershipCoveredQuantity === item.quantity ? (
+                  // Completely free item
+                  <span>
+                    Qty: {item.quantity} × <span style={{
+                      color: "#059669", 
+                      fontWeight: "600",
+                      backgroundColor: "#ecfdf5",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontSize: "12px"
+                    }}>FREE - Member Benefit</span>
+                  </span>
+                ) : item.isCoveredByMembership && (item.membershipCoveredQuantity || 0) > 0 ? (
+                  // Partially covered item  
+                  <span>
+                    {item.membershipCoveredQuantity} × <span style={{
+                      color: "#059669", 
+                      fontWeight: "600",
+                      backgroundColor: "#ecfdf5",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontSize: "12px"
+                    }}>FREE</span> + {(item.paidQuantity || 0)} × ${item.price.toFixed(2)}
+                  </span>
+                ) : (
+                  // Regular paid item
+                  `Qty: ${item.quantity} × $${item.price.toFixed(2)}`
+                )}
               </Text>
             </Column>
             <Column style={{ textAlign: "right" as const, width: "80px" }}>
@@ -165,9 +198,10 @@ export default function AdminNewOrderEmail({
                   ...sharedStyles.value,
                   fontWeight: "600",
                   margin: "0",
+                  color: item.totalPrice === 0 ? "#059669" : undefined,
                 }}
               >
-                ${item.totalPrice.toFixed(2)}
+                {item.totalPrice === 0 ? "FREE" : `$${item.totalPrice.toFixed(2)}`}
               </Text>
             </Column>
           </Row>

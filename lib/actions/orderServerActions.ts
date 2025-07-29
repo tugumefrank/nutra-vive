@@ -433,17 +433,18 @@ export async function createCheckoutSession(
 
       // Send order confirmation email for free orders
       try {
+        // Calculate item-level membership coverage for email
+        const itemsWithMembershipInfo = await calculateItemMembershipCoverage(
+          order.items,
+          userId,
+          cart.hasMembershipApplied || true // Free orders are typically membership orders
+        );
+
         await sendOrderConfirmation(order.email, {
           orderNumber: order.orderNumber,
           customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
           customerEmail: order.email,
-          items: order.items.map((item: any) => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            price: item.price,
-            totalPrice: item.totalPrice,
-            productImage: item.productImage,
-          })),
+          items: itemsWithMembershipInfo,
           subtotal: order.subtotal,
           shipping: order.shippingAmount,
           tax: order.taxAmount,
@@ -464,6 +465,13 @@ export async function createCheckoutSession(
 
       // Send admin notification for free orders
       try {
+        // Reuse the same membership calculation for admin email
+        const itemsWithMembershipInfo = await calculateItemMembershipCoverage(
+          order.items,
+          userId,
+          cart.hasMembershipApplied || true // Free orders are typically membership orders
+        );
+
         await sendAdminNewOrder(
           "orders@nutraviveholistic.com",
           {
@@ -471,13 +479,7 @@ export async function createCheckoutSession(
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
             customerEmail: order.email,
             orderId: order._id.toString(),
-            items: order.items.map((item: any) => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              price: item.price,
-              totalPrice: item.totalPrice,
-              productImage: item.productImage,
-            })),
+            items: itemsWithMembershipInfo,
             subtotal: order.subtotal,
             shipping: order.shippingAmount,
             tax: order.taxAmount,
@@ -553,13 +555,16 @@ export async function createCheckoutSession(
 }
 
 // Confirm payment and complete order (UPDATED with new email system)
-export async function confirmPayment(paymentIntentId: string): Promise<{
+export async function confirmPayment(
+  paymentIntentId: string,
+  providedUserId?: string
+): Promise<{
   success: boolean;
   order?: any;
   error?: string;
 }> {
   try {
-    const { userId } = await auth();
+    const userId = providedUserId || (await auth()).userId;
     if (!userId) {
       return {
         success: false,
@@ -708,25 +713,27 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
       }
     }
 
-    // 📧 SEND BEAUTIFUL ORDER CONFIRMATION EMAIL (skip for free orders - already sent)
+    // 📧 SEND EMAIL NOTIFICATIONS (skip for free orders - already sent)
     if (paymentIntentId !== "free_order") {
-      try {
-        // Try to get membership info from the order's appliedPromotion or discountAmount
-        const isMembershipOrder = order.discountAmount > 0;
-        const membershipDiscount = order.discountAmount || 0;
-        const promotionDiscount = order.appliedPromotion?.discountAmount || 0;
+      // Try to get membership info from the order's appliedPromotion or discountAmount
+      const isMembershipOrder = order.discountAmount > 0;
+      const membershipDiscount = order.discountAmount || 0;
+      const promotionDiscount = order.appliedPromotion?.discountAmount || 0;
 
+      // Calculate item-level membership coverage once for both emails
+      const itemsWithMembershipInfo = await calculateItemMembershipCoverage(
+        order.items,
+        userId,
+        isMembershipOrder
+      );
+
+      // Send customer confirmation email
+      try {
         await sendOrderConfirmation(order.email, {
           orderNumber: order.orderNumber,
           customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
           customerEmail: order.email,
-          items: order.items.map((item: any) => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            price: item.price,
-            totalPrice: item.totalPrice,
-            productImage: item.productImage,
-          })),
+          items: itemsWithMembershipInfo,
           subtotal: order.subtotal,
           shipping: order.shippingAmount,
           tax: order.taxAmount,
@@ -745,7 +752,7 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
         // Don't fail the order if email fails
       }
 
-      // 📧 SEND ADMIN NEW ORDER NOTIFICATION
+      // Send admin notification email
       try {
         await sendAdminNewOrder(
           "orders@nutraviveholistic.com",
@@ -754,17 +761,17 @@ export async function confirmPayment(paymentIntentId: string): Promise<{
             customerName: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
             customerEmail: order.email,
             orderId: order._id.toString(),
-            items: order.items.map((item: any) => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              price: item.price,
-              totalPrice: item.totalPrice,
-              productImage: item.productImage,
-            })),
+            items: itemsWithMembershipInfo,
             subtotal: order.subtotal,
             shipping: order.shippingAmount,
             tax: order.taxAmount,
             total: order.totalAmount,
+            // Membership-specific data for admin
+            isMembershipOrder: isMembershipOrder,
+            membershipTier: "Premium", 
+            membershipDiscount: membershipDiscount,
+            promotionDiscount: promotionDiscount,
+            totalSavings: membershipDiscount + promotionDiscount,
           }
         );
 
@@ -1725,5 +1732,139 @@ export async function deleteOrder(orderId: string) {
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete order",
     };
+  }
+}
+
+// Helper function to calculate item-level membership coverage for emails
+async function calculateItemMembershipCoverage(
+  orderItems: any[],
+  userId: string,
+  isMembershipOrder: boolean
+): Promise<Array<{
+  productName: string;
+  quantity: number;
+  price: number;
+  totalPrice: number;
+  productImage?: string;
+  isCoveredByMembership?: boolean;
+  membershipCoveredQuantity?: number;
+  paidQuantity?: number;
+  originalPrice?: number;
+}>> {
+  if (!isMembershipOrder) {
+    // No membership coverage - return items as-is
+    return orderItems.map(item => ({
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      totalPrice: item.totalPrice,
+      productImage: item.productImage,
+      isCoveredByMembership: false,
+      membershipCoveredQuantity: 0,
+      paidQuantity: item.quantity,
+      originalPrice: item.originalPrice || item.price,
+    }));
+  }
+
+  try {
+    // Get user's membership allocations
+    const { getCurrentUserMemberships } = await import("./membershipServerActions");
+    const membershipData = await getCurrentUserMemberships(userId);
+
+    if (!membershipData.success || !membershipData.userMemberships || membershipData.userMemberships.length === 0) {
+      // No active membership - return items as paid
+      return orderItems.map(item => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice,
+        productImage: item.productImage,
+        isCoveredByMembership: false,
+        membershipCoveredQuantity: 0,
+        paidQuantity: item.quantity,
+        originalPrice: item.originalPrice || item.price,
+      }));
+    }
+
+    // Get products to match categories
+    const productIds = orderItems.map(item => item.product?.toString() || item.product);
+    const products = await Product.find({ _id: { $in: productIds } })
+      .populate("category", "name")
+      .lean();
+
+    // Calculate coverage for each item
+    const itemsWithCoverage = [];
+    
+    for (const orderItem of orderItems) {
+      const product = products.find(p => p._id.toString() === (orderItem.product?.toString() || orderItem.product));
+      
+      if (!product || !product.category) {
+        // No product found or no category - item is paid
+        itemsWithCoverage.push({
+          productName: orderItem.productName,
+          quantity: orderItem.quantity,
+          price: orderItem.price,
+          totalPrice: orderItem.totalPrice,
+          productImage: orderItem.productImage,
+          isCoveredByMembership: false,
+          membershipCoveredQuantity: 0,
+          paidQuantity: orderItem.quantity,
+          originalPrice: orderItem.originalPrice || orderItem.price,
+        });
+        continue;
+      }
+
+      const categoryName = (product.category as any).name;
+      let membershipCoveredQuantity = 0;
+
+      // Check coverage across all user memberships
+      for (const membership of membershipData.userMemberships) {
+        if (!membership.productUsage) continue;
+        
+        const allocation = membership.productUsage.find((usage: any) => 
+          usage.categoryName === categoryName || 
+          usage.categoryId?.toString() === (product.category as any)._id?.toString()
+        );
+
+        if (allocation && allocation.availableQuantity > 0) {
+          const canUse = Math.min(allocation.availableQuantity, orderItem.quantity - membershipCoveredQuantity);
+          membershipCoveredQuantity += canUse;
+          
+          if (membershipCoveredQuantity >= orderItem.quantity) break;
+        }
+      }
+
+      const paidQuantity = Math.max(0, orderItem.quantity - membershipCoveredQuantity);
+      const isCovered = membershipCoveredQuantity > 0;
+
+      itemsWithCoverage.push({
+        productName: orderItem.productName,
+        quantity: orderItem.quantity,
+        price: orderItem.price,
+        totalPrice: paidQuantity * orderItem.price, // Only charge for paid quantity
+        productImage: orderItem.productImage,
+        isCoveredByMembership: isCovered,
+        membershipCoveredQuantity: membershipCoveredQuantity,
+        paidQuantity: paidQuantity,
+        originalPrice: orderItem.originalPrice || orderItem.price,
+      });
+    }
+
+    return itemsWithCoverage;
+
+  } catch (error) {
+    console.error("❌ Error calculating membership coverage for email:", error);
+    // Fallback to paid items
+    return orderItems.map(item => ({
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      totalPrice: item.totalPrice,
+      productImage: item.productImage,
+      isCoveredByMembership: false,
+      membershipCoveredQuantity: 0,
+      paidQuantity: item.quantity,
+      originalPrice: item.originalPrice || item.price,
+    }));
   }
 }

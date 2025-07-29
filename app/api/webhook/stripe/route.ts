@@ -15,6 +15,7 @@ interface WebhookHandlers {
   'invoice.payment_failed': (invoice: Stripe.Invoice) => Promise<void>;
   'checkout.session.completed': (session: Stripe.Checkout.Session) => Promise<void>;
   'payment_intent.succeeded': (paymentIntent: Stripe.PaymentIntent) => Promise<void>;
+  'charge.succeeded': (charge: Stripe.Charge) => Promise<void>;
 }
 
 // Following t3dotgg guide: Keep types simple and use centralized sync function
@@ -51,7 +52,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     try {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-      console.log(`Received Stripe webhook: ${event.type}`);
+      console.log(`🎯 Received Stripe webhook: ${event.type}`);
+      
+      // Enhanced logging for checkout sessions
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`🎉 CHECKOUT SESSION COMPLETED:`, {
+          sessionId: session.id,
+          customer: session.customer,
+          subscription: session.subscription,
+          status: session.status,
+          payment_status: session.payment_status,
+          metadata: session.metadata
+        });
+      }
     } catch (err) {
       const error = err as Error;
       console.error("Webhook signature verification failed:", error.message);
@@ -72,6 +86,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       'invoice.payment_failed': handleInvoiceEvent,
       'checkout.session.completed': handleCheckoutCompleted,
       'payment_intent.succeeded': handlePaymentIntentSucceeded,
+      'charge.succeeded': handleChargeSucceeded,
     };
 
     const handler = handlers[event.type as keyof WebhookHandlers];
@@ -145,7 +160,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   });
   
   if (!session.customer || !session.subscription || !session.metadata) {
-    console.log("❌ Checkout session missing required data, skipping");
+    console.error("❌ Checkout session missing required data:", {
+      customer: !!session.customer,
+      subscription: !!session.subscription, 
+      metadata: !!session.metadata,
+      sessionData: {
+        id: session.id,
+        status: session.status,
+        payment_status: session.payment_status
+      }
+    });
     return;
   }
 
@@ -160,12 +184,46 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
     console.log(`🔄 Processing subscription for user ${userId}`);
     
-    // Find user by clerkId (from metadata)
-    const user = await User.findOne({ clerkId: userId });
+    // Find user by clerkId (handle both web and mobile formats)
+    let user = await User.findOne({ clerkId: userId });
+    
     if (!user) {
-      console.error(`❌ User not found with clerkId: ${userId}`);
+      console.log(`🔍 User not found with exact clerkId: ${userId}, trying alternative lookups...`);
+      
+      // Try to find user by other methods
+      // 1. Check if it's a Stripe customer ID accidentally stored
+      user = await User.findOne({ stripeCustomerId: session.customer });
+      if (user) {
+        console.log(`✅ Found user by stripeCustomerId`);
+      }
+    }
+    
+    if (!user) {
+      // 2. Try to find by email from Stripe customer
+      try {
+        const stripeCustomer = await stripe.customers.retrieve(session.customer as string);
+        if (!stripeCustomer.deleted && 'email' in stripeCustomer && stripeCustomer.email) {
+          user = await User.findOne({ email: stripeCustomer.email });
+          if (user) {
+            console.log(`✅ Found user by email from Stripe customer: ${stripeCustomer.email}`);
+            // Update the user with correct clerkId if missing
+            if (!user.clerkId) {
+              await User.findByIdAndUpdate(user._id, { clerkId: userId });
+              console.log(`✅ Updated user with clerkId: ${userId}`);
+            }
+          }
+        }
+      } catch (stripeError) {
+        console.error(`❌ Error fetching Stripe customer:`, stripeError);
+      }
+    }
+    
+    if (!user) {
+      console.error(`❌ User not found with any method for userId: ${userId}, customerId: ${session.customer}`);
       return;
     }
+    
+    console.log(`✅ Found user:`, { _id: user._id, email: user.email, clerkId: user.clerkId });
     
     // Update user with Stripe customer ID if not set
     if (!user.stripeCustomerId) {
@@ -375,5 +433,52 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   } catch (error) {
     const err = error as Error;
     console.error("❌ Error processing payment_intent.succeeded:", err.message);
+  }
+}
+
+/**
+ * Handle charge succeeded events
+ * This can trigger subscription sync for mobile payments
+ */
+async function handleChargeSucceeded(charge: Stripe.Charge): Promise<void> {
+  console.log(`Processing charge.succeeded: ${charge.id}`);
+  console.log(`🔍 Charge details:`, {
+    customer: charge.customer,
+    invoice: 'invoice' in charge ? charge.invoice : null,
+    amount: charge.amount,
+    description: charge.description,
+    metadata: charge.metadata
+  });
+  
+  if (!charge.customer) {
+    console.log("Charge has no customer, skipping");
+    return;
+  }
+
+  try {
+    // Check if this charge is related to a subscription
+    if ('invoice' in charge && charge.invoice) {
+      console.log(`🔗 Charge is related to invoice ${charge.invoice}, syncing subscription data`);
+      // Use centralized sync function to handle subscription changes
+      await syncStripeDataToDatabase(charge.customer as string);
+      console.log(`✅ Synced subscription data for customer ${charge.customer} from charge`);
+    } else {
+      console.log(`💰 Charge ${charge.id} appears to be one-time payment, checking for subscription anyway...`);
+      
+      // For mobile payments, sometimes checkout.session.completed might be missing
+      // So let's try to sync subscription data anyway
+      try {
+        const syncResult = await syncStripeDataToDatabase(charge.customer as string);
+        if (syncResult) {
+          console.log(`✅ Found and synced subscription data for customer ${charge.customer} (backup sync from charge)`);
+        } else {
+          console.log(`ℹ️  No subscription data found for customer ${charge.customer}`);
+        }
+      } catch (syncError) {
+        console.log(`⚠️  Backup sync failed, but this is normal for non-subscription charges:`, syncError instanceof Error ? syncError.message : syncError);
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Error syncing data from charge.succeeded:`, error);
   }
 }

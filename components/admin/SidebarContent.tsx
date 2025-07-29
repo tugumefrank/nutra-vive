@@ -92,6 +92,13 @@ export default function SidebarContent({
       section: "customers",
       description: "Customer Feedback",
     },
+    {
+      name: "Memberships",
+      href: "/admin/memberships",
+      icon: "👑",
+      section: "customers",
+      description: "Subscription Management",
+    },
     // {
     //   name: "Analytics",
     //   href: "/admin/analytics",
@@ -105,6 +112,13 @@ export default function SidebarContent({
       icon: "🎯",
       section: "growth",
       description: "Discounts & Offers",
+    },
+    {
+      name: "QR Analytics",
+      href: "/admin/scanstats",
+      icon: "📊",
+      section: "growth",
+      description: "Scan Statistics",
     },
     // {
     //   name: "Reports",

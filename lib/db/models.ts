@@ -1169,16 +1169,8 @@ export interface IMembership extends Document {
     allowedProducts?: string[]; // Specific products if restricted
   }[];
 
-  // Custom Benefits
-  customBenefits: {
-    title: string;
-    description: string;
-    type: "webinar" | "content" | "discount" | "service" | "other";
-    value?: string; // e.g., "20% off", "Free delivery"
-  }[];
-
-  // Membership Features
-  features: string[]; // Array of feature descriptions
+  // Core Features (toggleable)
+  // Features array and customBenefits removed - only keeping core toggleable options below
 
   // Limits and Restrictions
   maxProductsPerMonth?: number;
@@ -1246,12 +1238,7 @@ export interface IUserMembership extends Document {
     lastUsed?: Date;
   }[];
 
-  customBenefitsUsed: {
-    benefitId: string;
-    title: string;
-    usedAt: Date;
-    value?: string;
-  }[];
+  // customBenefitsUsed removed - no longer tracking custom benefits
 
   // Auto-renewal
   autoRenewal: boolean;
@@ -1403,21 +1390,7 @@ const membershipSchema = new Schema<IMembership>(
       },
     ],
 
-    // Custom Benefits
-    customBenefits: [
-      {
-        title: { type: String, required: true },
-        description: { type: String, required: true },
-        type: {
-          type: String,
-          enum: ["webinar", "content", "discount", "service", "other"],
-          default: "other",
-        },
-        value: String,
-      },
-    ],
-
-    features: [String],
+    // Custom Benefits and features arrays removed - using only toggleable core features below
 
     // Limits
     maxProductsPerMonth: { type: Number, min: 0 },
@@ -1493,14 +1466,7 @@ const userMembershipSchema = new Schema<IUserMembership>(
       },
     ],
 
-    customBenefitsUsed: [
-      {
-        benefitId: { type: String, required: true },
-        title: { type: String, required: true },
-        usedAt: { type: Date, default: Date.now },
-        value: String,
-      },
-    ],
+    // customBenefitsUsed schema removed
 
     autoRenewal: { type: Boolean, default: true },
 

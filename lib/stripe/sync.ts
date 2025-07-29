@@ -320,7 +320,8 @@ export async function createMembershipCheckoutSession(
   userEmail: string,
   userName: string,
   membershipId: string,
-  origin?: string
+  origin?: string,
+  isMobile: boolean = false
 ): Promise<CheckoutSessionResult> {
   try {
     await connectToDatabase();
@@ -348,6 +349,26 @@ export async function createMembershipCheckoutSession(
       userId
     });
     
+    // Determine URLs based on platform
+    let successUrl: string;
+    let cancelUrl: string;
+    
+    if (isMobile) {
+      // Mobile app deep links
+      successUrl = process.env.MOBILE_SUCCESS_URL || 'nutravive://subscription-success?session_id={CHECKOUT_SESSION_ID}';
+      cancelUrl = process.env.MOBILE_CANCEL_URL || 'nutravive://subscription-cancelled';
+    } else {
+      // Web app URLs
+      const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://nutra-vive-app.vercel.app';
+      successUrl = `${baseUrl}/account/memberships?session_id={CHECKOUT_SESSION_ID}`;
+      cancelUrl = `${baseUrl}/account/memberships?cancelled=true`;
+    }
+
+    console.log(`🔗 Using URLs for ${isMobile ? 'mobile' : 'web'}:`, {
+      successUrl,
+      cancelUrl
+    });
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"], // Only allow cards (excludes Cash App Pay as per t3dotgg guide)
@@ -358,18 +379,20 @@ export async function createMembershipCheckoutSession(
         },
       ],
       mode: "subscription",
-      success_url: `${origin || process.env.NEXTAUTH_URL || 'http://localhost:3001'}/account/memberships?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin || process.env.NEXTAUTH_URL || 'http://localhost:3001'}/account/memberships?cancelled=true`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         userId,
         membershipId: membershipId,
         membershipTier: membership.tier,
+        platform: isMobile ? 'mobile' : 'web',
       },
       subscription_data: {
         metadata: {
           userId,
           membershipId: membershipId,
           membershipTier: membership.tier,
+          platform: isMobile ? 'mobile' : 'web',
         },
       },
     });

@@ -90,13 +90,14 @@ export async function createMembershipSubscriptionCheckout(
     const protocol = headersList.get('x-forwarded-proto') || 'http';
     const origin = host ? `${protocol}://${host}` : undefined;
 
-    // Create checkout session using centralized function
+    // Create checkout session using centralized function (web)
     const { sessionId, url } = await createMembershipCheckoutSession(
       userId,
       user.email,
       `${user.firstName} ${user.lastName}`,
       membershipId,
-      origin
+      origin,
+      false // isMobile = false (web app)
     );
 
     console.log(`✅ Created checkout session for user ${userId}`);

@@ -68,24 +68,49 @@ export async function POST(request: NextRequest) {
     if (body.membershipId && !body.action) {
       const validatedData = createSubscriptionSchema.parse(body);
       
-      // Create checkout session for new subscription
-      console.log("🆕 Creating new subscription checkout for membership:", validatedData.membershipId);
-      const result = await createMembershipSubscriptionCheckout(validatedData.membershipId);
+      // Create checkout session for new subscription (mobile-specific)
+      console.log("🆕 Creating new subscription checkout for mobile user:", userId);
+      console.log("📋 Membership ID:", validatedData.membershipId);
       
-      if (!result.success) {
-        console.log("❌ Failed to create subscription checkout:", result.error);
+      await connectToDatabase();
+      
+      // Find user for mobile checkout
+      const user = await User.findOne({ clerkId: userId });
+      if (!user) {
+        console.log("❌ User not found for mobile checkout:", userId);
         return NextResponse.json(
-          { error: result.error || "Failed to create subscription" },
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+      
+      // Import mobile-compatible checkout creation
+      const { createMembershipCheckoutSession } = await import("@/lib/stripe/sync");
+      
+      try {
+        const { sessionId, url } = await createMembershipCheckoutSession(
+          userId, // This is the JWT sub field
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+          validatedData.membershipId,
+          process.env.NEXTAUTH_URL,
+          true // isMobile = true
+        );
+        
+        console.log("✅ Mobile subscription checkout created successfully");
+        return NextResponse.json({
+          success: true,
+          checkoutUrl: url,
+          message: "Subscription checkout session created",
+        });
+        
+      } catch (error) {
+        console.error("❌ Mobile checkout creation failed:", error);
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Failed to create subscription" },
           { status: 500 }
         );
       }
-
-      console.log("✅ Subscription checkout created successfully");
-      return NextResponse.json({
-        success: true,
-        checkoutUrl: result.checkoutUrl,
-        message: "Subscription checkout session created",
-      });
     }
 
     // Handle subscription management actions
