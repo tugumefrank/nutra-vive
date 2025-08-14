@@ -54,6 +54,11 @@ interface UnifiedCartState {
   isApplyingPromotion: boolean;
   isRemovingPromotion: boolean;
 
+  // Shipping State
+  isCalculatingShipping: boolean;
+  shippingCalculated: boolean;
+  shippingError: string | null;
+
   // Promotion State
   promotionCodeInput: string;
   promotionValidationError: string | null;
@@ -98,6 +103,12 @@ interface UnifiedCartState {
   // Promotion Utilities
   canApplyPromotion: () => boolean;
   getPromotionEligibleTotal: () => number;
+
+  // Shipping Operations
+  updateShippingCost: (shippingCost: number) => Promise<void>;
+  clearShippingCost: () => void;
+  calculateShippingForCart: (destinationZIP: string) => Promise<number | null>;
+  hasShippingCalculated: () => boolean;
 }
 
 export const useUnifiedCartStore = create<UnifiedCartState>()(
@@ -235,6 +246,11 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
       isRemovingItem: {},
       isApplyingPromotion: false,
       isRemovingPromotion: false,
+
+      // Shipping State
+      isCalculatingShipping: false,
+      shippingCalculated: false,
+      shippingError: null,
 
       // Promotion State
       promotionCodeInput: "",
@@ -784,6 +800,107 @@ export const useUnifiedCartStore = create<UnifiedCartState>()(
           return total;
         }, 0);
       },
+
+      // Shipping Operations
+      updateShippingCost: async (shippingCost: number) => {
+        const currentCart = get().cart;
+        if (!currentCart) return;
+
+        try {
+          set({ isCalculatingShipping: true, shippingError: null });
+          
+          // Create updated cart with new shipping cost
+          const updatedCart = {
+            ...currentCart,
+            shippingAmount: shippingCost,
+            finalTotal: currentCart.afterDiscountsTotal + shippingCost + (currentCart.taxAmount || 0),
+          };
+
+          const newStats = calculateStats(updatedCart);
+          set({ 
+            cart: updatedCart, 
+            stats: newStats,
+            shippingCalculated: true,
+            isCalculatingShipping: false 
+          });
+          
+          console.log('✅ Shipping cost updated:', shippingCost);
+        } catch (error) {
+          console.error('❌ Failed to update shipping cost:', error);
+          set({ 
+            isCalculatingShipping: false, 
+            shippingError: 'Failed to update shipping cost' 
+          });
+        }
+      },
+
+      clearShippingCost: () => {
+        set({ 
+          shippingCalculated: false, 
+          shippingError: null,
+          isCalculatingShipping: false 
+        });
+        
+        const currentCart = get().cart;
+        if (currentCart) {
+          const updatedCart = {
+            ...currentCart,
+            shippingAmount: 0,
+            finalTotal: currentCart.afterDiscountsTotal + (currentCart.taxAmount || 0),
+          };
+
+          const newStats = calculateStats(updatedCart);
+          set({ cart: updatedCart, stats: newStats });
+        }
+      },
+
+      calculateShippingForCart: async (destinationZIP: string): Promise<number | null> => {
+        const cart = get().cart;
+        if (!cart || !cart.items.length) return null;
+
+        try {
+          set({ isCalculatingShipping: true, shippingError: null });
+          
+          // Import shipping calculation action
+          const { calculateShippingCost } = await import('@/lib/actions/shipping-actions');
+          
+          // Convert cart items to shipping format with correct bottle specifications
+          const cartItems = cart.items.map(item => ({
+            productId: item.product._id,
+            quantity: item.quantity,
+            weight: 1.0, // 1 lb per bottle
+            dimensions: {
+              length: 8,  // 8cm
+              width: 8,   // 8cm  
+              height: 8,  // 8cm
+            }
+          }));
+
+          const result = await calculateShippingCost({
+            items: cartItems,
+            destinationZIP,
+          });
+
+          if (result.success && result.data) {
+            const shippingCost = result.data.totalShippingCost;
+            await get().updateShippingCost(shippingCost);
+            return shippingCost;
+          } else {
+            throw new Error(result.error || 'Shipping calculation failed');
+          }
+        } catch (error) {
+          console.error('❌ Shipping calculation failed:', error);
+          set({ 
+            isCalculatingShipping: false,
+            shippingError: error instanceof Error ? error.message : 'Shipping calculation failed'
+          });
+          return null;
+        }
+      },
+
+      hasShippingCalculated: () => {
+        return get().shippingCalculated;
+      },
     };
   })
 );
@@ -793,6 +910,19 @@ export const useCartStats = () =>
   useUnifiedCartStore(useShallow((state) => state.stats));
 export const useCartItems = () =>
   useUnifiedCartStore(useShallow((state) => state.cart?.items || []));
+export const useCartShipping = () =>
+  useUnifiedCartStore(
+    useShallow((state) => ({
+      isCalculatingShipping: state.isCalculatingShipping,
+      shippingCalculated: state.shippingCalculated,
+      shippingError: state.shippingError,
+      shippingAmount: state.stats.shippingAmount,
+      calculateShippingForCart: state.calculateShippingForCart,
+      updateShippingCost: state.updateShippingCost,
+      clearShippingCost: state.clearShippingCost,
+      hasShippingCalculated: state.hasShippingCalculated,
+    }))
+  );
 export const useCartDrawer = () =>
   useUnifiedCartStore(
     useShallow((state) => ({

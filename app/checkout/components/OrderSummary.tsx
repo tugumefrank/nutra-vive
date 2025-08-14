@@ -313,7 +313,7 @@ export default function EnhancedOrderSummary({
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Shipping:</span>
           <span className="font-medium">
-            {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+            {shipping === 0 ? "FREE" : shipping > 0 ? `$${shipping.toFixed(2)}` : "Calculated at checkout"}
           </span>
         </div>
 

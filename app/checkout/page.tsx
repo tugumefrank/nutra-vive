@@ -103,8 +103,8 @@ export default function CheckoutPage() {
   const promotionDiscount = cart?.promotionDiscount || 0;
   const afterDiscountsTotal = cart?.afterDiscountsTotal || 0; // This is subtotal - membershipDiscount - promotionDiscount
 
-  // Helper functions for calculations
-  function calculateShipping(
+  // Helper functions for fallback calculations
+  function calculateFallbackShipping(
     amount: number,
     method: string,
     isFreeOrder: boolean = false
@@ -122,17 +122,17 @@ export default function CheckoutPage() {
   // Check if this is a free membership order (afterDiscountsTotal is exactly $0)
   const isFreeOrder = afterDiscountsTotal <= 0;
 
-  // Calculate shipping and tax based on whether it's a free order
-  const shipping = calculateShipping(
+  // Use shipping cost from cart (calculated by USPS) or fallback to old calculation
+  const shipping = cart?.shippingAmount ?? calculateFallbackShipping(
     afterDiscountsTotal,
     formData.deliveryMethod,
     isFreeOrder
   );
 
-  const tax = calculateTax(afterDiscountsTotal + shipping, isFreeOrder);
+  const tax = cart?.taxAmount ?? calculateTax(afterDiscountsTotal + shipping, isFreeOrder);
 
-  // Final order total
-  const total = afterDiscountsTotal + shipping + tax;
+  // Final order total - use cart's finalTotal if available, otherwise calculate
+  const total = cart?.finalTotal ?? (afterDiscountsTotal + shipping + tax);
 
   // Load cart data and user profile
   useEffect(() => {
@@ -436,12 +436,14 @@ export default function CheckoutPage() {
     // Show updated totals message
     const oldTotal = total;
     const newAfterDiscountsTotal = updatedCart.afterDiscountsTotal || 0;
-    const newShipping = calculateShipping(
+    
+    // Use shipping from cart (USPS calculated) or fallback
+    const newShipping = updatedCart.shippingAmount ?? calculateFallbackShipping(
       newAfterDiscountsTotal,
       formData.deliveryMethod
     );
-    const newTax = calculateTax(newAfterDiscountsTotal + newShipping);
-    const newTotal = newAfterDiscountsTotal + newShipping + newTax;
+    const newTax = updatedCart.taxAmount ?? calculateTax(newAfterDiscountsTotal + newShipping);
+    const newTotal = updatedCart.finalTotal ?? (newAfterDiscountsTotal + newShipping + newTax);
 
     if (Math.abs(newTotal - oldTotal) > 0.01) {
       const totalSavings =
@@ -764,7 +766,16 @@ export default function CheckoutPage() {
           />
         );
       case 3:
-        return <AddressStep {...stepProps} />;
+        return <AddressStep 
+          {...stepProps} 
+          onAddressValidated={(isValid, standardizedAddress) => {
+            console.log('📍 Address validation result:', { isValid, standardizedAddress });
+          }}
+          onShippingCalculated={(shippingCost) => {
+            console.log('🚚 Shipping calculated:', shippingCost);
+          }}
+          onNextStep={() => goToStep(4)}
+        />;
       case 4:
         return (
           <ReviewStep

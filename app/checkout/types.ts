@@ -57,3 +57,72 @@ export interface StepProps {
   subtotal: number;
   shipping: number;
 }
+
+export interface USPSAddressData {
+  firm?: string;
+  streetAddress: string;
+  secondaryAddress?: string;
+  city?: string;
+  state: string;
+  ZIPCode?: string;
+  ZIPPlus4?: string;
+  urbanization?: string;
+}
+
+export interface USPSTokenResponse {
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
+}
+
+export interface USPSAddressResponse {
+  address: {
+    firm?: string;
+    streetAddress: string;
+    secondaryAddress?: string;
+    city: string;
+    state: string;
+    ZIPCode: string;
+    ZIPPlus4?: string;
+    urbanization?: string;
+  };
+  additionalInfo?: {
+    DPVConfirmation?: string;
+    DPVFootnote?: string;
+    Business?: string;
+    CentralDeliveryPoint?: string;
+    Vacant?: string;
+  };
+  corrections?: string[];
+  warnings?: string[];
+  matches?: USPSAddressResponse[];
+}
+
+export interface USPSCityStateResponse {
+  city: string;
+  state: string;
+  ZIPCode: string;
+}
+
+export interface USPSApiResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  statusCode?: number;
+}
+
+export interface AddressValidationResult
+  extends USPSApiResult<USPSAddressResponse> {
+  isValid?: boolean;
+  standardizedAddress?: USPSAddressResponse["address"];
+}
+
+export interface ComprehensiveValidationResult {
+  original: USPSAddressData;
+  isValid: boolean;
+  standardized: USPSAddressResponse | null;
+  corrections: string[];
+  warnings: string[];
+  suggestions: USPSAddressResponse[];
+}

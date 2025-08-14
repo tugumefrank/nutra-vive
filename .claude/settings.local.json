@@ -28,7 +28,8 @@
       "Bash(rm:*)",
       "Bash(node:*)",
       "Bash(npx tsx:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "WebFetch(domain:developers.usps.com)"
     ],
     "deny": []
   }

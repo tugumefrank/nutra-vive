@@ -158,8 +158,17 @@ function calculateShipping(
   subtotal: number,
   isFreeOrder: boolean = false
 ): number {
-  // Always return 0 - shipping is now free for all orders
-  return 0;
+  // For pickup orders, always free
+  if (deliveryMethod === "pickup") return 0;
+  
+  // For free orders (membership), always free
+  if (isFreeOrder) return 0;
+  
+  // For standard orders, use free shipping threshold
+  if (subtotal >= 25) return 0; // Free shipping over $25
+  
+  // Default shipping cost - this should be overridden by USPS calculation
+  return 5.99;
 }
 
 // Calculate tax (simplified - 8% tax rate)
@@ -244,13 +253,17 @@ export async function createCheckoutSession(
     // Check if this is a free order FIRST (before calculating shipping/tax)
     const isFreeOrder = subtotal <= 0 || checkoutData.skipPayment === true;
 
-    const shippingAmount = calculateShipping(
+    // Use shipping amount from cart (calculated by USPS) or fallback calculation
+    const shippingAmount = cart.shippingAmount ?? calculateShipping(
       validatedData.deliveryMethod,
       subtotal,
       isFreeOrder
     );
-    const taxAmount = calculateTax(subtotal, shippingAmount, isFreeOrder);
-    const totalAmount = subtotal + shippingAmount + taxAmount;
+    
+    const taxAmount = cart.taxAmount ?? calculateTax(subtotal, shippingAmount, isFreeOrder);
+    
+    // Use cart's final total if available, otherwise calculate
+    const totalAmount = cart.finalTotal ?? (subtotal + shippingAmount + taxAmount);
 
     console.log("💰 Order totals calculated:");
     console.log("  - Subtotal (after discounts):", subtotal);

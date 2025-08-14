@@ -234,7 +234,7 @@ export default function ReviewStep({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping</span>
                     <span className="font-medium text-green-600">
-                      {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? "FREE" : shipping > 0 ? `$${shipping.toFixed(2)}` : "Calculated at checkout"}
                     </span>
                   </div>
                   <div className="flex justify-between">
