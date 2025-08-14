@@ -32,7 +32,7 @@ export default function NutraViveLanding() {
             </span>
           </Link>
           <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
-            Download App
+            Download App.
           </Button>
         </div>
       </header>
